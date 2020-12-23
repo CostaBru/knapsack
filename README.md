@@ -147,7 +147,7 @@ Iteration table for set 3. N is 99.
 
 N ** 4 is 96 059 601 and N ** 3 is 970 299, so the worst-case iteration number does not exceed (N ** 3) for N = 99
 
-# Polynomial N way partition algorithm using 1D knapsack solver
+# Polynomial N way partition algorithm using knapsack solver
 
 Partition is only weakly NP-hard - it is hard only when the numbers are encoded in non-unary system, and have value exponential in n.
 When the values are polynomial in N, Partition can be solved in polynomial time using the pseudopolynomial time number partitioning algorithm.
