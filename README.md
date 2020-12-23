@@ -165,7 +165,7 @@ For that case we can use 3D Knapsack with volume constrain equals to 3. That sol
 
 1D and 2D integer knapsack algorithms were tested on hardinstances_pisinger test dataset and gave accurate results that were equal to expected ones [4].
 
-1D and 2D knapsack algorithms were tested on real numbers as input weights and constrains using the same dataset, but each weight was divided by 100 000. It also gives accurate result the same as for integer numbers.
+1D and 2D knapsack algorithms were tested on rational numbers as input weights and constrains using the same dataset, and each weight was divided by 100 000. It also gives accurate result the same as for integer numbers.
 
 3D knapsack was tested along with classic DP solver on integer values. It is also seeming to work well.
 
