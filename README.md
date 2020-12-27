@@ -158,9 +158,6 @@ We will spread Non distinct numbers into the pseudo descending set. Each duplica
 
 Once we can verify that set can be partitioned to any number of sets equal sum in max time of O (C * (N ** 3)) where C in number of sets. 
 
-We can use the same solution for solving 3 PARTITION problem as well. Which is known as strongly NP complete [8]. 
-For that case we can use 3D Knapsack with volume constrain equals to 3. That solver input has weight, volume, and value, where weight is equal to value, and volume is always 1. 
-
 # Results validation
 
 1D and 2D integer knapsack algorithms were tested on hardinstances_pisinger test dataset and gave accurate results that were equal to expected ones [4].
