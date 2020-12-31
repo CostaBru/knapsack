@@ -16,7 +16,7 @@ import os
 
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-def partitionN(A, n, groupSize ,O):
+def partitionN(items, partitions, groupSize ,O):
 
     def checkBorderCases(A, n, count, maxElement,  O):
 
@@ -33,7 +33,7 @@ def partitionN(A, n, groupSize ,O):
 
         return None
 
-    def prepareGrouping(A, count, O):
+    def prepareGrouping(A, count, partitions, O):
 
         maxElement = 0
         sumOfItems = 0
@@ -48,7 +48,9 @@ def partitionN(A, n, groupSize ,O):
         
         O[0] += count
 
-        return group, maxElement, sumOfItems
+        size = sumOfItems // partitions
+
+        return group, maxElement, sumOfItems, size
     
     def groupItems(group, O):
 
@@ -66,204 +68,368 @@ def partitionN(A, n, groupSize ,O):
 
         return allUnique, nonUniqueList
 
-    count = len(A)
+    def getSingleDuplicatePartitions(nonUniqueList, count, partitions, groupSize, O):
 
-    if  count < n:
-        return 0
+        quotientResult, remainderResult  = [], []
+        singleItem = nonUniqueList[0]
+
+        if groupSize == 0:
+            if (count % partitions) == 0:
+                for i in range(partitions):
+                    quotient = [singleItem] * (count // partitions)
+                    quotientResult.append(quotient)
+            else:
+                for i in range(partitions - 1):
+                    quotient = [singleItem] * (count // partitions)
+                    quotientResult.append(quotient)                
+                remainderResult = [singleItem] * (count % partitions)
+        else:
+
+            stack = list(items)
+            currentQuotient = []
+
+            while len(stack) > 0:
+                item = stack.pop()
+                if len(currentQuotient) < groupSize:
+                    currentQuotient.append(item)
+                    if len(currentQuotient) == groupSize:
+                        quotientResult.append(currentQuotient)
+                        currentQuotient = []  
+
+            remainderResult = currentQuotient 
+
+        return  quotientResult, remainderResult  
+
+    def optimizePartitions(quotient, remainder, size, groupSize, partitions):
+
+        class partitionPoint:
+            def __init__(self, partintions, itemSet, itemIndexes=None):
+                self.partintions = partintions
+                self.Items = tuple(itemSet)
+                self.Indexes = set()
+                if itemIndexes:
+                    self.Indexes.update(itemIndexes)       
+            
+            def __add__(self, item): 
+
+                resultIndexes = set(self.Indexes)
+                resultSet = list(self.Items)
+                resultPart = self.partintions
+
+                for ni in item.Items:
+                    resultSet.append(ni)
+                
+                for ind in item.Indexes:
+                    resultIndexes.add(ind)
+
+                resultPart += item.partintions
+
+                resultSet.sort(reverse=True)
+
+                return partitionPoint(resultPart, resultSet, resultIndexes)        
+            
+            def __eq__(self, other):
+                return self.Items == other.Items
+
+            def __hash__(self):
+                return hash(self.Items)
+
+        def optimize(p, optimizeRemainder, groupSize, size, limit, O):
+
+            newSet = list(optimizeRemainder.Items)
+
+            if groupSize > 0 or limit % 2 == 0:
+                random.shuffle(newSet)
+        
+            for r in p.Items:
+                newSet.append(r) 
+            
+            O[0] += len(newSet)
+
+            newPartitions = p.partintions + optimizeRemainder.partintions
+
+            return  divideByPartitions(newSet, newPartitions, size, groupSize, False, O)
+
+        def getPoints(i, item, uniqueSet, limit):
+
+            itemPoint = partitionPoint(1, item)
+            itemPoint.Indexes.add(i)
+
+            if itemPoint not in uniqueSet:
+                yield itemPoint
+
+            for prevPoint in uniqueSet:
+                if prevPoint.partintions + itemPoint.partintions < limit:                
+                    newPoint = itemPoint + prevPoint
+                    if newPoint not in uniqueSet:
+                        yield newPoint
+
+        def backTrace(optimizationsMade, bestRemainder, originalQuotient, originalRemainder, O):
+
+            if len(optimizationsMade) == 0:
+                return originalQuotient, originalRemainder
+
+            bestPartition = list()
+            skipIndexes = set()
+
+            for optPoint in optimizationsMade:
+                skipIndexes.update(optPoint.Indexes)
+                bestPartition.append(optPoint.Items)
+                O[0] += 1
+            
+            for i in range(len(originalQuotient)):
+                it = originalQuotient[i]
+                if i in skipIndexes:
+                    continue
+                bestPartition.append(it)
+                O[0] += 1
+
+            return bestPartition, bestRemainder
+
+        if groupSize == 0:
+            quotient.sort(key=lambda x: len(x), reverse = True)
+            O[0] += len(quotient) * math.log2(len(quotient))        
+
+        remainderPoint = partitionPoint(partitions - len(quotient), remainder)
+        minRemiderLen = len(remainder) 
+
+        startLayer = 1
+        endLayer = max(startLayer + 1, partitions)
+
+        for limit in range(startLayer, endLayer):
+
+            print(limit)
+
+            optimizedIndexes,  uniqueSet = set(), set()
+            optimizationsMade, newPoints = [], []
+
+            remainderPoint = partitionPoint(partitions - len(quotient), remainder)
+            minRemiderLen = len(remainder) 
+
+            for i in range(len(quotient)):
+
+                item = quotient[i]
+
+                uniqueSet.update(newPoints)
+                newPoints.clear()
+
+                for p in getPoints(i, item, uniqueSet, limit):          
+
+                    if len(p.Indexes.intersection(optimizedIndexes)) > 0:
+                        continue
+
+                    optQuotient, optReminder = optimize(p, remainderPoint, groupSize, size, limit, O) 
+
+                    O[0] += 1
+
+                    if  len(optReminder) < minRemiderLen:
+
+                        for optItem in optQuotient:
+                            optimizationsMade.append(partitionPoint(1, optItem, p.Indexes))
+                            optimizedIndexes.update(p.Indexes)
+                            O[0] += 1
+
+                        parts = p.partintions + remainderPoint.partintions
+
+                        remainderPoint = partitionPoint(parts - len(optQuotient), optReminder)
+                        minRemiderLen = len(optReminder) 
+                    else:
+                        newPoints.append(p)
+
+                    if  minRemiderLen == 0:
+                        return backTrace(optimizationsMade, remainderPoint.Items, quotient, remainder, O)
+
+            if len(optimizedIndexes) > 0:
+                quotient, remainder = backTrace(optimizationsMade, remainderPoint.Items, quotient, remainder, O)
+                if groupSize == 0:
+                    quotient.sort(key=lambda x: len(x), reverse = True)
+                    O[0] += len(quotient) * math.log2(len(quotient))
+                else:
+                    random.shuffle(quotient)
+                    O[0] += len(quotient)
+                    
+        return backTrace(optimizationsMade, remainderPoint.Items, quotient, remainder, O)
+
+    def sortDuplicatesForPartitioning(group, count, nonUniqueList, O):
+        A_sort = []
+
+        keys = list(group.keys())
+        keysCount = len(keys)
+        O[0] += keysCount
+
+        keys.sort(reverse=True)
+        O[0] += keysCount * math.log2(keysCount)
+
+        i = 0
+        removeKeys = []
+        while len(nonUniqueList) > 0:
+
+            kl = keys if i % 3 == 0 else reversed(keys)
+            i += 1
+
+            for key in kl:
+
+                if  key in nonUniqueList and nonUniqueList[key] > 0:
+                    A_sort.append(key)
+                    nonUniqueList[key] -= 1
+                    
+                    if  nonUniqueList[key] <= 0:
+                        del nonUniqueList[key]
+                        removeKeys.append(key)
+            
+            if len(removeKeys) > 0:
+                for k in removeKeys:
+                    keys.remove(k) 
+                removeKeys.clear()
+                
+        O[0] += count
+
+        return A_sort
+
+    def partitionOverSameCountDuplicates(nonUniqueList, n, maxElement, size, groupSize, O):
+
+        sameCount = True
+
+        cnt = nonUniqueList[maxElement]
+
+        for k in nonUniqueList.keys():
+            if nonUniqueList[k] != cnt:
+                sameCount = False
+                O[0] += 1
+                break
+
+        if sameCount:
+
+            nonUKeys = list(nonUniqueList.keys())
+            newLen = len(nonUKeys)
+            O[0] += newLen
+
+            nonUKeys.sort(reverse=True)
+            O[0] += newLen * math.log2(newLen)
+
+            newN = n // cnt
+
+            size = sum(nonUKeys) // newN
+            O[0] += newLen
+            
+            quotient, remainder = divideByPartitions(nonUKeys, newN, size, groupSize, True, O)
+
+            quotientResult, remainderResult  = [], []
+
+            for i in range(cnt):
+                for item in quotient:
+                    quotientResult.append(item)
+                for rem in remainder:
+                    remainderResult.append(rem)
+
+            return quotientResult, remainderResult
+
+        return None
+
+    def divideByPartitions(items, partitions, size, groupSize, descOrder, O):    
+
+        quotient = []
+
+        for n in range(partitions, 0, -1):
+
+            if groupSize > 0:
+
+                dimensions, constrains  = [(item, 1) for item in items], (size, groupSize)
+
+                opt, optDims, optValues = knapsackNd(constrains, dimensions, items, O)
+
+                if  opt[0] == size and opt[1] == groupSize: 
+
+                    quotient.append(optValues)
+
+                    for toRemove in optValues:
+                        items.remove(toRemove)
+
+                    O[0] += len(optValues)
+
+                    if n == 2:
+
+                        O[0] += len(items)
+
+                        if sum(items) == size and len(items) == groupSize:
+                            quotient.append(list(items)) 
+                            items.clear()
+                            break
+                else:
+                    break
+            else:
+
+                optimal, optimalList = knapsack1d(size, items,  O, descOrder)
+
+                if  optimal == size:          
+
+                    quotient.append(optimalList)
+
+                    for toRemove in optimalList:
+                        items.remove(toRemove)  
+
+                    O[0] += len(optimalList)
+
+                    if n == 2:
+
+                        O[0] += len(items)
+
+                        if sum(items) == size:
+                            quotient.append(list(items)) 
+                            items.clear()
+                            break
+                else:
+                    break
+
+        return quotient, items
+
+    count = len(items)
+
+    if  count < partitions:
+        return [], []
     
-    group, maxElement, sumOfItems = prepareGrouping(A, count, O)
-
-    borderCaseCheck = checkBorderCases(A, n, count, maxElement, O)
+    group, maxElement, sumOfItems, size = prepareGrouping(items, count, partitions, O)
+    
+    borderCaseCheck = checkBorderCases(items, partitions, count, maxElement, O)
 
     if borderCaseCheck is not None:
         return borderCaseCheck
 
-    size = sumOfItems // n
-
     allUnique, nonUniqueList = groupItems(group, O)
-
-    A0 = []
 
     if  allUnique:
 
-        A.sort(reverse=True)
+        items.sort(reverse=True)
         O[0] += count * math.log2(count)
+        return divideByPartitions(items, partitions, size, groupSize, True, O)
 
-        if groupSize > 0:
-            A0 = [1] * count
-
-        return partitionRecursive(A, n, count, maxElement, size, A0, groupSize, O)
-    
     elif len(nonUniqueList) == 1:
 
-        if groupSize == 0:
-            return 1 if count % n == 0 else 0 
-        else:
-            return 1 if count % n == 0 and count % groupSize == 0 else 0   
+        return getSingleDuplicatePartitions(nonUniqueList, count, partitions, groupSize, O)
+
     else:
-
-        if len(nonUniqueList) > n:
-            partResult = partitionOverSameCountDuplicates(nonUniqueList, n, maxElement, size, groupSize, O)
-
+        if  len(nonUniqueList) > partitions and groupSize == 0:
+            partResult = partitionOverSameCountDuplicates(nonUniqueList, partitions, maxElement, size, groupSize, O)
             if partResult:
                 return partResult
 
-        sortedDuplicates = sortDuplicatesForPartitioning(group, count, nonUniqueList, O)
-
-        if groupSize > 0:
-            A0 = [1] * count
-
-        return partitionRecursive(sortedDuplicates, n, count, maxElement, size, A0, groupSize, O)
-   
-    return 0  
-
-def sortDuplicatesForPartitioning(group, count, nonUniqueList, O):
-    A_sort = []
-
-    keys = list(group.keys())
-    keysCount = len(keys)
-    O[0] += keysCount
-
-    keys.sort(reverse=True)
-    O[0] += keysCount * math.log2(keysCount)
-
-    i = 0
-    removeKeys = []
-    while len(nonUniqueList) > 0:
-
-        kl = keys if i % 3 == 0 else reversed(keys)
-        i += 1
-
-        for key in kl:
-
-            if  key in nonUniqueList and nonUniqueList[key] > 0:
-                A_sort.append(key)
-                nonUniqueList[key] -= 1
-                
-                if  nonUniqueList[key] <= 0:
-                    del nonUniqueList[key]
-                    removeKeys.append(key)
+        sortedDuplicates    = sortDuplicatesForPartitioning(group, count, nonUniqueList, O)
+        quotient, remainder = divideByPartitions(sortedDuplicates, partitions, size, groupSize, False, O)
         
-        if len(removeKeys) > 0:
-            for k in removeKeys:
-                keys.remove(k) 
-            removeKeys.clear()
-            
-    O[0] += count
+        if  len(remainder) == 0:
+            return quotient, remainder
 
-    return A_sort
+        return optimizePartitions(quotient, remainder, size, groupSize, partitions)
+   
+    return [],[]
 
-def partitionOverSameCountDuplicates(nonUniqueList, n, maxElement, size, groupSize, O):
-    sameCount = True
+def knapsack1d(size, items, O, desc = True):
 
-    cnt = nonUniqueList[maxElement]
-
-    for k in nonUniqueList.keys():
-        if nonUniqueList[k] != cnt:
-            sameCount = False
-            O[0] += 1
-            break
-
-    if sameCount:
-
-        nonUKeys = list(nonUniqueList.keys())
-        newLen = len(nonUKeys)
-        O[0] += newLen
-
-        nonUKeys.sort(reverse=True)
-        O[0] += newLen * math.log2(newLen)
-
-        size = sum(nonUKeys) // n
-        O[0] += newLen
-
-        A0 = [1] * newLen
-
-        return partitionRecursive(nonUKeys, n, newLen, maxElement, size, A0, groupSize, O)
-    
-    return None
-
-def partitionRecursive(A, n, count, maxEl, size, A0, groupSize, O):    
-
-    if  count < n:
-        return 0
-    
-    result = 0
-
-    if groupSize > 0:
-
-        optW, optV, optWeights, optVolumes, optValues = knapsack3d(size, groupSize, A, A0, A, O)
-
-        removedCount = len(optWeights)
-
-        if  optW == size and optV == groupSize:            
-
-            for toRemove in optWeights:
-                A.remove(toRemove)
-                A0.pop() 
-
-            O[0] += removedCount
-
-            newLen = count - removedCount
-
-            if n == 2:
-                O[0] += newLen
-                return 1 if sum(A) == size and len(A) == groupSize else 0
-
-            result = partitionRecursive(A, n - 1, newLen, maxEl, size, A0, groupSize, O)    
-    else:
-
-        optimal, optimalList = knapsack1d(size, A, O)
-
-        if  optimal == size:            
-            removedCount = len(optimalList)
-
-            for toRemove in optimalList:
-                A.remove(toRemove)  
-            O[0] += removedCount
-
-            newLen = count - removedCount
-
-            if n == 2:
-                O[0] += newLen
-
-                n2Sum = sum(A)
-                result = 1 if n2Sum == size else 0
-
-                return result
-
-            result = partitionRecursive(A, n - 1, newLen, maxEl, size, A0, groupSize, O)    
-    return result
-
-def canPartitionTwoFastFalsePositive(A, n, sum, O):
-    
-    if sum % 2 != 0 or n < 2:
-        return False
-
-    half = sum // 2
-    highSum = A[0]
-    
-    if highSum == half:
-        return True
-    
-    for i in range(1, n):
-        presum = highSum
-        for j in range(i, n):
-            O[0] += 1
-            presum = A[j] + presum
-            if presum > half:
-                presum -= A[j]
-            elif presum == half:
-                return True
-    return False
-
-def knapsack1d(size, items, O):
-
-    def prepare(size, items, O):
+    def prepare(size, items, desc, O):
         
         count = len(items)
         sum = 0
         lessCountSum = 0    
-        minItem = size
         partialSum09 = [0] * count
         starting = 1
         i = 0
@@ -272,20 +438,20 @@ def knapsack1d(size, items, O):
             itemWeight = item
             sum += itemWeight
 
-            partialSum09[count - i - 1] = sum
+            if desc:
+                partialSum09[count - i - 1] = sum
+            else:
+                partialSum09[count - i - 1] = sys.maxsize
 
             if itemWeight <= size:
                 lessCountSum += itemWeight  
             else:
                 starting += 1
-
-            if minItem > itemWeight:
-                minItem = itemWeight
             
             i += 1
 
         O[0] += count
-        return count, sum, lessCountSum, minItem, partialSum09, starting
+        return count, sum, lessCountSum, partialSum09, starting
 
     def checkCornerCases(size, items, count, sum, lessCountSum, O):        
 
@@ -311,7 +477,7 @@ def knapsack1d(size, items, O):
 
         return None      
   
-    def getPoints(itemWeight, size, circularPointQuene,  minItem, partSumForItem09, prevCyclePointCount, uniquePointSet):
+    def getPoints(itemWeight, size, circularPointQuene, partSumForItem09, prevCyclePointCount, uniquePointSet):
        
         # merges ordered visited points with new points with keeping order in O(N) using single circular queue. 
         # each getPoints method call starts fetching visited points from qu start, pops visited point and pushes new point and visited to the end of qu in ASC order.
@@ -324,7 +490,7 @@ def knapsack1d(size, items, O):
 
         limit = size - partSumForItem09
 
-        if useItemItself and (itemWeight + minItem <= size or itemWeight == size) and not itemWeight in uniquePointSet:
+        if useItemItself and not itemWeight in uniquePointSet:
             yield itemWeight
             circularPointQuene.append(itemWeight)
 
@@ -410,10 +576,10 @@ def knapsack1d(size, items, O):
     def createDP(count, starting):
         DP    = [None] * (count + 1)
         for i in range(starting):
-            DP[i] = defaultdict()
+            DP[i] = defaultdict(int)
         return DP
 
-    count, sum, lessCountSum, minItem, partialSum09, starting  = prepare(size, items, O)
+    count, sum, lessCountSum, partialSum09, starting  = prepare(size, items, desc, O)
 
     cornerCasesCheck = checkCornerCases(size, items, count, sum, lessCountSum, O)
 
@@ -439,7 +605,7 @@ def knapsack1d(size, items, O):
         partSumForItem09      = partialSum09[i - 1]
         prevDP,    curDP      = DP          [i - 1],    DP[i]
 
-        for p in getPoints(itemWeight, size, circularPointQuene, minItem, partSumForItem09, prevPointCount, prevDP):          
+        for p in getPoints(itemWeight, size, circularPointQuene, partSumForItem09, prevPointCount, prevDP):          
 
             curValue    =  getValue(p,              prevDP)  
             posblValue  =  getValue(p - itemWeight, prevDP) 
@@ -654,61 +820,141 @@ def knapsack2d(size, weights, values, O):
 
     return backTraceItems(DP, resultI, resultP, weights, values, O) 
 
-def knapsack3d(weightSize, volumeSize, weights, volumes, values, O):
+def knapsackNd(inputConstrains, inputItems, values, O):
 
-    def prepare(weightSize, volumeSize, weights, volumes, values, O):
-        count = len(weights)
-        lessCountSumWeight = 0    
-        lessCountSumVolume = 0   
+    class wPoint:
+        def __init__(self, dimensions):
+            self.dimensions = tuple(dimensions)
 
-        lessSizeWeights = []
-        lessSizeVolumes = []
+        def __str__(self):
+            return str(self.dimensions)
+        
+        def __repr__(self):
+            return str(self.dimensions)
+        
+        def __add__(self, item): 
+
+            l = len(self.dimensions)
+
+            newDim = [0] * l
+
+            for i in range(l):
+                newDim[i] = self.dimensions[i] + item.dimensions[i]
+
+            return wPoint(newDim) 
+        
+        def __sub__(self, item): 
+
+            l = len(self.dimensions)
+            newDim = [0] * l
+
+            for i in range(l):
+                newDim[i] = self.dimensions[i] - item.dimensions[i]
+
+            return wPoint(newDim)  
+            
+        # <
+        def __lt__(self, other):
+            l = len(self.dimensions)
+
+            anyLess = False
+            for i in range(l):
+
+                if self.dimensions[i] == other.dimensions[i]:
+                    continue
+
+                if self.dimensions[i] < other.dimensions[i]:                 
+                    anyLess = True
+                else:
+                    break
+
+            return anyLess  
+        # <=
+        def __le__(self, other):
+            l = len(self.dimensions)
+            for i in range(l):
+                
+                if self.dimensions[i] > other.dimensions[i]: 
+                    return False
+
+            return True  
+        # >
+        def __gt__(self, other):
+            l = len(self.dimensions)
+
+            anyLess = False
+            for i in range(l):
+
+                if self.dimensions[i] == other.dimensions[i]:
+                    continue
+
+                if other.dimensions[i] < self.dimensions[i]:                 
+                    anyLess = True
+                else:
+                    break
+
+            return anyLess  
+        # >=
+        def __ge__(self, other):
+            l = len(self.dimensions)
+            for i in range(l):
+                
+                if other.dimensions[i] > self.dimensions[i]: 
+                    return False
+
+            return True   
+        
+        def __eq__(self, other):
+            return self.dimensions == other.dimensions
+
+        def __hash__(self):
+            return hash(self.dimensions)
+
+    emptyPoint = wPoint([0] * len(inputConstrains))
+
+    def prepare(constrains, items, values, O):
+        count = len(items)
+
+        lessSizeItems = []
+
         lessSizeValues = []
         lessCount = 0
 
-        for i in range(0, len(weights)):
+        for i in range(0, count):
 
-            itemWeight = weights[i]
-            itemVolume = volumes[i]
+            item = wPoint(items[i])
             itemValue = values[i]
            
-            if itemWeight <= weightSize and itemVolume <= volumeSize:
-                lessCountSumWeight += itemWeight
-                lessCountSumVolume += itemVolume
+            if item <= constrains:
 
-                lessSizeWeights.append(itemWeight)                
-                lessSizeVolumes.append(itemVolume)                
+                lessSizeItems.append(item)                
                 lessSizeValues.append(itemValue)   
 
                 lessCount += 1  
             
         O[0] += count
 
-        return lessCount, lessCountSumWeight, lessCountSumVolume, lessSizeWeights, lessSizeVolumes, lessSizeValues
+        return lessCount, lessSizeItems, lessSizeValues
 
-    def checkCornerCases(weightSize, volumeSize, lessSizeWeights, lessSizeVolumes, lesSizeValues, lessSizeSumWeight, lessSizeSumVolume):        
+    def checkCornerCases(constrains, lessSizeItems, lessSizeValues):        
 
-        if  lessSizeSumWeight == 0 or lessSizeSumVolume == 0:
-            return 0, 0,[],[],[]
+        if  len(lessSizeItems) == 0:
+
+            return emptyPoint.dimensions, [],[]
         
-        if  lessSizeSumWeight < weightSize and lessSizeSumVolume < volumeSize:
-            return lessSizeSumWeight, lessSizeSumVolume, lessSizeWeights, lessSizeVolumes, lesSizeValues
-
         return None      
   
-    def getPoints(itemWeight, itemVolume, weightSize, volumeSize, circularPointQuene, prevCyclePointCount, uniquePointSet):
+    def getPoints(itemDimensions, constrainPoint, circularPointQuene, prevCyclePointCount, uniquePointSet):
         
         # merges ordered visited points with new points with keeping order in O(N) using single circular queue. 
         # each getPoints method call starts fetching visited points from qu start, pops visited point and pushes new point and visited to the end of qu in ASC order.
         # we skip new point if it in list already
 
         greaterQu = deque()
-
-        newPoint = (itemWeight, itemVolume)
         
-        if not newPoint in uniquePointSet:
-            yield newPoint
-            circularPointQuene.append(newPoint)
+        if not itemDimensions in uniquePointSet:
+            yield itemDimensions
+            circularPointQuene.append(itemDimensions)
 
         for i in range(prevCyclePointCount):
 
@@ -724,12 +970,9 @@ def knapsack3d(weightSize, volumeSize, weights, volumes, values, O):
             yield oldPoint
             circularPointQuene.append(oldPoint)
 
-            newPointW = oldPoint[0] + itemWeight
-            newPointV = oldPoint[1] + itemVolume
+            newPoint = oldPoint + itemDimensions
 
-            if newPointW <= weightSize and newPointV <= volumeSize: 
-
-                newPoint = (newPointW, newPointV) 
+            if newPoint <= constrainPoint: 
 
                 if not newPoint in uniquePointSet:   
 
@@ -753,20 +996,19 @@ def knapsack3d(weightSize, volumeSize, weights, volumes, values, O):
 
         if p in prevDP:
             cur = prevDP[p]
-            return cur[0], cur[1], cur[2]
+            return cur[0], cur[1]
 
-        return  0, 0, 0
+        return  0, emptyPoint
 
-    def setValue(curDP, p, curVal, curW, curV, O):
-        curDP[p] = (curVal, curW, curV)               
+    def setValue(curDP, p, curVal, curDimensions, O):
+        curDP[p] = (curVal, curDimensions)               
         O[0] += 1
 
-    def backTraceItems(DP, resultI, resultP, weights, values, volumes, O):
-        optW = 0
-        optV = 0
+    def backTraceItems(DP, resultI, resultP, items, values, O):
         res = DP[resultI][resultP][0]
-        optWeights, optValues, optVolumes = [], [], []
+        optItems, optValues = [], []
         point = resultP
+        opt = emptyPoint
 
         for i in range(resultI, 0, -1): 
            
@@ -783,36 +1025,34 @@ def knapsack3d(weightSize, volumeSize, weights, volumes, values, O):
                 skip = res == dpw[point][0]
 
             if not skip:       
-                itemWeight, itemValue, itemVolume = weights[i - 1], values[i - 1], volumes[i - 1]    
+                item, itemValue = items[i - 1], values[i - 1]    
 
-                optWeights.append(itemWeight)
+                optItems.append(item.dimensions)
                 optValues.append(itemValue)
-                optVolumes.append(itemVolume)
 
                 res   -= itemValue
+                point -= item
+                opt   += item
 
-                point = (point[0] - itemWeight, point[1] - itemVolume)
-
-                optW += itemWeight
-                optV += itemVolume
-
-        return optW, optV, optWeights, optVolumes, optValues
+        return opt.dimensions, optItems, optValues
 
     def createDP(count):
         DP    = [None] * (count + 1)
         DP[0] = defaultdict()
         return DP
 
-    count, lessSizeSumWeight, lessSizeSumVolume, lessSizeWeights, lessSizeVolumes, lessSizeValues = prepare(weightSize, volumeSize, weights, volumes, values, O)
+    constrains = wPoint(inputConstrains)
 
-    cornerCasesCheck = checkCornerCases(weightSize, volumeSize, lessSizeWeights, lessSizeVolumes, lessSizeValues, lessSizeSumWeight, lessSizeSumVolume)
+    count, lessSizeItems, lessSizeValues = prepare(constrains, inputItems, values, O)
+
+    cornerCasesCheck = checkCornerCases(constrains, lessSizeItems, lessSizeValues)
 
     if  cornerCasesCheck:
         return cornerCasesCheck
 
     DP = createDP(count)
 
-    resultI, resultP = 1, (0, 0)
+    resultI, resultP = 1, emptyPoint
 
     circularPointQuene = deque()
 
@@ -822,27 +1062,25 @@ def knapsack3d(weightSize, volumeSize, weights, volumes, values, O):
 
         DP[i] = defaultdict()
 
-        itemValue, itemWeight, itemVolume   = lessSizeValues[i - 1], lessSizeWeights[i - 1], lessSizeVolumes[i - 1]
-        prevDP,    curDP                    = DP    [i - 1],      DP[i]
+        itemValue, item   = lessSizeValues[i - 1], lessSizeItems[i - 1]
+        prevDP,    curDP  = DP[i - 1], DP[i]
 
         prevPointCount, newPointCount = newPointCount, prevPointCount
         newPointCount = 0
 
-        for p in getPoints(itemWeight, itemVolume, weightSize, volumeSize, circularPointQuene, prevPointCount, prevDP):          
+        for p in getPoints(item, constrains, circularPointQuene, prevPointCount, prevDP):          
 
-            curValue,    curWeight,   curVolume   =  getValue( p,                                     prevDP) 
-            posblValue,  posblWeight, posblVolume =  getValue((p[0] - itemWeight, p[1] - itemVolume), prevDP) 
+            curValue,    curDim   =  getValue(p,        prevDP) 
+            posblValue,  posblDim =  getValue(p - item, prevDP) 
 
             posblValue  += itemValue
-            posblWeight += itemWeight  
-            posblVolume += itemVolume  
+            posblDim    += item  
 
-            if  curValue < posblValue and posblWeight <= weightSize and posblVolume <= volumeSize:
+            if  curValue <= posblValue and posblDim <= constrains:
                 curValue = posblValue
-                curWeight = posblWeight
-                curVolume = posblVolume
+                curDim   = posblDim
                
-            setValue(curDP, p, curValue, curWeight, curVolume, O)
+            setValue(curDP, p, curValue, curDim, O)
 
             if  maxValue <= curValue:
                 resultP = p
@@ -851,7 +1089,7 @@ def knapsack3d(weightSize, volumeSize, weights, volumes, values, O):
             
             newPointCount += 1
 
-    return backTraceItems(DP, resultI, resultP, lessSizeWeights, lessSizeValues, lessSizeVolumes, O) 
+    return backTraceItems(DP, resultI, resultP, lessSizeItems, lessSizeValues, O) 
 
 def sortRevereseBoth(w, v):
     zipped_lists = zip(w, v)
@@ -871,41 +1109,6 @@ def sortReverese3Both(w, v, x):
 
     return w1, v1, x1
 
-def knapsack3d_dp(weightSize, volumeSize, weights, volumes, values):
-   
-    table = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
-
-    for i in range(len(weights)): 
-
-        thingValue = values[i]
-        thingConstraint1 = weights[i]
-        thingConstraint2 = volumes[i]
-
-        #rewriting the values from the previous line
-        for j in range(weightSize + 1):
-            for c in range(volumeSize + 1):
-                table[i + 1][j][c] = table[i][j][c]
-            
-
-        for j in range(thingConstraint1, weightSize + 1):
-            for k in range(thingConstraint2, volumeSize + 1):
-                table[i + 1][j][k] = max(thingValue + table[i][j - thingConstraint1][k - thingConstraint2], table[i][j][k])
-
-    w1 = table[len(weights)]
-    v1 = w1[weightSize]
-    vv1 = v1[volumeSize]
-
-    return vv1
-
-def DecimalData(data):
-
-        return Decimal(Decimal(data) / 100000)
-
-def DecimalArray(data):
-
-    for i in range(len(data)):
-        data[i] = DecimalData(data[i])
-
 verbose = True
 
 if True:
@@ -921,14 +1124,41 @@ if True:
 
     expectedValue = Decimal("10.20000109")
 
-    opt, optV, optWeights, optVolumes, optValues = knapsack3d(s, s, A, A, A, O)
-    assert expectedValue == sum(optValues)
-    opt, optWeights, optValues = knapsack2d(s, A, A, O)
-    assert expectedValue == sum(optValues)
-    opt, optValues = knapsack1d(s, A, O)   
-    assert expectedValue == sum(optValues)
+    opt, optItems, optValues3 = knapsackNd((s, s), [(a, a) for a in A], A, O)
+    assert expectedValue == sum(optValues3)
+    opt, optWeights, optValues2 = knapsack2d(s, A, A, O)
+    assert expectedValue == sum(optValues2)
+    opt, optValues1 = knapsack1d(s, A, O)   
+    assert expectedValue == sum(optValues1)
 
 if True:
+
+    def knapsack3d_dp(weightSize, volumeSize, weights, volumes, values):
+   
+        table = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
+
+        for i in range(len(weights)): 
+
+            thingValue = values[i]
+            thingConstraint1 = weights[i]
+            thingConstraint2 = volumes[i]
+
+            #rewriting the values from the previous line
+            for j in range(weightSize + 1):
+                for c in range(volumeSize + 1):
+                    table[i + 1][j][c] = table[i][j][c]
+                
+
+            for j in range(thingConstraint1, weightSize + 1):
+                for k in range(thingConstraint2, volumeSize + 1):
+                    table[i + 1][j][k] = max(thingValue + table[i][j - thingConstraint1][k - thingConstraint2], table[i][j][k])
+
+        w1 = table[len(weights)]
+        v1 = w1[weightSize]
+        vv1 = v1[volumeSize]
+
+        return vv1
+
     if verbose:
         print("3D knapsack matching with classic DP solution results.")
 
@@ -947,17 +1177,22 @@ if True:
 
                 dpRes = knapsack3d_dp(testKnapsackWeight, testKnapsackVolume, testCaseW, testCaseV, testCaseVal)
 
-                opt, optV, optWeights, optVolumes, optValues = knapsack3d(testKnapsackWeight, testKnapsackVolume, s_weights, s_volumes, s_values, O)
+                dims = [None] * len(s_weights)
+
+                for i in range(len(s_weights)):
+                    dims[i] = (s_weights[i], s_volumes[i])
+
+                opt, optItems, optValues = knapsackNd((testKnapsackWeight, testKnapsackVolume), dims, s_values, O)
 
                 resVal = sum(optValues)
 
-                resVol = sum(optVolumes)
-                resW = sum(optWeights)
+                resW = opt[0]
+                resVol = opt[1]
 
                 if resVal != dpRes or resW > testKnapsackWeight or resVol > testKnapsackVolume:
                     if verbose:
                         print("W: " +str(testKnapsackWeight) +  " V: " + str(testKnapsackVolume))
-                        print(" k sum val : " + str(sum(optValues)) +" dp: " + str(dpRes) + "k sum vol : " + str(sum(optVolumes)) + "k sum w : " + str(sum(optWeights)) + " all sum val: " + str(sum(s_values)) + " all sum vol: " + str(sum(s_volumes)) + " all sum w: " + str(sum(s_weights)))
+                        print(" k sum val : " + str(sum(optValues)) +" dp: " + str(dpRes) + " k sum vol : " + str(resVol) + " k sum w : " + str(resW) + " all sum val: " + str(sum(s_values)) + " all sum vol: " + str(sum(s_volumes)) + " all sum w: " + str(sum(s_weights)))
                     assert False
 
 if True:
@@ -980,7 +1215,7 @@ if True:
     tests.append((A, NU))
     A, NU =  [20, 23, 25, 49, 45, 27, 40, 22, 19], 3
     tests.append((A, NU))
-    A, NU = [20, 23, 25, 49, 45, 27, 40, 22, 19, 20, 23, 25, 49, 45, 27, 40, 22, 19], 3
+    A, NU = [20, 23, 25, 49, 45, 27, 40, 22, 19, 20, 23, 25, 49, 45, 27, 40, 22, 19], 6
     tests.append((A, NU))
     A, NU =  [27, 9, 9, 9, 9, 9, 3, 3, 3], 3
     tests.append((A, NU))
@@ -1014,11 +1249,18 @@ if True:
 
         O[0] = 0
 
-        if partitionN(A, NU, 0, O) != 1:
+        if verbose:        
+            print("case " + str(case))
+
+        partResult, reminder = partitionN(A, NU, 0, O)
+
+        if len(reminder) != 0 or len(partResult) != NU:
 
             if verbose:        
                 print("case " + str(case))
                 print("A " + str(A))
+                print("part result " + str(partResult))
+                print("part reminder  " + str(reminder))
                 print("len " + str(len(A)))
                 print("sum " + str(sum(A)))
                 print("sum // NU" + str(sum(A) // NU))
@@ -1028,6 +1270,15 @@ if True:
 
 if True:
 
+    def unionTuples(tuples):
+        rez = []
+        for t in tuples:
+            for tn in t:
+                rez.append(tn)
+        rez.sort()
+        return rez
+
+
     if verbose:
         print("3 partition tests.")
 
@@ -1035,28 +1286,43 @@ if True:
 
     tests = []
     # https://en.wikipedia.org/wiki/3-partition_problem
-    A, NU =  [20, 23, 25, 49, 45, 27, 40, 22, 19], 3
-    tests.append((A, NU))   
-    A, NU = [1, 2, 5, 6, 7, 9],2   
-    tests.append((A, NU))  
+    AT, NU =  [(20, 25, 45), (23, 27, 40), (49, 22, 19), (30, 30, 30)], 4
+    tests.append((unionTuples(AT), NU))   
+    AT, NU = [(1, 5, 9), (2, 6, 7)], 2   
+    tests.append((unionTuples(AT), NU))  
     # http://www.columbia.edu/~cs2035/courses/ieor4405.S17/npc-sched.pdf
     A, NU = [26, 26, 27, 28, 29, 29, 31, 33, 39, 40, 45, 47], 4 
     tests.append((A, NU))   
-    A, NU = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], 3
-    tests.append((A, NU))   
-    case = 0
+    AT, NU = [(1, 1, 1), (1, 1, 1), (1, 1, 1), (1, 1, 1), (1, 1, 1)], 5
+    tests.append((unionTuples(AT), NU))   
 
+    # the worst 3 partition test cases ever
+    AT, NU = [(3, 3, 6), (3, 4, 5), (1, 5, 6), (1, 3, 8), (1, 4, 7), (4, 4, 4), (2, 5, 5), (1, 2, 9), (2, 3, 7), (2, 4, 6), (1, 1, 10), (2, 2, 8)], 12
+    tests.append((unionTuples(AT), NU))  
+    AT, NU = [(1, 2, 15), (2, 3, 13), (6, 6, 6), (4, 7, 7), (3, 3, 12), (1, 6, 11), (2, 7, 9), (3, 6, 9), (1, 1, 16), (2, 2, 14), (2, 5, 11), (5, 6, 7), (3, 5, 10), (4, 6, 8), (1, 8, 9), (1, 3, 14), (2, 4, 12), (4, 4, 10), (3, 7, 8), (1, 5, 12), (2, 6, 10), (3, 4, 11), (1, 7, 10), (1, 4, 13), (4, 5, 9), (2, 8, 8), (5, 5, 8)], 27
+    tests.append((unionTuples(AT), NU))  
+    AT, NU = [(2, 7, 15), (1, 3, 20), (4, 4, 16), (1, 1, 22), (6, 7, 11), (3, 5, 16), (4, 10, 10), (6, 6, 12), (4, 7, 13), (3, 4, 17), (2, 5, 17), (1, 8, 15), (1, 6, 17), (3, 10, 11), (2, 6, 16), (2, 4, 18), (2, 11, 11), (1, 7, 16), (4, 8, 12), (3, 9, 12), (5, 7, 12), (6, 8, 10), (3, 3, 18), (5, 6, 13), (2, 9, 13), (1, 5, 18), (5, 8, 11), (8, 8, 8), (2, 3, 19), (2, 10, 12), (1, 4, 19), (4, 5, 15), (1, 11, 12), (3, 8, 13), (4, 9, 11), (2, 2, 20), (7, 8, 9), (1, 10, 13), (4, 6, 14), (6, 9, 9), (3, 7, 14), (2, 8, 14), (1, 2, 21), (7, 7, 10), (1, 9, 14), (3, 6, 15), (5, 5, 14), (5, 9, 10)], 48
+    tests.append((unionTuples(AT), NU))  
+
+    case = 0
     for A, NU in tests:
 
         case += 1
 
         O[0] = 0
 
-        if partitionN(A, NU, 3, O) != 1:
+        if verbose:        
+            print("case " + str(case))
+
+        partResult, reminder = partitionN(A, NU, 3, O)
+
+        if len(reminder) != 0 or len(partResult) != NU:
 
             if verbose:        
                 print("case " + str(case))
                 print("A " + str(A))
+                print("part result " + str(partResult))
+                print("part reminder  " + str(reminder))
                 print("len " + str(len(A)))
                 print("sum " + str(sum(A)))
                 print("sum // NU" + str(sum(A) // NU))
@@ -1209,8 +1475,18 @@ if True:
             assert allGood
 
 if True:
+
+    def DecimalData(data):
+
+        return Decimal(Decimal(data) / 100000)
+
+    def DecimalArray(data):
+
+        for i in range(len(data)):
+            data[i] = DecimalData(data[i])
+
     if verbose:
-        print("Run 2d knapsack for hardinstances_pisinger test dataset in case of integer and rational numbers..")
+        print("Run 2d knapsack for hardinstances_pisinger test dataset in case of integer and rational numbers.")
 
     script_dir = os.path.dirname(__file__) #<-- absolute dir the script is in
 
@@ -1328,7 +1604,6 @@ if True:
                         if row[3] == "1":
                             testExpected.append(int(row[1]))
 
-
 if False:
     # iteration investigation test generator
     a = [3, 7, 13, 31, 37, 43, 67, 73, 79, 127, 151, 163, 193, 211, 223, 241, 283, 307, 331, 349, 367, 409, 421, 433, 463, 487, 541, 577, 601, 613, 619, 631, 643, 673, 727, 739, 769, 787, 823, 883, 937, 991, 997]
@@ -1367,4 +1642,111 @@ if False:
                 writer.writerow({'size': str(s), 'iter':  str(round(O[0])), 'delta': str(round(O[0] - prevO))})
 
                 prevO = O[0]
-                
+
+if True:
+
+    def generate_partition(number, limitCount):
+        answer = set()
+        answer.add((number, ))
+        for x in range(number - 1, 0, -1):
+            for y in generate_partition(number - x, limitCount):
+                answer.add(tuple(sorted((x, ) + y)))
+                if len(answer) >= limitCount:
+                    return answer
+        return answer
+
+    if verbose:
+        print("Run N way partition using integer partiton generator.")
+
+    script_dir = os.path.dirname(__file__) #<-- absolute dir the script is in
+
+    with open(script_dir + '\\partition.perf.over.intpart.csv', 'w', newline='') as csvfile:
+        
+        fieldnames = ['item', 'case', 'limit', 'partition', 'N', 'sum', 'iter', 'max iter', 'good']
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+
+        writer.writeheader()
+
+        itemList = [1, 2, 3, 5, 7, 8, 10, 11]
+        maxIntPart = [20, 50, 100, 200, 300, 500, 1000, 2000]
+    
+        caseId = 0
+
+        allGood = True
+
+        badItems = []
+
+        for item in itemList:
+
+            for partLimit in maxIntPart:
+
+                for i in range(30, 55):
+
+                    if i % item != 0:
+                        continue
+
+                    if caseId != 0 and caseId != i:
+                        continue
+
+                    O = [0]
+
+                    subSet = []
+
+                    partition = 0
+
+                    goodSet = True
+
+                    goodSubSet = []
+
+                    for part in generate_partition(i, partLimit):
+
+                        if sum(part) == i:
+                            for p in part:
+                                subSet.append(p)
+
+                            goodSubSet.append(part)
+                            partition += 1
+                        else:
+                            goodSet = False
+
+                    if goodSet:
+
+                        expectedSum = sum(subSet)
+
+                        partResult, resultReminder = partitionN(subSet, partition, 0, O)
+
+                        if verbose:
+                            print("item = " + str(item) + ", case i " + str(i) + " , case part limit " + str(partLimit) + " , n = " + str(len(subSet))  + " , partition " + str(partition) + " , iter " + str(round(O[0])))
+
+                        resultPart = len(partResult)
+
+                        rezSum = 0
+                        for sub in partResult:
+                            rezSum += sum(sub)
+
+                        good = True
+                    
+                        if resultPart < partition or rezSum != expectedSum:
+
+                            allGood = False
+
+                            good = False
+
+                            badItems.append((item, i, ))
+
+                            sumRem = sum(resultReminder)
+
+                            print("BAD: item = " + str(item) +  ", case i " + str(i) + " , case part limit " + str(partLimit) + " , n = " + str(len(subSet))  +  " , rezult partition " + str(resultPart) + " , expected partition " + str(partition) + " , rez sum " + str(rezSum) + " , total sum " + str(rezSum + sumRem) + " , expected sum " + str(expectedSum) + " , iter " + str(round(O[0])))
+
+                        writer.writerow({'item': str(item), 'case': str(i), 'limit': str(partLimit), 'partition':  str(partition), 'N': str(len(subSet)), 'sum': str(rezSum), 'iter': str(round(O[0])), 'max iter': str((len(subSet)) * (partition ** 3)), 'good': str(good)})
+
+                        if not allGood:
+                            break
+                    
+
+
+        if len(badItems) > 0:
+            print(badItems)
+
+        assert allGood
+                       
