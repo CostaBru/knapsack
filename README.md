@@ -186,7 +186,7 @@ We can use the same approach to solve the strict 3 partition problem as well. Th
 
 N dimension knapsack was tested along with classic 2 dimensional DP solver on integer values. It also was tested using rational numbers on one dimension dataset. It is also seeming to work well.
 
-N way sum partition algorithm was tested by Leetcode test dataset https://leetcode.com/problems/partition-to-k-equal-sum-subsets/, and by testcases created by integer partition generator up to 14 000 items in the set and up to 2000 partitions. First time heuristics made works fine in 99% percent cases; for worst case where a lot of duplicates are present in given set the algorithm needs 1 optimization in avarage and up to 4 optimization iterations for some cases.
+N way sum partition algorithm was tested by Leetcode test dataset https://leetcode.com/problems/partition-to-k-equal-sum-subsets/, and by testcases created by integer partition generator up to 14 000 items in the set and up to 2000 partitions. First time heuristics made works fine in 99% percent cases; for worst case where a lot of duplicates are present in given set the algorithm needs 1 optimization in average and up to 4 optimization iterations for some cases.
 
 # Conclusion
 
