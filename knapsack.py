@@ -198,7 +198,7 @@ def partitionN(items, partitions, groupSize ,O):
 
         for limit in range(startLayer, endLayer):
 
-            print(limit)
+            #print("layer " + str(limit))
 
             optimizedIndexes,  uniqueSet = set(), set()
             optimizationsMade, newPoints = [], []
