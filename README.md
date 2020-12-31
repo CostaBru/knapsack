@@ -2,8 +2,6 @@
 
 Polynomial time algorithms for unbounded 1-0 knapsack problems up to 2 dimensions, algorithms for N way sum partition and strict N partition problems.
 
-
-
 # Abstract
 
 The knapsack problem is well known and described in many articles and books. The goal of this work is not to repeat it so the intro is going to be a very briefly.
@@ -40,39 +38,47 @@ Let's call the sum of weight visited with current weight a point. We are going t
 
 That growing collection gives as next recurrent expression for inner loop for Nth iteration [ Wi + ((Wi + Wi-1) + (Wi + Wi-2) + ... + (Wi + Wi-n)) ], where W is the weight, and I is the index in collection of given items.
 At each N iteration we have expected maximum numbers of item weights we need to visit to reach optimal solution. The first numbers of that growing sequence are the following:
-0, 1, 3, 7, 14, 25, 41, 63, 92, 129, 175, 231, 298, 377, 469, 575, 696, 833, 987, 1159.
-That sequence is known as A004006 (https://oeis.org/A004006)
 
-The Nth element can be calculated by following formula: A(n) = C(n,1) + C(n,2) + C(n,3), or n*(n ** 2 + 5)/6. The sum of N elements is equal to (n ** 4 + 10 * n ** 2) // 24. The complexity in big O notation is equal to O(N ** 4). 
+0, 1, 3, 7, 14, 25, 41, 63, 92, 129, 175, 231, 298, 377, 469, 575, 696, 833, 987, 1159. That sequence is known as A004006 (https://oeis.org/A004006)
+
+The Nth element can be calculated by following formula: 
+
+A(n) = C(n,1) + C(n,2) + C(n,3), or n*(n ** 2 + 5)/6. 
+
+The sum of N elements is equal to (n ** 4 + 10 * n ** 2) // 24. The complexity in big O notation is equal to O(N ** 4). 
 
 As soon we are not going to visit all weights possible from 1 to knapsack size, but only sums and weights itself, we should keep track of maximum weight and value we have archived for each point visited. When we processed all items points or found optimal solution earlier (in case of item weight is equal item value) we can backtrace items using DP table in the same way as in classical dynamic programing solution. 
 
 Instead of array of array as DP table, we are going to use array of map to keep O(1) access time for points that belong to W set.
 The map key is point visited, the map value is accumulated weight and value for that key.
 We are going to process points in ASC order. We will merge two sorted list into single one in O(N + M), where N previous point count, M is new points created. Hence the previous list has been ordered already and the new one we get from previous list using current weight addition. 
-Classic DPS uses recurrent formula: max(value + DP[i][j - weight], DP[i][j]). In our solution DP table contains values for processed points only. 
+Classic DPS uses recurrent formula: 
+
+max(value + DP[i][j - weight], DP[i][j]).
+
+In our solution DP table contains values for processed points only. 
 The case [j - weight] can give a point that does not belong to set W, that means that point would never contribute to the optimal solution (Axiom 1), and we can assign 0 value for outsider point. 
 
 # Three kind of problem
 
 We are going to investigate three kinds of knapsack problems.
 First one is knapsack where the item value and the item weight are the same. Let's call it 1D knapsack problem. The knapsack problem where value and weight are different is 2D problem. 1D and 2D knapsack problems are known as weakly NP hard problems in case of integer numbers.[2]
-3D knapsack is the problem where weight is the vector of two constrains, let's call it here weight and volume. The multi-dimensional knapsacks are computationally harder than knapsack; even for D=2, the problem does not have EPTAS unless P=NP. [1]
+N dimensional knapsack has N constrains, M items and M values, where Mth item is the vector of item dimensions of size N. The multi-dimensional knapsacks are computationally harder than knapsack; even for D=2, the problem does not have EPTAS unless P=NP. [1]
 
 ## 1D knapsack
 
 It is simpler than others, because we can terminate execution once we have found a solution equal to knapsack size. 
-We are going to use this property in N subset sum problem and 3 partition solution below. Which is NP complete in strong sense. https://en.wikipedia.org/wiki/3-partition_problem#cite_note-3. It has been shown that the generalization we have solved did not have an FPTAS. https://en.wikipedia.org/wiki/Knapsack_problem#cite_note-31
+We are going to use this property in N subset sum problem. 
 Also, here we can reduce the point collection growing speed, because some new points created will not contribute to the optimal solution. The reason of it is the depth of execution tree and growing speed of the sum starting from current one. 
 Let's call a partial sum is the number we get for some Ith element from minimum item to current item. Here we expect knapsack items in DESC order, so the smallest and the last Nth partial sum is going to be equal Nth weight, for Nth - 1 it is equal to [ S(N - 1) = S(N) +  Ith weight] and so on. 
 We are going to use that partial sum and the knowledge of desc iteration flow to skip new points from growing collection.
-We use partial sum and min item weight to decide to do we need add this weight or just use created new points. In addition, we could skip new sum point if that sum is less then knapsack size minus partial sum. (Lemma 1)
-In fact, the 1D knapsack problem time and space complexity begin to fall from O(N**4) to O(N**3) starting Ith item iteration where knapsack size is less that size // 2. (Teor 2)  
+We use partial sum to decide to do we need add this weight or just use created new points. In addition, we could skip new sum point if that sum is less then knapsack size minus partial sum. (Lemma 1)
+In fact, the 1D knapsack problem time and space complexity begin to fall from O(N**4) to O(N**3) starting Ith item iteration where knapsack size is less that size // 2. (Teor 2) 
 
-## 2D and 3D knapsacks
+## 2D and N dimension knapsacks
 
 They are required to visit all sums and cannot skip any of them. We use both weights\volume as W point and accumulate value\weight\volume reached for the W point using the same DP recurrent formula. 
-Each new dimension requires more memory for storing that dimension in point list and in DP table map keys collection. P knapsack time and space complexity are not greater than O( ( N * P ) ** 4), where P number of knapsack constrains, N count of knapsack items. 
+Each new dimension requires more memory for storing that dimension in point list and in DP table map keys collection, and we need to compare more numbers as well. P knapsack time and space complexity are not greater than O( ( N * P ) ** 4), where P number of knapsack constrains, N count of knapsack items. 
 Because of unique point processing and cutting new points by knapsack constrains the average complexity is near O(C * (( N * P ) ** 3)), where C is constant that dependents on N.  C falls for large N. N = 20 C is 10; for N = 500 C is 3.
 
 Once we get rid of integer indexes in the DP table, using a point as key to access the value, weight and volume in DP map, we can use described algorithms for all positive rational numbers without converting knapsack constrains and item weights given to integers.
@@ -147,16 +153,30 @@ Iteration table for set 3. N is 99.
 
 N ** 4 is 96 059 601 and N ** 3 is 970 299, so the worst-case iteration number does not exceed (N ** 3) for N = 99
 
-# Polynomial N way partition algorithm using knapsack solver
+# Polynomial N way partition and 3 partition problems algorithms
 
 Partition is only weakly NP-hard - it is hard only when the numbers are encoded in non-unary system, and have value exponential in n.
 When the values are polynomial in N, Partition can be solved in polynomial time using the pseudopolynomial time number partitioning algorithm.
 
-We are going to use new knapsack solution to create the polynomial algorithm for all positive numbers. The knapsack solver over distinct desc sorted numbers divides the set into N partitions if and only if that N partitions are exist. We can consider sums like a hashing. Hence each unique number leave a unique trace in the point sums and we know that knapsack search terminates execution once the size of knapsack has reached. Then we can backtrace those unique numbers and remove it from the input set and perform knapsack again and again until the set is not empty. If it is an empty that means we found the solution.
+We are going to use new knapsack solution to create the polynomial algorithm for all positive numbers. 
 
-We will spread Non distinct numbers into the pseudo descending set. Each duplicate should be in its own desc ordered cluster when we perform knapsack over full collection and take items out. 
+Let's consider input numbers as sequence we should divide into N groups. Let's call a knapsack solver a grouping operator that returns first group that met sum and group count contrains. To solve that problem we need to run that grouping operations N times. If we get an empty reminder at the end then the problem is solved. 
 
-Once we can verify that set can be partitioned to any number of sets equal sum in max time of O (C * (N ** 3)) where C in number of sets. 
+The knapsack solver over distinct desc sorted numbers divides the set into N partitions if and only if that N partitions are exist. We can consider sums like a hashing. Hence each unique number leave a unique trace in the point sums and we know that knapsack search terminates execution once the size of knapsack has reached. Then we can backtrace those unique numbers and remove it from the input set and perform knapsack again and again until the set is not empty. If it is an empty that means we found the solution.
+
+For case where duplicates are exist in the input set we will spread non distinct numbers into the pseudo descending set. Each duplicate should be in its own desc ordered cluster when we perform knapsack over full collection and take items out. That is a good heuristics that gives 99% good partitions in tests provided. 
+
+If reminder is not empty then we need to optimize its size to 0. At this point we have a quotient and reminder, quotient has M groups, reminder has T numbers. 
+
+Let's call an exisiting group a partion point. It contains the number of partition, the set of numbers, and the indexes of quotient item. We will define addition operation for the partition point. It unions both groups given, preserves quotient indexes and adds group partitions. 
+
+We sorts quotient groups by its length in descending order of N way partition problem case. It is more likly that group that have more items combined with reminder can be splited into new groups by knapsack solver.
+
+So far, we have a collection of partition points and the reminder partition point. To optimize reminder we need to union reminder number set with other partition points and theirs sums and call knapsack solver for it. 
+
+We are going to loop over the partition points and increase the limit of same time partition optimization. So the limit is going to be an iterator counter M. After all point processed for current M, we check the reminder lenght. If the length is decreased we set up new quotient and new reminder for next M loop interation. Once all partitons and combinations visited we have an optimal solution.
+
+We can use the same approach to solve the strict 3 partition problem as well. That problem is NP complete in strong sense. https://en.wikipedia.org/wiki/3-partition_problem#cite_note-3. We will use knapsack with 2 constrains as a grouping operator. The second constrain is group size which is 3. We apply two modifications to our algorithm to do not allow fall into local maximum. We add shuffling reminder set before union with partition point and shuffling new quotient we got after each optimization iteration.
 
 # Results validation
 
@@ -164,18 +184,17 @@ Once we can verify that set can be partitioned to any number of sets equal sum i
 
 1D and 2D knapsack algorithms were tested on rational numbers as input weights and constrains using the same dataset, and each weight was divided by 100 000. It also gives accurate result the same as for integer numbers.
 
-3D knapsack was tested along with classic DP solver on integer values. It is also seeming to work well.
+N dimension knapsack was tested along with classic 2 dimensional DP solver on integer values. It also was tested using rational numbers on one dimension dataset. It is also seeming to work well.
 
-Partition algorithm was tested by Leetcode test dataset https://leetcode.com/problems/partition-to-k-equal-sum-subsets/ 
+N way sum partition algorithm was tested by Leetcode test dataset https://leetcode.com/problems/partition-to-k-equal-sum-subsets/, and by testcases created by integer partition generator up to 14 000 items in the set and up to 2000 partitions. First time heuristics made works fine in 99% percent cases; for worst case where a lot of duplicates are present in given set the algorithm needs 1 optimization in avarage and up to 4 optimization iterations for some cases.
 
 # Conclusion
 
-Since 3D knapsack and 2D knapsack on rational numbers are NP complete in strong sense and the algorithm described solved that problems using polynomial time and space, 
-I can consider, with care, that NP = P at least for weak NP problems which optimal solutions are exists in subset, that can be calculated using commutative, associative and inversing math operation, like addition and subtraction, or multiplication and division.
+Since, N dimension knapsack and 2D knapsack on rational numbers are NP complete in strong sense and the algorithm described solved that problems using polynomial time and space, I can consider, with care, that NP = P at least for weak NP problems which optimal solutions are exists in subset, that can be calculated using commutative, associative and inversing math operation, like addition and subtraction, or multiplication and division. 
 
 # Further work
 
-Investigate possibility of such enhancements for other kinds of problems that have known pseudo polynomial complexity and can be solved in dynamic programing way. 
+Investigate possibility of such enhancements for other kinds of problems that have known pseudo polynomial complexity and can be solved in dynamic programing way. Provide a proof that 3 Partiton problem can be solved by knapsack using polynomial time and space. 
 
 # References
 
