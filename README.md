@@ -153,7 +153,7 @@ Iteration table for set 3. N is 99.
 
 N ** 4 is 96 059 601 and N ** 3 is 970 299, so the worst-case iteration number does not exceed (N ** 3) for N = 99
 
-# Polynomial N way partition and 3 partition problems algorithms
+# Polynomial partitions algorithms
 
 Partition is only weakly NP-hard - it is hard only when the numbers are encoded in non-unary system, and have value exponential in n.
 When the values are polynomial in N, Partition can be solved in polynomial time using the pseudopolynomial time number partitioning algorithm.
@@ -178,15 +178,17 @@ We are going to loop over the partition points and increase the limit of same ti
 
 We can use the same approach to solve the strict 3 partition problem as well. That problem is NP complete in strong sense. https://en.wikipedia.org/wiki/3-partition_problem#cite_note-3. We will use knapsack with 2 constrains as a grouping operator. The second constrain is group size which is 3. We apply two modifications to our algorithm to do not allow fall into local maximum. We add shuffling reminder set before union with partition point and shuffling new quotient we got after each optimization iteration.
 
+Time and space complexity for M partition for N items problem is the following: O(M ** 2 * ( N/M ) ** 3). For strict T groups M partitions for N items is O(M ** 2 * (N/M) ** 4).
+
 # Results validation
 
-1D and 2D integer knapsack algorithms were tested on hardinstances_pisinger test dataset and gave accurate results that were equal to expected ones [4].
+1D and 2D knapsack algorithms were tested on hardinstances_pisinger integer numbers test dataset [9] and gave accurate results that were equal to expected ones [4].
 
-1D and 2D knapsack algorithms were tested on rational numbers as input weights and constrains using the same dataset, and each weight was divided by 100 000. It also gives accurate result the same as for integer numbers.
+1D and 2D knapsack algorithms were tested on rational numbers as input weights and constrains using the same dataset. Each weight was divided by 100 000. It also gives accurate result the same as for integer numbers.
 
-N dimension knapsack was tested along with classic 2 dimensional DP solver on integer values. It also was tested using rational numbers on one dimension dataset. It is also seeming to work well.
+N dimension knapsack was tested along with classic 2 dimensional DP solver on integer values. It also was tested using rational numbers on one dimension dataset, and as the grouping operator in strict T group M partition solution (tests provided for T=3).
 
-N way sum partition algorithm was tested by Leetcode test dataset https://leetcode.com/problems/partition-to-k-equal-sum-subsets/, and by testcases created by integer partition generator up to 14 000 items in the set and up to 2000 partitions. First time heuristics made works fine in 99% percent cases; for worst case where a lot of duplicates are present in given set the algorithm needs 1 optimization in average and up to 4 optimization iterations for some cases.
+N way sum partition algorithm was tested by Leetcode test dataset https://leetcode.com/problems/partition-to-k-equal-sum-subsets/, and by testcases created by integer partition generator up to 102 549 items in the set and up to 10 000 partitions. First time heuristics made works fine in 95% percent cases; for worst case where a lot of duplicates are present in given set the algorithm needs 1-2 optimizations in average and up to 5 optimization iterations for some cases. As much duplicate numbers in the input set as much optimization iterations required.
 
 # Conclusion
 
@@ -194,7 +196,7 @@ Since, N dimension knapsack and 2D knapsack on rational numbers are NP complete 
 
 # Further work
 
-Investigate possibility of such enhancements for other kinds of problems that have known pseudo polynomial complexity and can be solved in dynamic programing way. Provide a proof that 3 Partiton problem can be solved by knapsack using polynomial time and space. 
+Investigate possibility of such enhancements for other kinds of problems that have known pseudo polynomial complexity and can be solved in dynamic programing way. 
 
 # References
 
@@ -206,3 +208,4 @@ Investigate possibility of such enhancements for other kinds of problems that ha
 - [6] Martello S, Toth P. Upper bounds and algorithms for hard 0–1 knapsack problems.
 - [7] https://en.wikipedia.org/wiki/Multiway_number_partitioning
 - [8] https://en.wikipedia.org/wiki/3-partition_problem
+- [9] http://hjemmesider.diku.dk/~pisinger/codes.html
