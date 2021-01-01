@@ -108,7 +108,13 @@ def partitionN(items, partitions, groupSize ,O):
                 self.Items = tuple(itemSet)
                 self.Indexes = set()
                 if itemIndexes:
-                    self.Indexes.update(itemIndexes)       
+                    self.Indexes.update(itemIndexes)   
+                    
+            def __str__(self):
+                return "partitions " + str(self.partitions) + ", " + str(self.Items) + ", " + str(self.Indexes)
+        
+            def __repr__(self):
+                return "partitions " + str(self.partitions) + ", " + str(self.Items) + ", " + str(self.Indexes)
             
             def __add__(self, item): 
 
