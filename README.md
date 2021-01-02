@@ -174,11 +174,12 @@ We sorts quotient groups by its length in descending order of N way partition pr
 
 So far, we have a collection of partition points and the reminder partition point. To optimize reminder we need to union reminder number set with other partition points and theirs sums and call knapsack solver for it. 
 
-We are going to loop over the partition points and increase the limit of same time partition optimization. So the limit is going to be an iterator counter M. After all point processed for current M, we check the reminder lenght. If the length is decreased we set up new quotient and new reminder for next M loop interation. Once all partitons and combinations visited we have an optimal solution.
+We are going to loop over the partition points and increase the limit of same time partition optimization. So the limit is going to be an iterator counter M. After all point processed for current M, we check the reminder lenght. If the length is decreased we set up new quotient and new reminder for next M loop interation. Once Log(M) partiton combinations visited we have an optimal solution.
 
 We can use the same approach to solve the strict 3 partition problem as well. That problem is NP complete in strong sense. https://en.wikipedia.org/wiki/3-partition_problem#cite_note-3. We will use knapsack with 2 constrains as a grouping operator. The second constrain is group size which is 3. We apply two modifications to our algorithm to do not allow fall into local maximum. We add shuffling reminder set before union with partition point and shuffling new quotient we got after each optimization iteration.
 
-Time and space complexity for M partition for N items problem is the following: O(M ** 2 * ( N/M ) ** 3). For strict T groups M partitions for N items is O(M ** 2 * (N/M) ** 4).
+Time and space complexity for M partition for N items problem is the following: O(M * LOG(M) * ( N/M ) ** 3). 
+For strict T groups M partitions for N items is O(M * LOG(M) * ((T * N)/M) ** 3).
 
 # Results validation
 
@@ -188,7 +189,7 @@ Time and space complexity for M partition for N items problem is the following: 
 
 N dimension knapsack was tested along with classic 2 dimensional DP solver on integer values. It also was tested using rational numbers on one dimension dataset, and as the grouping operator in strict T group M partition solution (tests provided for T=3).
 
-N way sum partition algorithm was tested by Leetcode test dataset https://leetcode.com/problems/partition-to-k-equal-sum-subsets/, and by testcases created by integer partition generator up to 102 549 items in the set and up to 10 000 partitions. First time heuristics made works fine in 95% percent cases; for worst case where a lot of duplicates are present in given set the algorithm needs 1-2 optimizations in average and up to 5 optimization iterations for some cases. As much duplicate numbers in the input set as much optimization iterations required.
+N way sum partition algorithm was tested by Leetcode test dataset https://leetcode.com/problems/partition-to-k-equal-sum-subsets/, and by testcases created by integer partition generator up to 102 549 items in the set and up to 10 000 partitions, and by rational numbers tests. First time heuristics made works fine in 95% percent cases; for worst case where a lot of duplicates are present in given set the algorithm needs 1-2 optimizations in average and up to 5 optimization iterations for some cases. As much duplicate numbers in the input set as much optimization iterations required. 
 
 # Conclusion
 
