@@ -18,21 +18,6 @@ import os
 
 def partitionN(items, partitions, groupSize ,O):
 
-    def checkBorderCases(A, n, count, maxElement,  O):
-
-        if n == 1 and maxElement == 1:
-            return 1
-
-        if sumOfItems % n != 0:
-            return 0
-
-        size = sumOfItems // n
-
-        if maxElement > size:
-            return 0
-
-        return None
-
     def prepareGrouping(A, count, partitions, O):
 
         maxElement = 0
@@ -48,9 +33,9 @@ def partitionN(items, partitions, groupSize ,O):
         
         O[0] += count
 
-        size = sumOfItems // partitions
+        size = sumOfItems / partitions
 
-        return group, maxElement, sumOfItems, size
+        return group, maxElement, size
     
     def groupItems(group, O):
 
@@ -103,13 +88,13 @@ def partitionN(items, partitions, groupSize ,O):
     def optimizePartitions(quotient, remainder, size, groupSize, partitions):
 
         class partitionPoint:
-            def __init__(self, partintions, itemSet, itemIndexes=None):
-                self.partintions = partintions
+            def __init__(self, partitions, itemSet, itemIndexes=None):
+                self.partitions = partitions
                 self.Items = tuple(itemSet)
                 self.Indexes = set()
                 if itemIndexes:
                     self.Indexes.update(itemIndexes)   
-                    
+
             def __str__(self):
                 return "partitions " + str(self.partitions) + ", " + str(self.Items) + ", " + str(self.Indexes)
         
@@ -120,7 +105,7 @@ def partitionN(items, partitions, groupSize ,O):
 
                 resultIndexes = set(self.Indexes)
                 resultSet = list(self.Items)
-                resultPart = self.partintions
+                resultPart = self.partitions
 
                 for ni in item.Items:
                     resultSet.append(ni)
@@ -128,7 +113,7 @@ def partitionN(items, partitions, groupSize ,O):
                 for ind in item.Indexes:
                     resultIndexes.add(ind)
 
-                resultPart += item.partintions
+                resultPart += item.partitions
 
                 resultSet.sort(reverse=True)
 
@@ -152,7 +137,7 @@ def partitionN(items, partitions, groupSize ,O):
             
             O[0] += len(newSet)
 
-            newPartitions = p.partintions + optimizeRemainder.partintions
+            newPartitions = p.partitions + optimizeRemainder.partitions
 
             return  divideByPartitions(newSet, newPartitions, size, groupSize, False, O)
 
@@ -165,7 +150,7 @@ def partitionN(items, partitions, groupSize ,O):
                 yield itemPoint
 
             for prevPoint in uniqueSet:
-                if prevPoint.partintions + itemPoint.partintions < limit:                
+                if prevPoint.partitions + itemPoint.partitions < limit:                
                     newPoint = itemPoint + prevPoint
                     if newPoint not in uniqueSet:
                         yield newPoint
@@ -200,11 +185,12 @@ def partitionN(items, partitions, groupSize ,O):
         minRemiderLen = len(remainder) 
 
         startLayer = 1
-        endLayer = max(startLayer + 1, partitions)
+        endLayer = max(startLayer + 1, int(math.log2(partitions)))
 
         for limit in range(startLayer, endLayer):
 
-            #print("layer " + str(limit))
+            if limit > 1:
+                print("optimization layer " + str(limit))
 
             optimizedIndexes,  uniqueSet = set(), set()
             optimizationsMade, newPoints = [], []
@@ -235,7 +221,7 @@ def partitionN(items, partitions, groupSize ,O):
                             optimizedIndexes.update(p.Indexes)
                             O[0] += 1
 
-                        parts = p.partintions + remainderPoint.partintions
+                        parts = p.partitions + remainderPoint.partitions
 
                         remainderPoint = partitionPoint(parts - len(optQuotient), optReminder)
                         minRemiderLen = len(optReminder) 
@@ -313,9 +299,16 @@ def partitionN(items, partitions, groupSize ,O):
             nonUKeys.sort(reverse=True)
             O[0] += newLen * math.log2(newLen)
 
-            newN = n // cnt
 
-            size = sum(nonUKeys) // newN
+            s = sum(nonUKeys)
+
+            if isinstance(s, int):
+                newN = n // cnt
+                size = sum(nonUKeys) // newN
+            else:
+                newN = Decimal(Decimal(n) / Decimal(cnt))
+                size = Decimal(Decimal(s) / newN)
+
             O[0] += newLen
             
             quotient, remainder = divideByPartitions(nonUKeys, newN, size, groupSize, True, O)
@@ -336,7 +329,7 @@ def partitionN(items, partitions, groupSize ,O):
 
         quotient = []
 
-        for n in range(partitions, 0, -1):
+        for n in range(int(partitions), 0, -1):
 
             if groupSize > 0:
 
@@ -394,12 +387,7 @@ def partitionN(items, partitions, groupSize ,O):
     if  count < partitions:
         return [], []
     
-    group, maxElement, sumOfItems, size = prepareGrouping(items, count, partitions, O)
-    
-    borderCaseCheck = checkBorderCases(items, partitions, count, maxElement, O)
-
-    if borderCaseCheck is not None:
-        return borderCaseCheck
+    group, maxElement, size = prepareGrouping(items, count, partitions, O)   
 
     allUnique, nonUniqueList = groupItems(group, O)
 
@@ -1204,7 +1192,7 @@ if True:
 if True:
 
     if verbose:
-        print("N partition sum tests.")
+        print("N partition sum integer tests.")
 
     # N partition tests
     O = [0]
@@ -1258,7 +1246,7 @@ if True:
         if verbose:        
             print("case " + str(case))
 
-        partResult, reminder = partitionN(A, NU, 0, O)
+        partResult, reminder = partitionN(list(A), NU, 0, O)
 
         if len(reminder) != 0 or len(partResult) != NU:
 
@@ -1274,6 +1262,49 @@ if True:
 
             assert False
 
+    def DecimalData(data):
+
+        return Decimal(Decimal(data) / 100000)
+
+    def DecimalArray(data):
+
+        for i in range(len(data)):
+            data[i] = DecimalData(data[i])
+
+    if verbose:
+        print("N partition sum rational numbers tests.")
+
+    case = 0
+
+    for A, NU in tests:
+
+        case += 1
+
+        O[0] = 0
+
+        if verbose:        
+            print("case " + str(case))
+
+        decA = list(A)
+
+        DecimalArray(decA)
+
+        partResult, reminder = partitionN(decA, NU, 0, O)
+
+        if len(reminder) != 0 or len(partResult) != NU:
+
+            if verbose:        
+                print("case " + str(case))
+                print("A " + str(decA))
+                print("part result " + str(partResult))
+                print("part reminder  " + str(reminder))
+                print("len " + str(len(decA)))
+                print("sum " + str(sum(decA)))
+                print("sum / NU" + str(sum(decA) / NU))
+                print("iter " + str(O[0]))
+
+            assert False
+
 if True:
 
     def unionTuples(tuples):
@@ -1283,10 +1314,10 @@ if True:
                 rez.append(tn)
         rez.sort()
         return rez
-
-
+    
+  
     if verbose:
-        print("3 partition tests.")
+        print("3 partition integer tests.")
 
     O = [0]
 
@@ -1300,7 +1331,9 @@ if True:
     A, NU = [26, 26, 27, 28, 29, 29, 31, 33, 39, 40, 45, 47], 4 
     tests.append((A, NU))   
     AT, NU = [(1, 1, 1), (1, 1, 1), (1, 1, 1), (1, 1, 1), (1, 1, 1)], 5
-    tests.append((unionTuples(AT), NU))   
+    tests.append((unionTuples(AT), NU))  
+    AT, NU = [(1, 1, 1), (1, 1, 1), (1, 1, 1), (1, 1, 1), (1, 1, 1), (1, 1, 1), (1, 1, 1), (1, 1, 1), (1, 1, 1), (1, 1, 1), (1, 1, 1), (1, 1, 1)], 12
+    tests.append((unionTuples(AT), NU))    
 
     # the worst 3 partition test cases ever
     AT, NU = [(3, 3, 6), (3, 4, 5), (1, 5, 6), (1, 3, 8), (1, 4, 7), (4, 4, 4), (2, 5, 5), (1, 2, 9), (2, 3, 7), (2, 4, 6), (1, 1, 10), (2, 2, 8)], 12
@@ -1320,7 +1353,7 @@ if True:
         if verbose:        
             print("case " + str(case))
 
-        partResult, reminder = partitionN(A, NU, 3, O)
+        partResult, reminder = partitionN(list(A), NU, 3, O)
 
         if len(reminder) != 0 or len(partResult) != NU:
 
@@ -1332,6 +1365,70 @@ if True:
                 print("len " + str(len(A)))
                 print("sum " + str(sum(A)))
                 print("sum // NU" + str(sum(A) // NU))
+                print("iter " + str(O[0]))
+
+            assert False
+    
+    if verbose:
+        print("6 partition integer tests.")
+
+    case = 0
+    for A, NU in tests:
+
+        case += 1
+
+        O[0] = 0
+
+        if NU % 6 != 0:
+            continue
+
+        if verbose:        
+            print("case " + str(case))
+
+        partResult, reminder = partitionN(list(A), NU // 2, 6, O)
+
+        if len(reminder) != 0 or len(partResult) != NU // 2:
+
+            if verbose:        
+                print("case " + str(case))
+                print("A " + str(A))
+                print("part result " + str(partResult))
+                print("part reminder  " + str(reminder))
+                print("len " + str(len(A)))
+                print("sum " + str(sum(A)))
+                print("sum // NU" + str(sum(A) // NU))
+                print("iter " + str(O[0]))
+
+            assert False
+    
+    if verbose:
+        print("3 partition rational numbers tests.")
+    
+    case = 0
+    for A, NU in tests:
+
+        case += 1
+
+        O[0] = 0
+
+        if verbose:        
+            print("case " + str(case))
+
+        decA = list(A)
+        DecimalArray(decA)
+
+        partResult, reminder = partitionN(decA, NU, 3, O)
+
+        if len(reminder) != 0 or len(partResult) != NU:
+
+            if verbose:        
+                print("case " + str(case))
+                print("A " + str(decA))
+                print("part result " + str(partResult))
+                print("part reminder  " + str(reminder))
+                print("len " + str(len(decA)))
+                print("sum " + str(sum(decA)))
+                print("sum / NU" + str(sum(decA) / NU))
                 print("iter " + str(O[0]))
 
             assert False
@@ -1744,7 +1841,7 @@ if True:
 
                             print("BAD: item = " + str(item) +  ", case i " + str(i) + " , case part limit " + str(partLimit) + " , n = " + str(len(subSet))  +  " , rezult partition " + str(resultPart) + " , expected partition " + str(partition) + " , rez sum " + str(rezSum) + " , total sum " + str(rezSum + sumRem) + " , expected sum " + str(expectedSum) + " , iter " + str(round(O[0])))
 
-                        writer.writerow({'item': str(item), 'case': str(i), 'limit': str(partLimit), 'partition':  str(partition), 'N': str(len(subSet)), 'sum': str(rezSum), 'iter': str(round(O[0])), 'max iter': str((len(subSet)) * (partition ** 3)), 'good': str(good)})
+                        writer.writerow({'item': str(item), 'case': str(i), 'limit': str(partLimit), 'partition':  str(partition), 'N': str(len(subSet)), 'sum': str(rezSum), 'iter': str(round(O[0])), 'max iter': str((len(subSet)) ** 3 + (partition ** 3)), 'good': str(good)})
 
                         if not allGood:
                             break
@@ -1755,4 +1852,4 @@ if True:
             print(badItems)
 
         assert allGood
-                       
+                        
