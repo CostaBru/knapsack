@@ -1,4 +1,4 @@
-# Knapsack
+# Knapsack and Set Partitions
 
 Polynomial time algorithms for unbounded 1-0 knapsack problems up to N dimensions, algorithms for N way sum partition and strict N partition problems.
 
@@ -342,3 +342,6 @@ Investigate possibility of such enhancements for other kinds of problems that ha
 - [7] https://en.wikipedia.org/wiki/Multiway_number_partitioning
 - [8] https://en.wikipedia.org/wiki/3-partition_problem
 - [9] http://hjemmesider.diku.dk/~pisinger/codes.html
+
+## License
+[MIT](https://choosealicense.com/licenses/mit/)
