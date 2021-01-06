@@ -236,7 +236,7 @@ N dimension knapsack was tested along with classic 2 dimensional ``DPS`` solver 
 
 N way sum partition algorithm was tested by Leetcode test dataset https://leetcode.com/problems/partition-to-k-equal-sum-subsets/, and by testcases created by integer partition generator up to 102 549 items in the set and up to 10 000 partitions, and by rational numbers tests. First time heuristics made works fine in 95% percent cases; for worst case where a lot of duplicates are present in given set the algorithm needs 1-2 optimizations in average and up to 5 optimization iterations for some cases. As much duplicate numbers in the input set as much optimization iterations required. 
 
-Mulitple knapsack and integer optimization tests were perfromed as well.
+Mulitple knapsack and integer optimization tests were performed as well. Optimization iteration counter didn't exceed the declareted maximum.
 
 # Implementations and usage
 
