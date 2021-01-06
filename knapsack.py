@@ -16,26 +16,34 @@ import os
 
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-def partitionN(items, partitions, groupSize ,O):
+verbose = True
 
-    def prepareGrouping(A, count, partitions, O):
+def partitionN(items, sizesOrPartitions, groupSize, O, optimizationLimit = -1):
 
-        maxElement = 0
-        sumOfItems = 0
+    class partitionItem:
+        def __init__(self, itemSet, sizes):
+            self.Items = itemSet
+            self.Sizes = sizes
+        
+        def __len__(self):
+            return len(self.Items)
+
+        def __str__(self):
+            return "{ Size: " + str(self.Sizes) + ", Items: " + str(self.Items) + " }"
+    
+        def __repr__(self):
+            return "{ Size: " + str(self.Sizes) + ", Items: " + str(self.Items) + " }"
+
+    def prepareGrouping(A, O):
 
         group = defaultdict(list)
 
         for c in A:
-            sumOfItems += c
-            group[c].append(c)        
-            if c > maxElement:
-                maxElement = c
+            group[c].append(c)   
         
-        O[0] += count
+        O[0] += len(A)
 
-        size = sumOfItems / partitions
-
-        return group, maxElement, size
+        return group
     
     def groupItems(group, O):
 
@@ -53,21 +61,36 @@ def partitionN(items, partitions, groupSize ,O):
 
         return allUnique, nonUniqueList
 
-    def getSingleDuplicatePartitions(nonUniqueList, count, partitions, groupSize, O):
+    def getSingleDuplicatePartitions(items, count, sizes, groupSize, O):
 
         quotientResult, remainderResult  = [], []
-        singleItem = nonUniqueList[0]
 
         if groupSize == 0:
-            if (count % partitions) == 0:
-                for i in range(partitions):
-                    quotient = [singleItem] * (count // partitions)
-                    quotientResult.append(quotient)
-            else:
-                for i in range(partitions - 1):
-                    quotient = [singleItem] * (count // partitions)
-                    quotientResult.append(quotient)                
-                remainderResult = [singleItem] * (count % partitions)
+            stack = list(items)
+            currentQuotient = []
+            ls = list(sizes)
+
+            while len(ls) > 0:
+                size = ls.pop()
+                qs = 0
+                while len(stack) > 0:
+                    item = stack.pop()
+
+                    qs += item
+
+                    if qs <= size:
+                        currentQuotient.append(item)
+                    
+                    if qs >= size:
+                        qs = 0
+                        quotientResult.append(currentQuotient)
+                        currentQuotient = []
+
+            remainderResult = currentQuotient 
+
+            for item in stack:
+                remainderResult.append(item)
+                      
         else:
 
             stack = list(items)
@@ -83,164 +106,252 @@ def partitionN(items, partitions, groupSize ,O):
 
             remainderResult = currentQuotient 
 
-        return  quotientResult, remainderResult  
+            for item in stack:
+                remainderResult.append(item)
 
-    def optimizePartitions(quotient, remainder, size, groupSize, partitions):
+        return  quotientResult, remainderResult, 0 
+
+    def optimizePartitions(quotients, remainder, sizes, groupSize, optimizationLimit, O):
+
+        def mergeTwoSortedReversedIter(itemSet1, itemSet2):
+
+            moveL1, moveL2 = True, True
+            n1,     n2     = True, True
+
+            iter_1 = iter(itemSet1) 
+            iter_2 = iter(itemSet2)
+
+            val1,   val2   = 0, 0
+
+            while n1 or n2:      
+
+                if moveL1:
+                    val1 = next(iter_1, -sys.maxsize)
+                
+                if moveL2:
+                    val2 = next(iter_2, -sys.maxsize)
+
+                n1 = val1 > -sys.maxsize
+                n2 = val2 > -sys.maxsize
+                
+                if n1 and n2:
+                    if val1 > val2:
+                        yield val1
+                        moveL1 = True
+                        moveL2 = False                        
+                    elif val2 > val1:
+                        yield val2
+                        moveL1 = False 
+                        moveL2 = True                            
+                    else:
+                        yield val1
+                        yield val2
+                        moveL1 = True
+                        moveL2 = True
+                elif n1 and not n2:
+                    yield val1
+                    moveL1 = True
+                    moveL2 = False
+                elif n2 and not n1:
+                    yield val2
+                    moveL1 = False 
+                    moveL2 = True   
 
         class partitionPoint:
-            def __init__(self, partitions, itemSet, itemIndexes=None):
-                self.partitions = partitions
+            def __init__(self, itemSet, sizes, itemIndexes=None):
                 self.Items = tuple(itemSet)
+                self.Sizes = sizes 
                 self.Indexes = set()
                 if itemIndexes:
                     self.Indexes.update(itemIndexes)   
+            
+            def GetPartitions(self):
+                return len(self.Sizes)
 
             def __str__(self):
-                return "partitions " + str(self.partitions) + ", " + str(self.Items) + ", " + str(self.Indexes)
+                return "{ Size: " + str(self.Sizes) + ", Items: " + str(self.Items) + ", QI: " + str(self.Indexes) + " }"
         
             def __repr__(self):
-                return "partitions " + str(self.partitions) + ", " + str(self.Items) + ", " + str(self.Indexes)
-            
+                return "{ Size: " + str(self.Sizes) + ", Items: " + str(self.Items) + ", QI: " + str(self.Indexes) + " }"
+                
             def __add__(self, item): 
 
                 resultIndexes = set(self.Indexes)
-                resultSet = list(self.Items)
-                resultPart = self.partitions
-
-                for ni in item.Items:
-                    resultSet.append(ni)
+                resultSizes = list(self.Sizes)
                 
                 for ind in item.Indexes:
                     resultIndexes.add(ind)
 
-                resultPart += item.partitions
+                for s in item.Sizes:
+                    resultSizes.append(s)
 
-                resultSet.sort(reverse=True)
+                iters = mergeTwoSortedReversedIter(self.Items, item.Items)
 
-                return partitionPoint(resultPart, resultSet, resultIndexes)        
+                resultSet = list(iters)
+
+                return partitionPoint(resultSet, resultSizes, resultIndexes)        
             
             def __eq__(self, other):
-                return self.Items == other.Items
+                return self.Items == other.Items and self.Sizes == other.Sizes
 
             def __hash__(self):
                 return hash(self.Items)
 
-        def optimize(p, optimizeRemainder, groupSize, size, limit, O):
+        def optimize(p, remainderItem, groupSize, limit, O):
 
-            newSet = list(optimizeRemainder.Items)
+            newSet = list(remainderItem.Items)
+            newSizes = list(remainderItem.Sizes)
 
-            if groupSize > 0 or limit % 2 == 0:
+            if groupSize > 0 or limit > 1:                
                 random.shuffle(newSet)
-        
+                O[0] += len(newSet)
+
+                random.shuffle(newSizes)
+                O[0] += len(newSizes)
+            
             for r in p.Items:
                 newSet.append(r) 
             
-            O[0] += len(newSet)
+            for s in p.Sizes:
+                newSizes.append(s)
+           
+            O[0] += len(p.Items)
+            O[0] += len(p.Sizes)
 
-            newPartitions = p.partitions + optimizeRemainder.partitions
-
-            return  divideByPartitions(newSet, newPartitions, size, groupSize, False, O)
+            return  divideSet(newSet, newSizes, groupSize, False, O)
 
         def getPoints(i, item, uniqueSet, limit):
 
-            itemPoint = partitionPoint(1, item)
+            itemPoint = partitionPoint(item.Items, item.Sizes)
             itemPoint.Indexes.add(i)
 
             if itemPoint not in uniqueSet:
                 yield itemPoint
 
             for prevPoint in uniqueSet:
-                if prevPoint.partitions + itemPoint.partitions < limit:                
+                if prevPoint.GetPartitions() + itemPoint.GetPartitions() < limit:                
                     newPoint = itemPoint + prevPoint
                     if newPoint not in uniqueSet:
                         yield newPoint
 
-        def backTrace(optimizationsMade, bestRemainder, originalQuotient, originalRemainder, O):
+        def backTrace(optimizationsMade, remainderItem, originalQuotient, originalRemainder, optimizationCount, O):
 
             if len(optimizationsMade) == 0:
-                return originalQuotient, originalRemainder
+                return originalQuotient, originalRemainder, optimizationCount
 
             bestPartition = list()
             skipIndexes = set()
 
             for optPoint in optimizationsMade:
                 skipIndexes.update(optPoint.Indexes)
-                bestPartition.append(optPoint.Items)
+                bestPartition.append(partitionItem(optPoint.Items, optPoint.Sizes))
                 O[0] += 1
+                O[0] += len(optPoint.Items)
+                O[0] += len(optPoint.Sizes)
+                O[0] += len(optPoint.Indexes)
+
+            optimizationCount += len(optimizationsMade)
             
             for i in range(len(originalQuotient)):
-                it = originalQuotient[i]
                 if i in skipIndexes:
                     continue
+                it = originalQuotient[i]
                 bestPartition.append(it)
                 O[0] += 1
 
-            return bestPartition, bestRemainder
+            return bestPartition, remainderItem, optimizationCount
 
-        if groupSize == 0:
-            quotient.sort(key=lambda x: len(x), reverse = True)
-            O[0] += len(quotient) * math.log2(len(quotient))        
+        def incOForPoint(O, p):
+            O[0] += 1
+            O[0] += len(p.Items)
+            O[0] += len(p.Sizes)
+            O[0] += len(p.Indexes)
+           # O[0] += (len(p.Items) * math.log2(len(p.Items)))
 
-        remainderPoint = partitionPoint(partitions - len(quotient), remainder)
-        minRemiderLen = len(remainder) 
+        def incOForPartition(O, optItem):
+            O[0] += 1
+            O[0] += len(optItem.Items)
+            O[0] += len(optItem.Sizes)
+
+        def prepareQuotients(quotients, groupSize, limit, O):
+
+            if limit == 0:
+                for q in quotients:
+                    q.Items.sort(reverse=True)
+                    O[0] += len( q.Items) * math.log2(len( q.Items))
+                    O[0] += 1
+
+            if groupSize == 0:
+                quotients.sort(key=lambda x: len(x), reverse = True)
+                O[0] += len(quotients) * math.log2(len(quotients))
+            elif limit > 0:
+                random.shuffle(quotients)
+                O[0] += len(quotients)
+
+        prepareQuotients(quotients, groupSize, 0, O)    
+
+        remainderItem = remainder
+        minRemiderLen = len(remainderItem) 
 
         startLayer = 1
-        endLayer = max(startLayer + 1, int(math.log2(partitions)))
+        endLayer = (len(sizes) // 2) + 1
+
+        if optimizationLimit > 0:
+            endLayer = optimizationLimit
+
+        optimizationCount = 0
 
         for limit in range(startLayer, endLayer):
 
-            if limit > 1:
-                print("optimization layer " + str(limit))
+            if limit == 2:
+                continue
+
+            if verbose and limit > 2:
+                print("performimg optimizations at the same time is limited by: " + str(limit) + "; quotients: " + str(len(quotients)) + " reminder len " + str(len(remainder)))
 
             optimizedIndexes,  uniqueSet = set(), set()
             optimizationsMade, newPoints = [], []
 
-            remainderPoint = partitionPoint(partitions - len(quotient), remainder)
-            minRemiderLen = len(remainder) 
+            remainderItem = remainder
+            minRemiderLen = len(remainderItem) 
 
-            for i in range(len(quotient)):
+            for i in range(len(quotients)):
 
-                item = quotient[i]
+                item = quotients[i]
 
                 uniqueSet.update(newPoints)
                 newPoints.clear()
 
                 for p in getPoints(i, item, uniqueSet, limit):          
 
-                    if len(p.Indexes.intersection(optimizedIndexes)) > 0:
+                    if len(optimizedIndexes) > 0 and not p.Indexes.isdisjoint(optimizedIndexes):
                         continue
 
-                    optQuotient, optReminder = optimize(p, remainderPoint, groupSize, size, limit, O) 
+                    optQuotient, optReminder, optCount = optimize(p, remainderItem, groupSize, limit, O) 
 
-                    O[0] += 1
+                    incOForPoint(O, p)
 
                     if  len(optReminder) < minRemiderLen:
 
                         for optItem in optQuotient:
-                            optimizationsMade.append(partitionPoint(1, optItem, p.Indexes))
+                            optimizationsMade.append(partitionPoint(optItem.Items, optItem.Sizes, p.Indexes))
                             optimizedIndexes.update(p.Indexes)
-                            O[0] += 1
+                            incOForPartition(O, optItem)
 
-                        parts = p.partitions + remainderPoint.partitions
-
-                        remainderPoint = partitionPoint(parts - len(optQuotient), optReminder)
-                        minRemiderLen = len(optReminder) 
+                        remainderItem = optReminder
+                        minRemiderLen = len(remainderItem) 
                     else:
                         newPoints.append(p)
 
                     if  minRemiderLen == 0:
-                        return backTrace(optimizationsMade, remainderPoint.Items, quotient, remainder, O)
+                        return backTrace(optimizationsMade, remainderItem, quotients, remainder, optimizationCount, O)
 
             if len(optimizedIndexes) > 0:
-                quotient, remainder = backTrace(optimizationsMade, remainderPoint.Items, quotient, remainder, O)
-                if groupSize == 0:
-                    quotient.sort(key=lambda x: len(x), reverse = True)
-                    O[0] += len(quotient) * math.log2(len(quotient))
-                else:
-                    random.shuffle(quotient)
-                    O[0] += len(quotient)
+                quotients, remainder, optimizations = backTrace(optimizationsMade, remainderItem, quotients, remainder, optimizationCount, O)
+                prepareQuotients(quotients, groupSize, limit, O)    
+                optimizationCount += optimizations
                     
-        return backTrace(optimizationsMade, remainderPoint.Items, quotient, remainder, O)
+        return  quotients, remainder, optimizationCount
 
     def sortDuplicatesForPartitioning(group, count, nonUniqueList, O):
         A_sort = []
@@ -278,11 +389,11 @@ def partitionN(items, partitions, groupSize ,O):
 
         return A_sort
 
-    def partitionOverSameCountDuplicates(nonUniqueList, n, maxElement, size, groupSize, O):
+    def partitionOverSameCountDuplicates(nonUniqueList, sizes, groupSize, O):
 
         sameCount = True
 
-        cnt = nonUniqueList[maxElement]
+        cnt = next(iter(nonUniqueList.values()))
 
         for k in nonUniqueList.keys():
             if nonUniqueList[k] != cnt:
@@ -299,123 +410,168 @@ def partitionN(items, partitions, groupSize ,O):
             nonUKeys.sort(reverse=True)
             O[0] += newLen * math.log2(newLen)
 
+            newSizes = []
 
             s = sum(nonUKeys)
+            n = len(sizes)
+
+            newN = n // cnt
 
             if isinstance(s, int):
-                newN = n // cnt
                 size = sum(nonUKeys) // newN
+                newSizes = [size] * newN
             else:
-                newN = Decimal(Decimal(n) / Decimal(cnt))
-                size = Decimal(Decimal(s) / newN)
+                size = Decimal(Decimal(s) / Decimal(Decimal(n) / Decimal(cnt)))
+                newSizes = [size] * newN
 
             O[0] += newLen
             
-            quotient, remainder = divideByPartitions(nonUKeys, newN, size, groupSize, True, O)
+            quotient, remainder, optCount = divideSet(nonUKeys, newSizes, groupSize, True, O)
 
             quotientResult, remainderResult  = [], []
 
             for i in range(cnt):
                 for item in quotient:
-                    quotientResult.append(item)
-                for rem in remainder:
+                    quotientResult.append(item.Items)
+                for rem in remainder.Items:
                     remainderResult.append(rem)
 
-            return quotientResult, remainderResult
+            return quotientResult, remainderResult, optCount
 
         return None
 
-    def divideByPartitions(items, partitions, size, groupSize, descOrder, O):    
+    def divideSet(items, sizes, groupSize, descOrder, O):    
 
-        quotient = []
+        quotients = []
+        reminderSizes = []
+        reminderItems = items
 
-        for n in range(int(partitions), 0, -1):
+        ls = len(sizes)
+
+        for n in range(ls, 0, -1):
+
+            size = sizes[n - 1]
 
             if groupSize > 0:
 
-                dimensions, constrains  = [(item, 1) for item in items], (size, groupSize)
+                if n == 1:
 
-                opt, optDims, optValues = knapsackNd(constrains, dimensions, items, O)
+                    O[0] += len(reminderItems)
 
-                if  opt[0] == size and opt[1] == groupSize: 
+                    remSum = sum(reminderItems)
 
-                    quotient.append(optValues)
+                    if remSum == size and len(reminderItems) == groupSize:
+                        quotients.append(partitionItem(list(reminderItems), [size])) 
+                        reminderItems.clear()
+                        break  
+                    elif remSum < size:
+                        reminderSizes.append(size)
+                        break                 
+
+                dimensions, constrains  = [(item, 1) for item in reminderItems], (size, groupSize)
+
+                opt, optDims, optValues = knapsackNd(constrains, dimensions, reminderItems, O)
+
+                if (opt[0] == size and opt[1] == groupSize): 
+
+                    quotients.append(partitionItem(optValues, [size]))
 
                     for toRemove in optValues:
-                        items.remove(toRemove)
+                        reminderItems.remove(toRemove)
 
                     O[0] += len(optValues)
-
-                    if n == 2:
-
-                        O[0] += len(items)
-
-                        if sum(items) == size and len(items) == groupSize:
-                            quotient.append(list(items)) 
-                            items.clear()
-                            break
                 else:
-                    break
+                    reminderSizes.append(size)
             else:
 
-                optimal, optimalList = knapsack1d(size, items,  O, descOrder)
+                if n == 1:
 
-                if  optimal == size:          
+                    O[0] += len(reminderItems)
 
-                    quotient.append(optimalList)
+                    remSum = sum(reminderItems)
+
+                    if remSum == size:
+                        quotients.append(partitionItem(list(reminderItems), [size])) 
+                        reminderItems.clear()
+                        break  
+                    elif remSum < size:
+                        reminderSizes.append(size)
+                        break
+
+                optimal, optimalList = knapsack1d(size, reminderItems,  O, descOrder)
+
+                if optimal == size:          
+
+                    quotients.append(partitionItem(optimalList, [size]))
 
                     for toRemove in optimalList:
-                        items.remove(toRemove)  
+                        reminderItems.remove(toRemove)  
 
-                    O[0] += len(optimalList)
-
-                    if n == 2:
-
-                        O[0] += len(items)
-
-                        if sum(items) == size:
-                            quotient.append(list(items)) 
-                            items.clear()
-                            break
+                    O[0] += len(optimalList)    
                 else:
-                    break
+                    reminderSizes.append(size)
 
-        return quotient, items
+        return quotients, partitionItem(reminderItems, reminderSizes), 0
+
+    def getSizes(sizesOrPartitions):
+        sizes = sizesOrPartitions
+
+        sameSizes = isinstance(sizesOrPartitions, int)
+
+        if sameSizes:
+
+            itemsSum = sum(items)
+
+            if isinstance(itemsSum, int):
+                size = itemsSum // sizesOrPartitions
+                sizes = [size] * sizesOrPartitions
+            else:
+                size = Decimal(itemsSum / Decimal(sizesOrPartitions))
+                sizes = [size] * sizesOrPartitions
+
+        return sizes, sameSizes
 
     count = len(items)
 
-    if  count < partitions:
-        return [], []
+    sizes, sameSizes = getSizes(sizesOrPartitions)
+
+    if  count < len(sizes):
+        return [], [], 0
     
-    group, maxElement, size = prepareGrouping(items, count, partitions, O)   
+    group = prepareGrouping(items, O)   
 
     allUnique, nonUniqueList = groupItems(group, O)
 
     if  allUnique:
 
-        items.sort(reverse=True)
+        items.sort(reverse = True)
         O[0] += count * math.log2(count)
-        return divideByPartitions(items, partitions, size, groupSize, True, O)
+
+        sortedDesc = True
+
+        return divideSet(items, sizes, groupSize, sortedDesc, O)
 
     elif len(nonUniqueList) == 1:
 
-        return getSingleDuplicatePartitions(nonUniqueList, count, partitions, groupSize, O)
+        return getSingleDuplicatePartitions(items, count, sizes, groupSize, O)
 
     else:
-        if  len(nonUniqueList) > partitions and groupSize == 0:
-            partResult = partitionOverSameCountDuplicates(nonUniqueList, partitions, maxElement, size, groupSize, O)
+        if  len(nonUniqueList) > len(sizes) and groupSize == 0 and sameSizes:
+            partResult = partitionOverSameCountDuplicates(nonUniqueList, sizes, groupSize, O)
             if partResult:
                 return partResult
+        
+        sortedDesc = False
 
         sortedDuplicates    = sortDuplicatesForPartitioning(group, count, nonUniqueList, O)
-        quotient, remainder = divideByPartitions(sortedDuplicates, partitions, size, groupSize, False, O)
+        quotients, remainder, optCount = divideSet(sortedDuplicates, sizes, groupSize, sortedDesc, O)
         
-        if  len(remainder) == 0:
-            return quotient, remainder
+        if  len(remainder) == 0 or len(quotients) == len(sizes):
+            return quotients, remainder, optCount
 
-        return optimizePartitions(quotient, remainder, size, groupSize, partitions)
+        return optimizePartitions(quotients, remainder, sizes, groupSize, optimizationLimit, O)
    
-    return [],[]
+    return [],[], 0
 
 def knapsack1d(size, items, O, desc = True):
 
@@ -1103,8 +1259,6 @@ def sortReverese3Both(w, v, x):
 
     return w1, v1, x1
 
-verbose = True
-
 if True:
     if verbose:
         print("rational numbers tests for 1D, 2D and 3D knapsacks.")
@@ -1246,7 +1400,7 @@ if True:
         if verbose:        
             print("case " + str(case))
 
-        partResult, reminder = partitionN(list(A), NU, 0, O)
+        partResult, reminder, optCount = partitionN(list(A), NU, 0, O)
 
         if len(reminder) != 0 or len(partResult) != NU:
 
@@ -1255,6 +1409,7 @@ if True:
                 print("A " + str(A))
                 print("part result " + str(partResult))
                 print("part reminder  " + str(reminder))
+                print("optCount  " + str(optCount))
                 print("len " + str(len(A)))
                 print("sum " + str(sum(A)))
                 print("sum // NU" + str(sum(A) // NU))
@@ -1289,7 +1444,7 @@ if True:
 
         DecimalArray(decA)
 
-        partResult, reminder = partitionN(decA, NU, 0, O)
+        partResult, reminder, optCount = partitionN(decA, NU, 0, O)
 
         if len(reminder) != 0 or len(partResult) != NU:
 
@@ -1298,10 +1453,153 @@ if True:
                 print("A " + str(decA))
                 print("part result " + str(partResult))
                 print("part reminder  " + str(reminder))
+                print("optCount  " + str(optCount))
                 print("len " + str(len(decA)))
                 print("sum " + str(sum(decA)))
                 print("sum / NU" + str(sum(decA) / NU))
                 print("iter " + str(O[0]))
+
+            assert False
+
+if True :
+
+    if verbose:
+        print("MKS integer tests.")
+
+    mksTests = []
+
+    A, NU = [3, 383, 401, 405, 580, 659, 730, 1024, 1100, 1175, 1601, 2299, 3908, 4391, 4485, 5524], 4
+    mksTests.append((A, NU))
+    A, NU = [4,5,3,2,5,5,5,1,5,5,5,5,3,5,5,2], 13
+    mksTests.append((A, NU))
+    A, NU = [4,4,6,2,3,8,10,2,10,7], 4
+    mksTests.append((A, NU))
+    A, NU = [4,15,1,1,1,1,3,11,1,10], 3
+    mksTests.append((A, NU))
+    A, NU =  [20, 23, 25, 49, 45, 27, 40, 22, 19], 3
+    mksTests.append((A, NU))
+    A, NU = [20, 23, 25, 49, 45, 27, 40, 22, 19, 20, 23, 25, 49, 45, 27, 40, 22, 19], 6
+    mksTests.append((A, NU))
+    A, NU =  [27, 9, 9, 9, 9, 9, 3, 3, 3], 3
+    mksTests.append((A, NU))
+    A, NU = [10,10,10,7,7,7,7,7,7,6,6,6], 3
+    mksTests.append((A, NU))
+    A, NU = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], 3
+    mksTests.append((A, NU))
+    A, NU = [10,12,1,2,10,7,5,19,13,1],4
+    mksTests.append((A, NU))
+    A, NU = [1,2,3,4,5,6,7,8,9],3
+
+    singleTest = []
+    singleTestSizes = []
+
+    ind = 0
+
+    for A, NU in mksTests:
+
+        ind += 1
+
+        for num in A:
+            singleTest.append(num)
+
+        size = sum(A) // NU
+
+        for i in range(NU):
+           singleTestSizes.append(size)
+
+    O = [0]
+
+    random.shuffle(singleTest)
+    random.shuffle(singleTestSizes)
+
+    partResult, reminder, optCount = partitionN(list(singleTest), singleTestSizes, 0, O)
+
+    if len(reminder) != 0:
+
+        if verbose:        
+            print("A " + str(singleTest))
+            print("part result " + str(partResult))
+            print("part reminder  " + str(reminder))
+            print("optCount  " + str(optCount))
+            print("len " + str(len(singleTest)))
+            print("sum " + str(sum(singleTest)))
+            print("iter " + str(O[0]))
+
+if True :
+
+    if verbose:
+        print("Optimization integer tests.")
+
+    O = [0]
+    tests = []
+
+    A, NU = [3, 383, 401, 405, 580, 659, 730, 1024, 1100, 1175, 1601, 2299, 3908, 4391, 4485, 5524], 4
+    tests.append((A, NU))
+    A, NU = [4,5,3,2,5,5,5,1,5,5,5,5,3,5,5,2], 13
+    tests.append((A, NU))
+    A, NU = [4,4,6,2,3,8,10,2,10,7], 4
+    tests.append((A, NU))
+    A, NU = [4,15,1,1,1,1,3,11,1,10], 3
+    tests.append((A, NU))
+    A, NU =  [20, 23, 25, 49, 45, 27, 40, 22, 19], 3
+    tests.append((A, NU))
+    A, NU = [20, 23, 25, 49, 45, 27, 40, 22, 19, 20, 23, 25, 49, 45, 27, 40, 22, 19], 6
+    tests.append((A, NU))
+    A, NU =  [27, 9, 9, 9, 9, 9, 3, 3, 3], 3
+    tests.append((A, NU))
+    A, NU = [10,10,10,7,7,7,7,7,7,6,6,6], 3
+    tests.append((A, NU))
+    A, NU = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], 3
+    tests.append((A, NU))
+    A, NU = [10,12,1,2,10,7,5,19,13,1],4
+    tests.append((A, NU))
+    A, NU = [1,2,3,4,5,6,7,8,9],3
+
+    case = 0
+
+    for A, NU in tests:
+
+        case += 1
+
+        O[0] = 0
+
+        if verbose:        
+            print("case " + str(case))
+
+        testCase = list(A)
+
+        size = sum(A) // NU
+
+        singleTestSizes = []
+
+        for i in range(NU):
+           singleTestSizes.append(size)
+        
+        lenT = len(testCase)
+
+        reminderItem = random.randint(min(A), max(A))
+
+        testCase.append(reminderItem)
+
+        partResult, reminder, optCount = partitionN(testCase, singleTestSizes, 0, O)
+
+        iterNum = O[0]
+        maxIter = (NU ** 3) * ((lenT // NU) ** 4)
+
+        if len(reminder) == 0 or len(partResult) != NU or iterNum > maxIter:
+
+            if verbose:        
+                print("case " + str(case))
+                print("A " + str(A))
+                print("part result " + str(partResult))
+                print("part reminder  " + str(reminder))
+                print("reminderItem  " + str(reminderItem))
+                print("optCount  " + str(optCount))
+                print("len " + str(len(A)))
+                print("sum " + str(sum(A)))
+                print("sum // NU" + str(sum(A) // NU))
+                print("iter " + str(iterNum))
+                print("max iter " + str(maxIter))
 
             assert False
 
@@ -1353,7 +1651,7 @@ if True:
         if verbose:        
             print("case " + str(case))
 
-        partResult, reminder = partitionN(list(A), NU, 3, O)
+        partResult, reminder, optCount = partitionN(list(A), NU, 3, O)
 
         if len(reminder) != 0 or len(partResult) != NU:
 
@@ -1362,6 +1660,7 @@ if True:
                 print("A " + str(A))
                 print("part result " + str(partResult))
                 print("part reminder  " + str(reminder))
+                print("optCount  " + str(optCount))
                 print("len " + str(len(A)))
                 print("sum " + str(sum(A)))
                 print("sum // NU" + str(sum(A) // NU))
@@ -1385,7 +1684,7 @@ if True:
         if verbose:        
             print("case " + str(case))
 
-        partResult, reminder = partitionN(list(A), NU // 2, 6, O)
+        partResult, reminder, optCount = partitionN(list(A), NU // 2, 6, O)
 
         if len(reminder) != 0 or len(partResult) != NU // 2:
 
@@ -1394,15 +1693,25 @@ if True:
                 print("A " + str(A))
                 print("part result " + str(partResult))
                 print("part reminder  " + str(reminder))
+                print("optCount  " + str(optCount))
                 print("len " + str(len(A)))
                 print("sum " + str(sum(A)))
-                print("sum // NU" + str(sum(A) // NU))
+                print("sum // NU " + str(sum(A) // NU))
                 print("iter " + str(O[0]))
 
             assert False
     
     if verbose:
         print("3 partition rational numbers tests.")
+
+    def DecimalData(data):
+
+        return Decimal(Decimal(data) / 100000)
+
+    def DecimalArray(data):
+
+        for i in range(len(data)):
+            data[i] = DecimalData(data[i])
     
     case = 0
     for A, NU in tests:
@@ -1417,7 +1726,7 @@ if True:
         decA = list(A)
         DecimalArray(decA)
 
-        partResult, reminder = partitionN(decA, NU, 3, O)
+        partResult, reminder, optCount = partitionN(decA, NU, 3, O)
 
         if len(reminder) != 0 or len(partResult) != NU:
 
@@ -1426,6 +1735,7 @@ if True:
                 print("A " + str(decA))
                 print("part result " + str(partResult))
                 print("part reminder  " + str(reminder))
+                print("optCount  " + str(optCount))
                 print("len " + str(len(decA)))
                 print("sum " + str(sum(decA)))
                 print("sum / NU" + str(sum(decA) / NU))
@@ -1577,16 +1887,7 @@ if True:
                             testExpected.append(int(row[1]))
             assert allGood
 
-if True:
-
-    def DecimalData(data):
-
-        return Decimal(Decimal(data) / 100000)
-
-    def DecimalArray(data):
-
-        for i in range(len(data)):
-            data[i] = DecimalData(data[i])
+if True:   
 
     if verbose:
         print("Run 2d knapsack for hardinstances_pisinger test dataset in case of integer and rational numbers.")
@@ -1765,14 +2066,13 @@ if True:
 
     with open(script_dir + '\\partition.perf.over.intpart.csv', 'w', newline='') as csvfile:
         
-        fieldnames = ['item', 'case', 'limit', 'partition', 'N', 'sum', 'iter', 'max iter', 'good']
+        fieldnames = ['item', 'case', 'limit', 'partition', 'N', 'sum', 'optimizations', 'iter', 'max iter', 'good']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
         writer.writeheader()
 
         itemList = [1, 2, 3, 5, 7, 8, 10, 11]
-        maxIntPart = [20, 50, 100, 200, 300, 500, 1000, 2000]
-    
+        maxIntPart = [20, 50, 100, 200, 300, 500, 1000]
         caseId = 0
 
         allGood = True
@@ -1816,20 +2116,20 @@ if True:
 
                         expectedSum = sum(subSet)
 
-                        partResult, resultReminder = partitionN(subSet, partition, 0, O)
+                        partResult, resultReminder, optCount = partitionN(subSet, partition, 0, O)
 
                         if verbose:
-                            print("item = " + str(item) + ", case i " + str(i) + " , case part limit " + str(partLimit) + " , n = " + str(len(subSet))  + " , partition " + str(partition) + " , iter " + str(round(O[0])))
+                            print("item = " + str(item) + ", case i " + str(i) + " , case part limit " + str(partLimit) + " , n = " + str(len(subSet))  + " , partition " + str(partition) + " , iter " + str(round(O[0])) + ", optimizations " + str(optCount))
 
                         resultPart = len(partResult)
 
                         rezSum = 0
                         for sub in partResult:
-                            rezSum += sum(sub)
+                            rezSum += sum(sub.Items)
 
                         good = True
                     
-                        if resultPart < partition or rezSum != expectedSum:
+                        if resultPart < partition or rezSum != expectedSum or len(resultReminder) > 0:
 
                             allGood = False
 
@@ -1841,12 +2141,10 @@ if True:
 
                             print("BAD: item = " + str(item) +  ", case i " + str(i) + " , case part limit " + str(partLimit) + " , n = " + str(len(subSet))  +  " , rezult partition " + str(resultPart) + " , expected partition " + str(partition) + " , rez sum " + str(rezSum) + " , total sum " + str(rezSum + sumRem) + " , expected sum " + str(expectedSum) + " , iter " + str(round(O[0])))
 
-                        writer.writerow({'item': str(item), 'case': str(i), 'limit': str(partLimit), 'partition':  str(partition), 'N': str(len(subSet)), 'sum': str(rezSum), 'iter': str(round(O[0])), 'max iter': str((len(subSet)) ** 3 + (partition ** 3)), 'good': str(good)})
+                        writer.writerow({'item': str(item), 'case': str(i), 'limit': str(partLimit), 'partition':  str(partition), 'N': str(len(subSet)), 'sum': str(rezSum), 'optimizations': str(optCount), 'iter': str(round(O[0])), 'max iter': str(((partition) ** 3) * ((len(subSet)//partition) ** 4)), 'good': str(good)})
 
                         if not allGood:
                             break
-                    
-
 
         if len(badItems) > 0:
             print(badItems)
