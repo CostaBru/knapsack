@@ -191,8 +191,8 @@ Max iterations calculates by following expression:
 
 Optimization column is the number of new quotients generated during the reminder optimization.  
 
-| item | integer | generator limit | partitions |     N      |  optimizations  |  iterations  |  max iterations |
-|------|---------|-----------------|------------|------------|-----------------|--------------|-----------------|
+| item | integer | generator limit | partitions |     N         |  optimizations  |  iterations    |  max iterations |
+|------|---------|-----------------|------------|---------------|-----------------|----------------|-----------------|
 |1|54|20|20|63|0|1 633|648000|
 |1|54|50|50|201|0|10 711|32000000|
 |1|54|100|100|462|0|46 059|256000000|
@@ -218,7 +218,7 @@ Optimization column is the number of new quotients generated during the reminder
 |------|---------|-----------------|------------|------------|-----------------|--------------|-----------------|
 |1|54|10 000|10 000|88 258|260|1 994 693 179|51200000000|
 
-Using test interation and optimization results we can have 3 cases. 
+Using test iterations and optimization reports we can have 3 cases. 
 1. No optimization performed. This means that first heuristics sorting and single knapsack grouping solved the case. 
 2. Single optimization layer. That means that first groping gives almost optimal solution, and we optimized reminder by visiting quotiens without mixing it with each other.
 3. Up to 4 optimiaztion layers. First heuristics gave bad grouping. We had to regenerate old quotiens by mixing it with each other to get up to 4 partitions in the optimize group.
