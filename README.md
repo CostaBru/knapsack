@@ -174,12 +174,12 @@ We sorts quotient groups by its length in descending order of N way partition pr
 
 So far, we have a collection of partition points and the reminder partition point. To optimize reminder we need to union reminder number set with other partition points and theirs sums and call knapsack solver for it. 
 
-We are going to loop over the partition points and increase the limit of same time partition optimization. So the limit is going to be an iterator counter M. After all point processed for current M, we check the reminder lenght. If the length is decreased we set up new quotient and new reminder for next M loop interation. Once Log(M) partiton combinations visited we have an optimal solution.
+We are going to loop over the partition points and increase the limit of same time partition optimization. So the limit is going to be an iterator counter M. After all point processed for current M, we check the reminder lenght. If the length is decreased we set up new quotient and new reminder for next M loop interation. Once half of M partiton combinations visited we have an optimal solution.
 
-We can use the same approach to solve the strict 3 partition problem as well. That problem is NP complete in strong sense. https://en.wikipedia.org/wiki/3-partition_problem#cite_note-3. We will use knapsack with 2 constrains as a grouping operator. The second constrain is group size which is 3. We apply two modifications to our algorithm to do not allow fall into local maximum. We add shuffling reminder set before union with partition point and shuffling new quotient we got after each optimization iteration.
+We can use the same approach to solve the strict 3(T) partition problem as well. That problem is NP complete in strong sense. https://en.wikipedia.org/wiki/3-partition_problem#cite_note-3. We will use knapsack with 2 constrains as a grouping operator. The second constrain is group size which is 3(T). We apply two modifications to our algorithm to do not allow fall into local maximum. We add shuffling reminder set before union with partition point and shuffling new quotient we got after each optimization iteration.
 
 Time and space complexity for M partition for N items problem is the following: O(M ** 3 * ( N/M ) ** 4). 
-For strict T groups M partitions for N items is O(M ** 2 * ((T * N)/M) ** 4).
+For strict T groups M partitions for N items is O(M ** 3 * ((T * N)/M) ** 4).
 
 # Partition performance
 
