@@ -40,21 +40,22 @@ That growing collection gives as next recurrent expression for inner loop for Nt
 
 ``[ Wi + ((Wi + Wi-1) + (Wi + Wi-2) + ... + (Wi + Wi-n)) ]``, 
 
-where W is the weight, and I is the index in collection of given items. At each N iteration we have expected maximum numbers of item weights we need to visit to reach optimal solution. The first numbers of that growing sequence are the following:
+where ``W`` is the weight, and ``I`` is the index in collection of given items. At each ``N`` iteration we have expected maximum numbers of item weights we need to visit to reach optimal solution. The first numbers of that growing sequence are the following:
 
 ``0, 1, 3, 7, 14, 25, 41, 63, 92, 129, 175, 231, 298, 377, 469, 575, 696, 833, 987, 1159``. That sequence is known as ``A004006`` (https://oeis.org/A004006)
 
-The Nth element can be calculated by following formula: 
+The ``Nth`` element can be calculated by following formula: 
 
 ``A(n) = C(n,1) + C(n,2) + C(n,3), or n*(n ** 2 + 5)/6.``
 
-The sum of N elements is equal to ``(n ** 4 + 10 * n ** 2) // 24``. The complexity in big O notation is equal to ``O(N ** 4)``. 
+The sum of ``N`` elements is equal to ``(n ** 4 + 10 * n ** 2) // 24``. The complexity in big O notation is equal to ``O(N ** 4)``. 
 
 As soon we are not going to visit all weights possible from 1 to knapsack size, but only sums and weights itself, we should keep track of maximum weight and value we have archived for each point visited. When we processed all items points or found optimal solution earlier (in case of item weight is equal item value) we can backtrace items using DP table in the same way as in classical dynamic programing solution. 
 
 Instead of array of array as DP table, we are going to use array of map to keep ``O(1)`` access time for points that belong to ``W`` set.
 The map key is point visited, the map value is accumulated weight and value for that key.
 We are going to process points in ASC order. We will merge two sorted list into single one in ``O(N + M)``, where ``N`` previous point count, ``M`` is new points created. Hence the previous list has been ordered already and the new one we get from previous list using current weight addition. 
+
 Classic ``DPS`` uses recurrent formula: 
 
 ``max(value + DP[i][j - weight], DP[i][j])``.
