@@ -216,7 +216,7 @@ Optimization column is the number of new quotients generated during the reminder
 
 | item | integer | generator limit | partitions |     N      |  optimizations  |  iterations  |  max iterations |
 |------|---------|-----------------|------------|------------|-----------------|--------------|-----------------|
-|1|54|10000|10 000|88 258|540 000|260|1 994 693 179|51200000000|
+|1|54|10 000|10 000|88 258|260|1 994 693 179|51200000000|
 
 Using test interation and optimization results we can have 3 cases. 
 1. No optimization performed. This means that first heuristics sorting and single knapsack grouping solved the case. 
