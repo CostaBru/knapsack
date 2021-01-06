@@ -218,7 +218,9 @@ def partitionN(items, sizesOrPartitions, groupSize, O, optimizationLimit = -1):
             O[0] += len(p.Items)
             O[0] += len(p.Sizes)
 
-            return  divideSet(newSet, newSizes, groupSize, False, O)
+            sortedDesc = True
+
+            return  divideSet(newSet, newSizes, groupSize, sortedDesc, O)
 
         def getPoints(i, item, uniqueSet, limit):
 
@@ -266,7 +268,6 @@ def partitionN(items, sizesOrPartitions, groupSize, O, optimizationLimit = -1):
             O[0] += len(p.Items)
             O[0] += len(p.Sizes)
             O[0] += len(p.Indexes)
-           # O[0] += (len(p.Items) * math.log2(len(p.Items)))
 
         def incOForPartition(O, optItem):
             O[0] += 1
@@ -327,19 +328,22 @@ def partitionN(items, sizesOrPartitions, groupSize, O, optimizationLimit = -1):
                     if len(optimizedIndexes) > 0 and not p.Indexes.isdisjoint(optimizedIndexes):
                         continue
 
-                    optQuotient, optReminder, optCount = optimize(p, remainderItem, groupSize, limit, O) 
+                    if p.GetPartitions() >= limit - 1:
+                        optQuotient, optReminder, optCount = optimize(p, remainderItem, groupSize, limit, O) 
 
-                    incOForPoint(O, p)
+                        incOForPoint(O, p)
 
-                    if  len(optReminder) < minRemiderLen:
+                        if  len(optReminder) < minRemiderLen:
 
-                        for optItem in optQuotient:
-                            optimizationsMade.append(partitionPoint(optItem.Items, optItem.Sizes, p.Indexes))
-                            optimizedIndexes.update(p.Indexes)
-                            incOForPartition(O, optItem)
+                            for optItem in optQuotient:
+                                optimizationsMade.append(partitionPoint(optItem.Items, optItem.Sizes, p.Indexes))
+                                optimizedIndexes.update(p.Indexes)
+                                incOForPartition(O, optItem)
 
-                        remainderItem = optReminder
-                        minRemiderLen = len(remainderItem) 
+                            remainderItem = optReminder
+                            minRemiderLen = len(remainderItem) 
+                        else:
+                            newPoints.append(p)
                     else:
                         newPoints.append(p)
 
@@ -561,7 +565,7 @@ def partitionN(items, sizesOrPartitions, groupSize, O, optimizationLimit = -1):
             if partResult:
                 return partResult
         
-        sortedDesc = False
+        sortedDesc = True
 
         sortedDuplicates    = sortDuplicatesForPartitioning(group, count, nonUniqueList, O)
         quotients, remainder, optCount = divideSet(sortedDuplicates, sizes, groupSize, sortedDesc, O)
@@ -666,14 +670,18 @@ def knapsack1d(size, items, O, desc = True):
 
             if newPoint <= size and not newPoint in uniquePointSet:   
 
-                peek = circularPointQuene[0]
+                if len(circularPointQuene) > 0:
+                    peek = circularPointQuene[0]
 
-                if newPoint < peek:                   
+                    if newPoint < peek:                   
+                        yield newPoint
+                        circularPointQuene.append(newPoint)
+
+                    elif newPoint > peek:
+                        greaterQu.append(newPoint)
+                else:
                     yield newPoint
                     circularPointQuene.append(newPoint)
-
-                elif newPoint > peek:
-                    greaterQu.append(newPoint)
         
         while len(greaterQu) > 0:
 
@@ -853,16 +861,20 @@ def knapsack2d(size, weights, values, O):
 
             newPoint = oldPoint + itemWeight
 
-            if newPoint <= size and not newPoint in uniquePointSet:   
+            if newPoint <= size and not newPoint in uniquePointSet: 
 
-                peek = circularPointQuene[0]
+                if len(circularPointQuene) > 0:
+                    peek = circularPointQuene[0]
 
-                if newPoint < peek:                   
+                    if newPoint < peek:                   
+                        yield newPoint
+                        circularPointQuene.append(newPoint)
+
+                    elif newPoint > peek:
+                        greaterQu.append(newPoint)
+                else:
                     yield newPoint
                     circularPointQuene.append(newPoint)
-
-                elif newPoint > peek:
-                    greaterQu.append(newPoint)
         
         while len(greaterQu) > 0:
 
@@ -1126,14 +1138,18 @@ def knapsackNd(inputConstrains, inputItems, values, O):
 
                 if not newPoint in uniquePointSet:   
 
-                    peek = circularPointQuene[0]
+                    if len(circularPointQuene) > 0:
+                        peek = circularPointQuene[0]
 
-                    if newPoint < peek:
+                        if newPoint < peek:
+                            yield newPoint
+                            circularPointQuene.append(newPoint)
+
+                        elif newPoint > peek:
+                            greaterQu.append(newPoint)
+                    else:
                         yield newPoint
                         circularPointQuene.append(newPoint)
-
-                    elif newPoint > peek:
-                        greaterQu.append(newPoint)
         
         while len(greaterQu) > 0:
 
@@ -2066,13 +2082,14 @@ if True:
 
     with open(script_dir + '\\partition.perf.over.intpart.csv', 'w', newline='') as csvfile:
         
-        fieldnames = ['item', 'case', 'limit', 'partition', 'N', 'sum', 'optimizations', 'iter', 'max iter', 'good']
+        fieldnames = ['item', 'case', 'limit', 'partition', 'N', 'optimizations', 'iter', 'max iter', 'good']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
         writer.writeheader()
 
         itemList = [1, 2, 3, 5, 7, 8, 10, 11]
-        maxIntPart = [20, 50, 100, 200, 300, 500, 1000]
+        maxIntPart = [20, 50, 100, 200, 300, 500, 1000, 2000, 3000, 4000, 5000]
+        #maxIntPart = [20, 50, 100, 200, 300, 500, 1000]
         caseId = 0
 
         allGood = True
@@ -2141,7 +2158,7 @@ if True:
 
                             print("BAD: item = " + str(item) +  ", case i " + str(i) + " , case part limit " + str(partLimit) + " , n = " + str(len(subSet))  +  " , rezult partition " + str(resultPart) + " , expected partition " + str(partition) + " , rez sum " + str(rezSum) + " , total sum " + str(rezSum + sumRem) + " , expected sum " + str(expectedSum) + " , iter " + str(round(O[0])))
 
-                        writer.writerow({'item': str(item), 'case': str(i), 'limit': str(partLimit), 'partition':  str(partition), 'N': str(len(subSet)), 'sum': str(rezSum), 'optimizations': str(optCount), 'iter': str(round(O[0])), 'max iter': str(((partition) ** 3) * ((len(subSet)//partition) ** 4)), 'good': str(good)})
+                        writer.writerow({'item': str(item), 'case': str(i), 'limit': str(partLimit), 'partition':  str(partition), 'N': str(len(subSet)), 'optimizations': str(optCount), 'iter': str(round(O[0])), 'max iter': str(((partition) ** 3) * ((len(subSet)//partition) ** 4)), 'good': str(good)})
 
                         if not allGood:
                             break
