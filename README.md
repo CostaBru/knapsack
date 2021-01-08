@@ -243,7 +243,7 @@ Mulitple knapsack and integer optimization tests were performed as well. Optimiz
 
 The single ``knapsack.py`` script has all described alogrithms, tests, and performance report generators. It is copy\paste friendly without 3d party dependencies. To run all knapsack tests, please, download test cases from [9], and copy those files to /hardinstances_pisinger directory. 
 
-There are 3 python methods to use:
+There are 4 python methods to use:
 - partitionN, which gets number set to partition, partitions number or list of particular sizes of each partition, strict partition group size, and the iterator counter array.
 - knapsack1d, which used in partitionN as set grouping operator. It requires the following parameters: size of knapsack, items, iterator counter array, and flag indicating whether items are sorted in desc order. 
 - knapsack2d, gets size of knapsack, items, values, iterator counter array. 
