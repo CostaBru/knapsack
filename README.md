@@ -1,6 +1,6 @@
 # Knapsack and Set Partitions
 
-Polynomial time algorithms for unbounded 1-0 knapsack problems up to ``N`` dimensions, algorithms for ``N`` way sum partition and strict ``N`` partition, and multiple knapsack problems.
+Exact polynomial time\space algorithms for unbounded 1-0 knapsack problems up to ``N`` dimensions, algorithms for ``N`` way sum partition and strict ``N`` partition, and multiple knapsack problems.
 
 # Abstract
 
@@ -36,7 +36,7 @@ Due to ``Axiom 1``, let's consider only weights and sums of weights. We will per
 
 Let's call the sum of weight visited with current weight a point. We are going to generate the set of W point for each knapsack item. We will provide the current weight and sum of current item weight with all visited points before. And use classic DP formula for that new set. 
 
-That growing collection gives as next recurrent expression for inner loop for Nth iteration:
+That growing collection gives as next recurrent expression for inner loop for ``Nth`` iteration:
 
 ``[ Wi + ((Wi + Wi-1) + (Wi + Wi-2) + ... + (Wi + Wi-n)) ]``, 
 
@@ -50,7 +50,7 @@ The ``Nth`` element can be calculated by following formula:
 
 The sum of ``N`` elements is equal to ``(n ** 4 + 10 * n ** 2) // 24``. The complexity in big O notation is equal to ``O(N ** 4)``. 
 
-As soon we are not going to visit all weights possible from 1 to knapsack size, but only sums and weights itself, we should keep track of maximum weight and value we have archived for each point visited. When we processed all items points or found optimal solution earlier (in case of item weight is equal item value) we can backtrace items using DP table in the same way as in classical dynamic programing solution. 
+As soon we are not going to visit all weights possible from 1 to knapsack size, but only sums and weights itself, we should keep track of maximum weight and value we have archived for each point visited. When we processed all items points or found optimal solution earlier (in case of item weight is equal item value) we can backtrace items using DP table in the same way as in ``DPS``. 
 
 Instead of array of array as DP table, we are going to use array of map to keep ``O(1)`` access time for points that belong to ``W`` set.
 The map key is point visited, the map value is accumulated weight and value for that key.
@@ -66,7 +66,7 @@ The case ``[j - weight]`` can give a point that does not belong to set ``W``, th
 # Three kind of problem
 
 We are going to investigate three kinds of knapsack problems.
-First one is knapsack where the item value and the item weight are the same. Let's call it 1D knapsack problem. The knapsack problem where value and weight are different is 2D problem. 1D and 2D knapsack problems are known as ``weakly NP hard`` problems in case of integer numbers.[2]
+First one is knapsack where the item value and the item weight are the same which is known as subset sum problem. Let's call it 1D knapsack problem. The knapsack problem where value and weight are different is 2D problem. 1D and 2D knapsack problems are known as ``weakly NP hard`` problems in case of integer numbers.[2]
 ``N`` dimensional knapsack has ``N`` constrains, ``M`` items and ``M`` values, where ``Mth`` item is the vector of item dimensions of size ``N``. The multi-dimensional knapsacks are computationally harder than knapsack; even for ``D=2``, the problem does not have EPTAS unless ``P=NP``. [1]
 
 ## 1D knapsack
@@ -74,7 +74,7 @@ First one is knapsack where the item value and the item weight are the same. Let
 It is simpler than others, because we can terminate execution once we have found a solution equal to knapsack size. 
 We are going to use this property in ``N`` subset sum problem. 
 Also, here we can reduce the point collection growing speed, because some new points created will not contribute to the optimal solution. The reason of it is the depth of execution tree and growing speed of the sum starting from current one. 
-Let's call a partial sum is the number we get for some Ith element from minimum item to current item. Here we expect knapsack items in DESC order, so the smallest and the last Nth partial sum is going to be equal ``Nth`` weight, for ``Nth - 1`` it is equal to ``[ S(N - 1) = S(N) +  Ith weight]`` and so on. 
+Let's call a partial sum is the number we get for some ``Ith`` element from minimum item to current item. Here we expect knapsack items in DESC order, so the smallest and the last ``Nth`` partial sum is going to be equal ``Nth`` weight, for ``Nth - 1`` it is equal to ``[ S(N - 1) = S(N) +  Ith weight]`` and so on. 
 We are going to use that partial sum and the knowledge of desc iteration flow to skip new points from growing collection.
 We use partial sum to decide to do we need add this weight or just use created new points. In addition, we could skip new sum point if that sum is less then knapsack size minus partial sum. (``Lemma 1``)
 
@@ -96,7 +96,7 @@ The optimal solution could be found in set of all sums of items weights only. It
 ### Teor 1
 
 The dynamic programing recurrent formula ``max(DP[i], DP[i - w] + v)`` works for set of sums. Prof: Because the set ``W`` is existing in set ``S``, where set ``W`` are the items and sums, where set ``S`` are numbers starting 1 up to knapsack size,
-then DPS recurrent formula ``max(DP[i], DP[i - w] + v)`` works for W points as well. if ``[i - w]`` is not the sum of items it will not be in optimal solution anyway due to ``Axiom 1``, and we consider 0 value for that point-outsider.
+then ``DPS`` recurrent formula ``max(DP[i], DP[i - w] + v)`` works for ``W`` points as well. if ``[i - w]`` is not the sum of items it will not be in optimal solution anyway due to ``Axiom 1``, and we consider 0 value for that point-outsider.
 
 ### Lemma 1 for 1D knapsack: 
 
@@ -111,11 +111,11 @@ The ``W point`` cannot reach the size of knapsack as part of sums of next algori
 ### Teor 2 for 1D knapsack: 
 
 The 1-0 knapsack problem where ``p = w`` has ``O(C * (N ** 3))`` time and space complexity. 
-Prof: Growing speed without addition item weight itself to the W point is less that ``O (N ** 4)``.
+Prof: Growing speed without addition item weight itself to the ``W point`` is less that ``O (N ** 4)``.
 The first items are the following: ``1, 3, 7, 11, 16, 22, 30, 38, 47, 57, 69, 81, 94, 108, 124, 140, 157, 175, 195, 215, 236, 258. ``
 That is known as A082644 integer number sequence. https://oeis.org/A082644. 
-The n'ht element can be calculated by next formula: ``n * (n - 1/2 ) / 2``.  
-Sum of N is ``(n ** 3) // 6 - (n ** 2) // 8``. Which is ``O(N ** 3)``. 
+The ``Nht`` element can be calculated by next formula: ``n * (n - 1/2 ) / 2``.  
+Sum of ``N`` is ``(n ** 3) // 6 - (n ** 2) // 8``. Which is ``O(N ** 3)``. 
 
 # Analysis
 
@@ -262,6 +262,16 @@ Investigate possibility of such enhancements for other kinds of problems that ha
 - [7] https://en.wikipedia.org/wiki/Multiway_number_partitioning
 - [8] https://en.wikipedia.org/wiki/3-partition_problem
 - [9] http://hjemmesider.diku.dk/~pisinger/codes.html
+
+## How to cite ##
+
+	@unpublished{knapsack,
+	    author = {Konstantin Briukhnov (@ConstaBru)},
+	    title = {Exact polynomial algorithms for 1-0 unbounded knapsack, N way subset sum, T group N partitions, MKS problems},
+	    year = 2020,
+	    note = {Available at \url{https://github.com/CostaBru/knapsack}},
+	    url = {https://github.com/CostaBru/knapsack}
+	}
 
 ## License
 [MIT](https://choosealicense.com/licenses/mit/)
