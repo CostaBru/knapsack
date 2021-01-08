@@ -243,6 +243,12 @@ Mulitple knapsack and integer optimization tests were performed as well. Optimiz
 
 The single ``knapsack.py`` script has all described alogrithms, tests, and performance report generators. It is copy\paste friendly without 3d party dependencies. To run all knapsack tests, please, download test cases from [9], and copy those files to /hardinstances_pisinger directory. 
 
+There are 3 python methods to use:
+- partitionN, which gets number set to partition, partitions number or list of particular sizes of each partition, strict partition group size, and the iterator counter array.
+- knapsack1d, which used in partitionN as set grouping operator. It requires the following parameters: size of knapsack, items, iterator counter array, and flag indicating whether items are sorted in desc order. 
+- knapsack2d, gets size of knapsack, items, values, iterator counter array. 
+- knapsackNd, expects the single tuple as size constrains of knapsack, items as tuples of dimensions, values, iterator counter array. It is used in partitionN method in the strict group size case.
+
 # Conclusion
 
 Having, ``N`` dimension knapsack and ``2D`` knapsack on rational numbers are ``NP complete`` in strong sense and the algorithm described solved that problems using polynomial time and space, and tests result gave the evidence that python 3 script, which 1000 times slover than compiled programs, was able to group hundreds of thousands numbers to tens thousands same sum partitions. I can consider, with care, that ``NP = P`` at least for ``weak NP problems``. 
