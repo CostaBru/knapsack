@@ -240,7 +240,7 @@ Classic DPS algorithm  for 1-0 unbounded knapsack problem was extended to work w
 
 	@unpublished{knapsack,
 	    author = {Konstantin Briukhnov (@ConstaBru)},
-	    title = {Exact polynomial algorithms for 1-0 unbounded knapsack, N way subset sum, T group N partitions, MKS problems},
+	    title = {Exact dynamic programming algorithm for rational numbers for 1-0 unbounded knapsack up to M dimensions},
 	    year = 2020,
 	    note = {Available at \url{https://github.com/CostaBru/knapsack}},
 	    url = {https://github.com/CostaBru/knapsack}
