@@ -1,6 +1,6 @@
 # Knapsack and Set Partitions
 
-Exact polynomial time\space algorithms for unbounded 1-0 knapsack problems up to ``N`` dimensions, algorithms for ``N`` way sum partition and strict ``N`` partition, and multiple knapsack problems.
+Exact and close to polynomomial time and space algorithms for unbounded 1-0 knapsack problems up to ``N`` dimensions, algorithms for ``N`` way sum partition and strict ``N`` partition, and multiple knapsack problems.
 
 # Abstract
 
@@ -16,7 +16,7 @@ Let's consider classical bottom-up dynamic programing solution for unbounded kna
 It uses recurrent formula to calculate maximum value going through item weights array and checks every weight possible using DP table from 1 to size of knapsack. 
 DPS algorithm is very efficient on small numbers. It has a limitation to use only positive integers as input. Time and memory Complexity is ``O(N * M)`` which is known as pseudopolynomial.
 
-During solving the multiway number partition problem [7] using knapsack, I noticed that classical algorithm did extra work by considering possibilities those never would be a part of the optimal solution.
+During solving the multiway number partition problem [7] using knapsack, I noticed that ``DPS`` did extra work by considering possibilities those never would be a part of the optimal solution.
 
 Classic ``DPS`` works in integer set ``1..S`` integer numbers, where ``S`` is size of knapsack. [1] 
 
@@ -24,15 +24,9 @@ But the optimal solution can be only in subset ``W``, where ``W`` contains items
 
 When weight considered is not a part of sum of items then classic ``DPS`` algorithm compares and copies maximum value reached to next DP table cell. 
 
-# Motivation
-
-Of course, the main driver is curiosity, an attempt to answer the question "What if?", and the kind of math intuition. I had a strong feeling that knapsack should have a polynomial time algorithm. Because it uses addition which is commutative, meaning that order does not matter, and it is associative, and subtraction, which is inverse operation for addition, to locate the optimal solution. 
-
-The goal of this work to enhance the classical solution and make the knapsack 1-0 algorithm be the true polynomial.
-
 # The main idea
 
-Due to ``Axiom 1``, let's consider only weights and sums of weights. We will perform the DP algorithm over that collection for each item. Doing this we get polynomial time and space algorithm. (``Teor 1``)
+Due to ``Axiom 1``, let's consider only weights and sums of weights. We will perform the DP algorithm over that collection for each item. 
 
 Let's call the sum of weight visited with current weight a point. We are going to generate the set of W point for each knapsack item. We will provide the current weight and sum of current item weight with all visited points before. And use classic DP formula for that new set. 
 
@@ -40,15 +34,7 @@ That growing collection gives as next recurrent expression for inner loop for ``
 
 ``[ Wi + ((Wi + Wi-1) + (Wi + Wi-2) + ... + (Wi + Wi-n)) ]``, 
 
-where ``W`` is the weight, and ``I`` is the index in collection of given items. At each ``N`` iteration we have expected maximum numbers of item weights we need to visit to reach optimal solution. The first numbers of that growing sequence are the following:
-
-``0, 1, 3, 7, 14, 25, 41, 63, 92, 129, 175, 231, 298, 377, 469, 575, 696, 833, 987, 1159``. That sequence is known as ``A004006`` (https://oeis.org/A004006)
-
-The ``Nth`` element can be calculated by following formula: 
-
-``A(n) = C(n,1) + C(n,2) + C(n,3), or n*(n ** 2 + 5)/6.``
-
-The sum of ``N`` elements is equal to ``(n ** 4 + 10 * n ** 2) // 24``. The complexity in big O notation is equal to ``O(N ** 4)``. 
+where ``W`` is the weight, and ``I`` is the index in collection of given items. At each ``N`` iteration we have expected maximum numbers of item weights we need to visit to reach optimal solution. The recurrent formula for that collection is ``(2 ** N) - 1``
 
 As soon we are not going to visit all weights possible from 1 to knapsack size, but only sums and weights itself, we should keep track of maximum weight and value we have archived for each point visited. When we processed all items points or found optimal solution earlier (in case of item weight is equal item value) we can backtrace items using DP table in the same way as in ``DPS``. 
 
@@ -78,13 +64,10 @@ Let's call a partial sum is the number we get for some ``Ith`` element from mini
 We are going to use that partial sum and the knowledge of desc iteration flow to skip new points from growing collection.
 We use partial sum to decide to do we need add this weight or just use created new points. In addition, we could skip new sum point if that sum is less then knapsack size minus partial sum. (``Lemma 1``)
 
-In fact, the 1D knapsack problem time and space complexity begin to fall from ``O(N**4)`` to ``O(N**3)`` starting ``Ith`` item iteration where knapsack size is less that ``size // 2``. (``Teor 2``) 
-
 ## 2D and N dimension knapsacks
 
 They are required to visit all sums and cannot skip any of them. We use both weights\volume as W point and accumulate value\weight\volume reached for the ``W point`` using the same DP recurrent formula. 
-Each new dimension requires more memory for storing that dimension in point list and in DP table map keys collection, and we need to compare more numbers as well. ``P`` knapsack time and space complexity are not greater than ``O( ( N * P ) ** 4)``, where ``P`` number of knapsack constrains, ``N`` count of knapsack items. 
-Because of unique point processing and cutting new points by knapsack constrains the average complexity is near ``O(C * (( N * P ) ** 3))``, where ``C`` is constant that dependents on ``N``.  ``C`` falls for large ``N``. ``N`` = 20 ``C`` is 10; for ``N`` = 500 ``C`` is 3.
+Each new dimension requires more memory for storing that dimension in point list and in DP table map keys collection, and we need to compare more numbers as well. 
 
 Once we get rid of integer indexes in the DP table, using a point as key to access the value, weight and volume in DP map, we can use described algorithms for ``all positive rational numbers`` without converting knapsack constrains and item weights given to integers.
 Above solutions solve the knapsack problems which are strongly ``NP-complete`` if the weights and profits are given as rational numbers. https://en.wikipedia.org/wiki/Knapsack_problem#cite_note-Wojtczak18-12
@@ -107,15 +90,6 @@ It may be a part of solution, so we can consider only sums previous points with 
 
 We can consider the starting way of each point and the full way from that point to knapsack size as part of other sums.
 The ``W point`` cannot reach the size of knapsack as part of sums of next algorithm iterations and will not contribute to optimal solution if it less than ``knapsack size`` minus ``partial sum`` for current item.  
-
-### Teor 2 for 1D knapsack: 
-
-The 1-0 knapsack problem where ``p = w`` has ``O(C * (N ** 3))`` time and space complexity. 
-Prof: Growing speed without addition item weight itself to the ``W point`` is less that ``O (N ** 4)``.
-The first items are the following: ``1, 3, 7, 11, 16, 22, 30, 38, 47, 57, 69, 81, 94, 108, 124, 140, 157, 175, 195, 215, 236, 258. ``
-That is known as A082644 integer number sequence. https://oeis.org/A082644. 
-The ``Nht`` element can be calculated by next formula: ``n * (n - 1/2 ) / 2``.  
-Sum of ``N`` is ``(n ** 3) // 6 - (n ** 2) // 8``. Which is ``O(N ** 3)``. 
 
 # Analysis
 
@@ -181,9 +155,6 @@ So far, we have a collection of ``partition points`` and the ``reminder`` partit
 We are going to loop over the partition points and increase the limit of same time partition optimization. So the limit is going to be an iterator counter ``M``. After all point processed for current ``M``, we check the ``reminder`` lenght. If the length is decreased we set up new ``quotients`` and new ``reminder`` for next ``M`` loop interation. Once ``half of M`` partiton combinations visited we have an optimal solution.
 
 We can use the same approach to solve the ``strict 3(T) partition`` problem as well. That problem is ``NP complete`` in strong sense. https://en.wikipedia.org/wiki/3-partition_problem#cite_note-3. We will use knapsack with ``2 constrains`` as a grouping operator. The second constrain is group size which is ``3(T)``. We apply two modifications to our algorithm to do not allow fall into local maximum. We add shuffling ``reminder`` set before union with partition point and shuffling new ``quotients`` we got after each optimization iteration.
-
-Time and space complexity for ``M`` partition for ``N`` items problem is the following: ``O(M ** 3 * ( N/M ) ** 4)``. 
-For strict ``T groups M partitions for N items`` is ``O(M ** 3 * ((T * N)/M) ** 4)``.
 
 # Partition performance
 
@@ -251,11 +222,7 @@ There are 4 python methods to use:
 
 # Conclusion
 
-Having, ``N`` dimension knapsack and ``2D`` knapsack on rational numbers are ``NP complete`` in strong sense and the algorithm described solved that problems using polynomial time and space, and tests result gave the evidence that python 3 script, which 1000 times slover than compiled programs, was able to group hundreds of thousands numbers to tens thousands same sum partitions. I can consider, with care, that ``NP = P`` at least for ``weak NP problems``. 
-
-# Further work
-
-Investigate possibility of such enhancements for other kinds of problems that have known pseudo polynomial complexity and can be solved in dynamic programing way. 
+Classic DPS algorithm  for 1-0 unbounded knapsack problem was extended to work with rational numbers and have any number of independend dimensions limited by any number of knapsack constrains.
 
 # References
 
