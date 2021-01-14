@@ -1473,7 +1473,7 @@ def DecimalArray(data):
 
 if True:
     if verbose:
-        print("rational numbers tests for sabset sum knapsack, 1-0 knapsack, and N dimension knapsacks, where N 2-4.")
+        print("rational numbers tests for subset sum knapsack, 1-0 knapsack, and N dimension knapsacks, where N 2-4.")
 
     O = [0]
 
@@ -2027,7 +2027,7 @@ if True:
 if True:
 
     if verbose:
-        print("Run 1d knapsack for hardinstances_pisinger subset sum test dataset.")
+        print("Run subset sum knapsack for hardinstances_pisinger subset sum test dataset.")
 
     script_dir = os.path.dirname(__file__) #<-- absolute dir the script is in
 
@@ -2128,7 +2128,7 @@ if True:
 if True:   
 
     if verbose:
-        print("Run 2d knapsack for hardinstances_pisinger test dataset in case of integer and rational numbers.")
+        print("Run 1-0 knapsack for hardinstances_pisinger test dataset in case of integer and rational numbers.")
 
     script_dir = os.path.dirname(__file__) #<-- absolute dir the script is in
 
@@ -2300,7 +2300,7 @@ if True:
         return answer
 
     if verbose:
-        print("Run N way partition using integer partiton generator.")
+        print("Run N way sum partition using integer partiton generator.")
 
     script_dir = os.path.dirname(__file__) #<-- absolute dir the script is in
 
