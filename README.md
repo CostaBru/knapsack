@@ -2,7 +2,7 @@
 
 This work contains the list of algorithms, performance analysis and reports:
 
-- An exponental algorithm that has the polynominal time\space runtime for unbounded 1-0 knapsack problem. The comparison of the state of art Nemhauser-Ullmann Algorithm [12] with that one.
+- An exponental algorithm that has the polynominal time\space runtime for unbounded 1-0 knapsack problem. The comparison of the Nemhauser-Ullmann Algorithm [12] with that one.
 
 - An exponental algorithm for abstract up to ``T`` dimensions unbounded 1-0 knapsack problem.
 
