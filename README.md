@@ -2,7 +2,7 @@
 
 This work contains the list of algorithms, performance analysis and reports:
 
-- An exponental algorithm that has the polynominal time\space runtime for unbounded 1-0 knapsack problem. The comparison of the state of art Nemhauser-Ullmann Algorithm [12][13] with that one.
+- An exponental algorithm that has the polynominal time\space runtime for unbounded 1-0 knapsack problem. The comparison of the state of art Nemhauser-Ullmann Algorithm [12] with that one.
 
 - An exponental algorithm for abstract up to ``T`` dimensions unbounded 1-0 knapsack problem.
 
@@ -113,17 +113,6 @@ The ``W point`` cannot reach the size of knapsack as part of sums of next algori
 # Nemhauser-Ullman
 
 The Nemhauser-Ullman algorithm [12] for the knapsack problem computes the Pareto curve and returns the best solution from the curve.
-
-One natural neighborhood is to smoothe each weight ``wi`` uniformly over an interval of width ``σ`` centered at ``wi``.
-
-Thus, an adversary chooses the exact profit ``p`` of each object and the mean ``w`` of each object, and ``ii`` then nature randomly perturbs all weights by adding a number uniformly chosen from ``[−σ/2, σ/2]``. For weights that are smaller than ``σ/2``, we allow that the box is shifted to the right, this only increases the mean value. One property of such density functions is that they take on value at most ``1/σ`` for any possible weight. I.e., each ``wi`` is given by a random draw with density function ``fi :[0,∞]→[0,1/σ]``.
-
-The following analysis allows any distribution on the weights, whose density function is upper bounded by ``1/σ``; it does not use any other specific properties of the distribution. In fact, for the purpose of [12] lecture, we make the simplifying assumption that we have ``fi : [0,1] → [0,1/σ]``
-for all ``i`` ∈ ``[n]``.
-
-For σ-smoothed instances, the expected size of ``P`` is bounded by ``(n**2)/σ`` for all ``j`` ∈ ``n``. In particular, the Nemhauser-Ullman algorithm for the knapsack problem has a smoothed complexity of ``O((n**)3/σ)`` for the smoothness model described in [12]. 
-
-The result is by Beier, R ̈oglin and V ̈ocking. Please look at [12] for details.
 
 For now, github has two implementations of this algorithm. One of them which is written by ``Darius Arnold`` in python3, was included in knapsack.py with paretoKnapsack method. The code was modifeid a little bit to count interations and some corner cases patches applied to make it works on test dataset. 
 
