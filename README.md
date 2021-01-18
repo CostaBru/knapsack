@@ -8,7 +8,7 @@ This work contains the list of algorithms, performance analysis and reports:
 
 - ``M`` equal-subset-sum of ``N`` integer number set that is exponental in ``M`` only.
 
-- Algorithm for multiple knapsack and ``M`` strict partition problem.
+- Algorithms for multiple knapsack and ``M`` strict partition problem.
 
 - Test cases and iteration reports.
 
@@ -48,48 +48,49 @@ where ``W`` is the weight, and ``I`` is the index in collection of given items. 
 
 The recurrent formula for that collection is ``(2 ** N) - 1``. Which is exponental in ``N``. That exponent is limited by ``C`` the size of knapsack.
 
-The main driver of that exponental growth is the count of new distinct sums generated after each iteration of ``Nth`` item. Because the patrition function of each existing sum grows as an exponential function of the square root of its argument, the probabilty of new sum generated be an unuque falls down dramatically when count of sums grows up. 
+The main driver of that exponental growth is the count of new distinct sums generated after each iteration of ``Nth`` item. Because the patrition function of each existing sum grows as an exponential function of the square root of its argument, the probabilty of new sum generated be an unuque falls down dramatically when count of sums grows up. This limitation function is non linear and it is the subject for further work.
 
-On the othen hand, each new dimension added to the knapsack problem decreases the limitiation effect. 
+In case of ``T`` dimensinal knapsack, each new dimension added decreases this limitiation effect. 
 
-The best case for knapsack is all duplicate weights in given set. The compexity is ``O(N)`` in that case. Superincreasing sequence of weights [10] can be solved in ``O(N LogN)``. The worst case for the algorithm is considering as much possible of unique weights as possible. We can state that the superincreasing set of prime numbers is the worst case, where each sums for previous ``N`` numbers grater than next ``N item`` in the ordered set.  
+The best case for knapsack is all duplicate weights in given set. The compexity is ``O(N)`` in that case. Superincreasing sequence of weights [10] can be solved in ``O(N LogN)``. 
 
-As soon we are not going to visit all weights possible from 1 to knapsack size, but only sums and weights itself, we should keep track of maximum weight and value we have archived for each point visited. When we processed all items points or found optimal solution earlier (in case of item weight is equal item value) we can backtrace items using DP table in the same way as in ``DPS``. 
+The worst case for the algorithm is considering as much possible of unique weights as possible. We can state that the superincreasing set of prime numbers is the worst case, where each sums for previous ``N`` numbers grater than next ``N item`` in the ordered set.  
 
-Instead of array of array as DP table, we are going to use array of map to keep ``O(1)`` access time for points that belong to ``W`` set, and to check whether new sum is distinct.
-The map key is point visited, the map value is accumulated weight and value for that key.
-We are going to process points in ASC order. We will merge two sorted list into single one in ``O(N + M)``, where ``N`` previous point count, ``M`` is new points created. Hence the previous list has been ordered already and the new one we get from previous list using current weight addition. 
+``DPS`` algorithm acumulates the result in ``[N x C]`` DP table, where ``C`` is size of knapsack. This new algorithm are not going to visit all weights possible from 1 to ``C``, but only sums and weights itself. To gether the result from DP table, we should keep track of maximum weight and value, we have archived for each ``w point`` visited. When all ``w points`` have processed, or we found optimal solution earlier (in case of item weight is equal item value) we can backtrace items using DP table in the same way as in ``DPS``. 
+
+Instead of array of array as DP table, we are going to use array of map to keep ``O(1)`` access time for points that belong to ``W`` set, and to check whether new sum is distinct. The map key is ``w point``, the map value is accumulated weight (dimension) and value.
+We are going to process ``w points`` in ASC order. We will merge two sorted list into single one in ``O(N + M)``, where ``N`` previous point count, ``M`` is count of new points created. Hence the previous list has been ordered already, and the new one we get from previous list using current weight (dimension) addition. 
 
 Classic ``DPS`` uses recurrent formula: 
 
 ``max(value + DP[i][j - weight], DP[i][j])``.
 
 In our solution DP table contains values for processed points only. 
-The case ``[j - weight]`` can give a point that does not belong to set ``W``, that means that point would never contribute to the optimal solution (``Axiom 1``), and we can assign 0 value for outsider point. 
+The case ``[j - weight]`` can give a point that does not belong to set ``W``, that means it would never contribute to the optimal solution (``Axiom 1``), and we can assign 0 value for that outsider point. 
 
 # Three kind of problem
 
 We are going to investigate three kinds of knapsack problems.
-First one is knapsack where the item value and the item weight are the same which is known as subset sum problem. It and 1-0 knapsack problems are known as ``weakly NP hard`` problems in case of integer numbers.[2]
+First one is knapsack where the item value and the item weight are the same, which is known as subset sum problem. That one and 1-0 knapsack problems are known as ``weakly NP hard`` problems in case of integer numbers.[2]
 
 ``N`` dimensional knapsack has ``N`` constrains, ``M`` items and ``M`` values, where ``Mth`` item is the vector of item dimensions of size ``N``. The multi-dimensional knapsacks are computationally harder than knapsack; even for ``D=2``, the problem does not have EPTAS unless ``P=NP``. [1]
 
 ## Subset sum knapsack
 
-It is simpler than others, because we can terminate execution once we have found a solution equal to knapsack size. 
-We are going to use this property in ``M`` equal-subset-sum problem. Here we can reduce the point collection growing speed, because some new points created will not contribute to the optimal solution. The reason of it is the depth of execution tree and growing speed of the sum starting from current one. 
+It is simpler than others, because we can terminate execution once we have found a solution equal to knapsack size. Here we can reduce the ``w point`` collection growing speed, because some new points created will not contribute to the optimal solution. The reason of it is the depth of execution tree and growing speed of the sum starting from current one. 
 
+Let's denote ``partial sum`` is the number we get for some ``Ith`` element from maximum item to current item. Our algorithm expects items in DESC order, so the highest and the first ``Nth`` partial sum is going to be equal ``Nth`` weight (dimension), for ``Nth + 1`` it is equal to ``[ S(N - 1) = S(N) +  Ith weight]`` and so on. 
 
-Let's call a partial sum is the number we get for some ``Ith`` element from maximum item to current item. Here we expect knapsack items in DESC order, so the highest and the first ``Nth`` partial sum is going to be equal ``Nth`` weight, for ``Nth + 1`` it is equal to ``[ S(N - 1) = S(N) +  Ith weight]`` and so on. 
+We are going to use that ``partial sum`` and the knowledge of desc iteration flow to skip new ``w points`` from growing collection.
+We use ``partial sum`` to decide to do we need add this weight or just use created new points. In addition, we could skip new sum point if that sum is less then knapsack size ``C`` minus ``partial sum``. (``Lemma 1``) 
 
-We are going to use that partial sum and the knowledge of desc iteration flow to skip new points from growing collection.
-We use partial sum to decide to do we need add this weight or just use created new points. In addition, we could skip new sum point if that sum is less then knapsack size minus partial sum. (``Lemma 1``) 
-
-That optimization can be used in case of subset sum knapsack, or equal values knapsacks no metter of it dimension count.
+That optimization can be used in case of subset sum knapsack, or equal values knapsacks, or when value is equal to first dimension, no metter of knapsack dimension count. The main prerequisite is DESC order of items given.
 
 ## 1-0 and N dimension knapsacks
 
-They are required to visit all dimension sums and cannot skip any of them in case of non equal profits. We use dimensions as ``W points`` and accumulate profit\weight\volume reached for that ``W point`` using the same DP recurrent formula. 
+They are required to visit all dimension sums, and cannot skip any of them in case of non equal profits or non equal to first dimension. 
+Here we accumulate profit\dimension sum reached for each ``W point`` using the same DP recurrent formula. 
+
 Each new dimension requires more memory for storing that dimension in point list and in DP table map keys collection, and we need to compare more numbers as well. 
 
 Once we get rid of integer indexes in the DP table, using a ``w point`` as key to access the profit value, and dimensions in DP map, we can use described algorithms for ``all positive rational numbers`` without converting knapsack constrains and item dimensions given to integers.
@@ -105,12 +106,12 @@ The optimal solution could be found in set of all sums of items weights only. It
 The dynamic programing recurrent formula ``max(DP[i], DP[i - w] + v)`` works for set of sums. Prof: Because the set ``W`` is existing in set ``S``, where set ``W`` are the items and sums, where set ``S`` are numbers starting 1 up to knapsack size,
 then ``DPS`` recurrent formula ``max(DP[i], DP[i - w] + v)`` works for ``W`` points as well. if ``[i - w]`` is not the sum of items it will not be in optimal solution anyway due to ``Axiom 1``, and we consider 0 value for that point-outsider.
 
-### Lemma 1 for subset sum knapsack: 
+### Lemma 1: 
 
 If current ``partial sum`` is less than size of ``knapsack // 2`` then that item itself cannot be a first item of optimal solution. 
 It may be a part of solution, so we can consider only distinct previous points sums with this item. 
 
-### Lemma 2 for subset sum knapsack or equal profits case:
+### Lemma 2:
 
 We can consider the starting way of each point and the full way from that point to knapsack size as part of other sums.
 The ``W point`` cannot reach the size of knapsack as part of sums of next algorithm iterations and will not contribute to optimal solution if it less than ``knapsack size`` minus ``partial sum`` for current item.  
@@ -311,9 +312,9 @@ P2 is random numbers 3 up to 99,942,569,111. Total sum is 1,127,081,334,901. C i
 
 Looking at the table we can see negative trend of growing speed in last 1/4. 
 
-The total iterations count for random case is 1,220,500. For primes case, it is 21,696,675. 
+The total iterations count for random case is 1,220,500. For primes case, it is 21,696,675. The max exponental iteration count is 33,554,432 for ``N``=25. 
 
-Those numbers confim worst case statement. The max exponental iteration count is 33,554,432 for ``N``=25. 
+Those results confim worst case statement and superpolinominal compexity for it. 
 
 # Equal subset sum algorithm
 
@@ -322,9 +323,7 @@ When the values are polynomial in ``N``, Partition can be solved in polynomial t
 
 We are going to use new knapsack solution to solve ``M`` equal subsetsum problem which is the exponental in ``M`` only. 
 
-
 Let's consider ``N`` input numbers as sequence we should divide into ``M`` groups with equal sums. Let's denote a knapsack solver be a grouping operator that returns first group that met sum and group count contrains. To solve that problem we need to run that grouping operations ``M`` times. If we get an empty ``reminder`` at the end then the problem is solved. 
-
 
 The knapsack solver over distinct desc sorted numbers divides the set into ``M`` partitions if and only if that ``M`` partitions are exist. We can consider sums like a hashing. Hence each unique number leave a unique trace in the point sums, and we know that knapsack search terminates execution once the size of knapsack has reached. Then we can backtrace those unique numbers and remove it from the input set and perform knapsack again and again until the set is not empty. If it is an empty that means we found the solution.
 
