@@ -1,12 +1,14 @@
-import sys
 from collections import defaultdict
-from typing import List 
-from decimal import Decimal
 from collections import deque
+from decimal import Decimal
+from typing import List 
+
+import statistics
 import datetime
 import random
 import math 
 import csv
+import sys
 import os
 
 # Copyright Dec 2020 Konstantin Briukhnov (kooltew at gmail.com) (@CostaBru). San-Francisco Bay Area.
@@ -31,10 +33,10 @@ def partitionN(items, sizesOrPartitions, groupSize, O, optimizationLimit = -1):
             return len(self.Items)
 
         def __str__(self):
-            return "{ Size: " + str(self.Sizes) + ", Items: " + str(self.Items) + " }"
+            return f"| Size: {self.Sizes}, Items: {self.Items} |"
     
         def __repr__(self):
-            return "{ Size: " + str(self.Sizes) + ", Items: " + str(self.Items) + " }"
+             return f"| Size: {self.Sizes}, Items: {self.Items} |"
 
     def prepareGrouping(A, O):
 
@@ -171,10 +173,10 @@ def partitionN(items, sizesOrPartitions, groupSize, O, optimizationLimit = -1):
                 return len(self.Sizes)
 
             def __str__(self):
-                return "{ Size: " + str(self.Sizes) + ", Items: " + str(self.Items) + ", QI: " + str(self.Indexes) + " }"
+                return f"< Size: {self.Sizes}, Items: {self.Items}, QI: {self.Indexes} >"
         
             def __repr__(self):
-                return "{ Size: " + str(self.Sizes) + ", Items: " + str(self.Items) + ", QI: " + str(self.Indexes) + " }"
+                return f"< Size: {self.Sizes}, Items: {self.Items}, QI: {self.Indexes} >"
                 
             def __add__(self, item): 
 
@@ -204,20 +206,20 @@ def partitionN(items, sizesOrPartitions, groupSize, O, optimizationLimit = -1):
             newSet = []
             newSizes = list(remainderItem.Sizes)
 
-            if groupSize > 0 or limit > 1:  
+            if limit > 1:  
 
                 sortedDesc = False
 
                 newSet = list(remainderItem.Items)
-
-                random.shuffle(newSet)
-                O[0] += len(newSet)
 
                 random.shuffle(newSizes)
                 O[0] += len(newSizes)  
 
                 for r in p.Items:
                     newSet.append(r) 
+                
+                random.shuffle(newSet)
+                O[0] += len(newSet)
             else:
                 sortedDesc = True
                 newSet = list(mergeTwoSortedReversedIter(remainderItem.Items, p.Items))
@@ -260,7 +262,8 @@ def partitionN(items, sizesOrPartitions, groupSize, O, optimizationLimit = -1):
 
             for optPoint in optimizationsMade:
                 skipIndexes.update(optPoint.Indexes)
-                bestPartition.append(partitionItem(optPoint.Items, optPoint.Sizes))
+                O[0] += 2 * len(optPoint.Items)
+                bestPartition.append(partitionItem(list(reversed(optPoint.Items)), optPoint.Sizes))
                 incOForPoint(O, optPoint)
 
             optimizationCount += len(optimizationsMade)
@@ -292,10 +295,10 @@ def partitionN(items, sizesOrPartitions, groupSize, O, optimizationLimit = -1):
                     O[0] += len( q.Items) * math.log2(len( q.Items))
                     O[0] += 1
 
-            if limit > 2:
+            if limit > 1:
                 random.shuffle(quotients)
                 O[0] += len(quotients)
-            elif groupSize == 0:
+            elif groupSize == 0 and len(quotients) > 0:
                 quotients.sort(key=lambda x: len(x), reverse = True)
                 O[0] += len(quotients) * math.log2(len(quotients))
             
@@ -305,7 +308,7 @@ def partitionN(items, sizesOrPartitions, groupSize, O, optimizationLimit = -1):
         minRemiderLen = len(remainderItem) 
 
         startLayer = 1
-        endLayer = len(sizes)
+        endLayer = len(sizes) + int(math.log2(size))
 
         if optimizationLimit > 0:
             endLayer = optimizationLimit
@@ -313,18 +316,16 @@ def partitionN(items, sizesOrPartitions, groupSize, O, optimizationLimit = -1):
         optimizationCount = 0
 
         for limit in range(startLayer, endLayer):
-
-            if limit == 2:               
-                continue
-
-            if verbose and limit > 2:
-                print("performimg optimizations at the same time is limited by: " + str(limit) + "; quotients: " + str(len(quotients)) + " reminder len " + str(len(remainder)))
-
+            
             optimizedIndexes,  uniqueSet = set(), set()
             optimizationsMade, newPoints = [], []
 
             remainderItem = remainder
             minRemiderLen = len(remainderItem) 
+            remainderItemMedian = statistics.median(remainderItem.Items) 
+
+            if verbose and limit > 4:
+                print(f"performimg optimizations at the same time is limited by: {limit}; quotients: {len(quotients)} reminder len {len(remainder)}; reminder median {remainderItemMedian}")
 
             for i in range(len(quotients)):
 
@@ -342,14 +343,17 @@ def partitionN(items, sizesOrPartitions, groupSize, O, optimizationLimit = -1):
 
                     incOForPoint(O, p)
 
-                    if  len(optReminder) < minRemiderLen:
+                    optReminderMedian = statistics.median(optReminder.Items) if len(optReminder) <= minRemiderLen and len(optReminder.Items) > 0 else 0
+
+                    if  len(optReminder) < minRemiderLen or (len(optReminder) == minRemiderLen and remainderItemMedian < optReminderMedian):
 
                         for optItem in optQuotient:
                             optimizationsMade.append(partitionPoint(optItem.Items, optItem.Sizes, p.Indexes))
                             optimizedIndexes.update(p.Indexes)
                             incOForPartition(O, optItem)
-
+                        
                         remainderItem = optReminder
+                        remainderItemMedian = optReminderMedian
                         minRemiderLen = len(remainderItem) 
                     else:
                         newPoints.append(p)
@@ -362,7 +366,7 @@ def partitionN(items, sizesOrPartitions, groupSize, O, optimizationLimit = -1):
                 optimizationCount += optimizations
             
             prepareQuotients(quotients, groupSize, remainder, limit, O) 
-                    
+                
         return  quotients, remainder, optimizationCount
 
     def sortDuplicatesForPartitioning(group, count, nonUniqueList, O):
@@ -401,7 +405,7 @@ def partitionN(items, sizesOrPartitions, groupSize, O, optimizationLimit = -1):
 
         return A_sort
 
-    def partitionOverSameCountDuplicates(nonUniqueList, sizes, groupSize, O):
+    def partitionOverSameCountDuplicates(nonUniqueList, sizes, groupSize, optimizationLimit, O):
 
         sameCount = True
 
@@ -448,7 +452,7 @@ def partitionN(items, sizesOrPartitions, groupSize, O, optimizationLimit = -1):
                 for rem in remainder.Items:
                     remainderResult.append(rem)
 
-            if  len(remainderResult) == 0 or len(quotientResult) == len(sizes):
+            if  len(remainderResult) == 0 or len(quotientResult) == len(sizes) or len(quotients) == 0:
                 return quotientResult, remainderResult, optCount
 
             return optimizePartitions(remainderResult, quotientResult, sizes, groupSize, optimizationLimit, O)
@@ -514,7 +518,7 @@ def partitionN(items, sizesOrPartitions, groupSize, O, optimizationLimit = -1):
                         reminderSizes.append(size)
                         break
 
-                optimal, optimalList = ssKnapsack(size, reminderItems,  O, descOrder)
+                optimal, optimalList = subsKnapsack(size, reminderItems,  O, descOrder)
 
                 if optimal == size:          
 
@@ -568,26 +572,26 @@ def partitionN(items, sizesOrPartitions, groupSize, O, optimizationLimit = -1):
         quotients, remainder, optCount = divideSet(items, sizes, groupSize, True, O)
     else:
         if  len(nonUniqueList) > len(sizes) and groupSize == 0 and sameSizes:
-            partResult = partitionOverSameCountDuplicates(nonUniqueList, sizes, groupSize, O)
+            partResult = partitionOverSameCountDuplicates(nonUniqueList, sizes, groupSize, optimizationLimit, O)
             if partResult:
                 return partResult
 
         sortedDuplicates = sortDuplicatesForPartitioning(group, count, nonUniqueList, O)
         quotients, remainder, optCount = divideSet(sortedDuplicates, sizes, groupSize, False, O)    
    
-    if  len(remainder) == 0 or len(quotients) == len(sizes):
+    if  len(remainder) == 0 or len(quotients) == len(sizes) or len(quotients) == 0:
         return quotients, remainder, optCount
 
     return optimizePartitions(quotients, remainder, sizes, groupSize, optimizationLimit, O)   
 
-def ssKnapsack(size, items, O, desc = True):
+def subsKnapsack(size, items, O, desc = True):
 
     def prepare(size, items, desc, O):
         
         count = len(items)
         itemSum, lessCountSum  = 0, 0
         partialSum09 = [sys.maxsize] * count
-        superIncreasing = desc
+        superIncreasing, allDesc = desc, desc
         starting = 1
         i = 0
         if count > 0 :
@@ -612,8 +616,10 @@ def ssKnapsack(size, items, O, desc = True):
                         
                         prevSum09 += item09
 
-                if desc:
-                    assert prevItem09 <= item09
+                if allDesc:
+                    if not prevItem09 <= item09:
+                        allDesc = False
+
                     partialSum09[i0] = itemSum           
 
                 if itemWeight <= size:
@@ -624,6 +630,9 @@ def ssKnapsack(size, items, O, desc = True):
                 prevItem09 = item09
                 
                 i += 1
+        
+        if not allDesc:         
+            partialSum09 = [sys.maxsize] * count 
 
         O[0] += count
         return count, itemSum, lessCountSum, partialSum09, starting, superIncreasing
@@ -680,13 +689,13 @@ def ssKnapsack(size, items, O, desc = True):
                 yield quPoint 
                 circularPointQuene.append(quPoint)
 
-            if oldPoint >= limit:
+            if  oldPoint >= limit:
                 yield oldPoint
                 circularPointQuene.append(oldPoint)
          
             newPoint = oldPoint + itemWeight
 
-            if newPoint < limit:
+            if  newPoint < limit:
                 continue
 
             if newPoint <= size and not newPoint in uniquePointSet:   
@@ -760,14 +769,13 @@ def ssKnapsack(size, items, O, desc = True):
 
     def solveSuperIncreasing(size, items, starting, count, O):
 
-        def indexLargestLessThan(items, item, starting, O):   
+        def indexLargestLessThan(items, item, lo, O):   
 
             if item == 0:
                 return None  
 
             cnt = len(items)
 
-            lo = starting - 1
             hi = cnt - 1
 
             while lo <= hi:
@@ -791,13 +799,13 @@ def ssKnapsack(size, items, O, desc = True):
 
         resultItems = []
         resultSum = 0
-        index = indexLargestLessThan(items, size, starting, O)
+        index = indexLargestLessThan(items, size, starting - 1, O)
 
         while index is not None:
             value = items[index]
             resultItems.append(value)
             resultSum += value
-            index = indexLargestLessThan(items, size - resultSum, starting, O)
+            index = indexLargestLessThan(items, size - resultSum, index + 1, O)
             O[0] += 1
         
         if verbose:
@@ -867,22 +875,25 @@ def knapsack(size, weights, values, O, desc = True):
     def prepare(constrains, items, values, desc , O):
         count = len(items)
 
-        lessSizeItems, lessSizeValues  = [], []
+        lessSizeItems, lessSizeValues, partialSum09  = [], [], []
         lessCount, lessCountSum, itemSum  = 0, 0, 0
-        superIncreasing = desc
+        superIncreasing, allValuesEqual, allValuesEqualToConstrains, allDesc = desc, desc, desc, desc
 
         if count > 0:
-            prevSum09 = items[-1]
+
+            prevItem09 = items[-1]
+            prevSum09 = prevItem09
+            prevValue = values[-1]
 
             for i in range(0, count):
 
-                item = items[i]
+                item      = items[i]
                 itemValue = values[i]
 
                 i0 = count - i - 1
+                item09 = items[i0]
 
-                if superIncreasing and i0 >= 0 and i0 < count - 1:
-                    item09 = items[i0]
+                if superIncreasing:
 
                     if item09 <= size:
 
@@ -890,6 +901,17 @@ def knapsack(size, weights, values, O, desc = True):
                             superIncreasing = False
                         
                         prevSum09 += item09
+                
+                if allValuesEqual and prevValue != itemValue:
+                    allValuesEqual = False
+                
+                if allValuesEqualToConstrains and item != itemValue:
+                    allValuesEqualToConstrains = False
+                
+                if allValuesEqual or allValuesEqualToConstrains:
+
+                    itemSum += item
+                    partialSum09.append(itemSum)
             
                 if item <= constrains:
 
@@ -897,14 +919,23 @@ def knapsack(size, weights, values, O, desc = True):
                     lessSizeValues.append(itemValue)  
 
                     lessCountSum += item
-
                     lessCount += 1  
                 
+                if allDesc:
+                    if not prevItem09 <= item09:
+                        allDesc = False
+                
                 itemSum += item
+        
+        if allDesc and (allValuesEqual or allValuesEqualToConstrains):
+            partialSum09.reverse()
+            O[0] += len(partialSum09)
+        else:
+            partialSum09 = [sys.maxsize] * lessCount 
             
         O[0] += count
 
-        return lessCount, lessSizeItems, lessSizeValues, lessCountSum, itemSum, superIncreasing
+        return lessCount, lessSizeItems, lessSizeValues, lessCountSum, itemSum, superIncreasing, partialSum09
 
     def checkCornerCases(size, lessSizeItems, lessSizeValues, count, lessCountSum, itemSum, O):        
 
@@ -919,15 +950,19 @@ def knapsack(size, weights, values, O, desc = True):
 
         return None      
      
-    def getPoints(itemWeight, size, circularPointQuene, prevCyclePointCount, uniquePointSet):
+    def getPoints(itemWeight, size, circularPointQuene, partSumForItem09, prevCyclePointCount, uniquePointSet):
         
         # merges ordered visited points with new points with keeping order in O(N) using single circular queue. 
         # each getPoints method call starts fetching visited points from qu start, pops visited point and pushes new point and visited to the end of qu in ASC order.
         # we skip new point if it in list already
 
+        useItemItself = partSumForItem09 >= size // 2
+
+        limit = size - partSumForItem09
+
         greaterQu = deque()
 
-        if not itemWeight in uniquePointSet:         
+        if useItemItself and not itemWeight in uniquePointSet:         
             yield itemWeight
             circularPointQuene.append(itemWeight)
 
@@ -942,10 +977,14 @@ def knapsack(size, weights, values, O, desc = True):
                 yield quPoint 
                 circularPointQuene.append(quPoint)
 
-            yield oldPoint
-            circularPointQuene.append(oldPoint)
+            if  oldPoint >= limit:
+                yield oldPoint
+                circularPointQuene.append(oldPoint)
 
             newPoint = oldPoint + itemWeight
+
+            if  newPoint < limit:
+                continue
 
             if newPoint <= size and not newPoint in uniquePointSet: 
 
@@ -1021,14 +1060,13 @@ def knapsack(size, weights, values, O, desc = True):
 
     def solveSuperIncreasing(size, items, values, count, O):
 
-        def indexLargestLessThan(items, item, starting, O):   
+        def indexLargestLessThan(items, item, lo, O):   
 
             if item == 0:
                 return None  
 
             cnt = len(items)
 
-            lo = starting - 1
             hi = cnt - 1
 
             while lo <= hi:
@@ -1054,7 +1092,7 @@ def knapsack(size, weights, values, O, desc = True):
         resultItems = []
         resultValues = []
         resultSum = 0
-        index = indexLargestLessThan(items, size, starting, O)
+        index = indexLargestLessThan(items, size, starting - 1, O)
 
         while index is not None:
             item = items[index]
@@ -1062,7 +1100,7 @@ def knapsack(size, weights, values, O, desc = True):
             resultItems.append(item)
             resultValues.append(value)
             resultSum += value
-            index = indexLargestLessThan(items, size - resultSum, starting, O)
+            index = indexLargestLessThan(items, size - resultSum, index + 1, O)
             O[0] += 1
 
         if verbose:
@@ -1070,7 +1108,7 @@ def knapsack(size, weights, values, O, desc = True):
         
         return resultSum, resultItems, resultValues
         
-    count, lessSizeItems, lessSizeValues, lessCountSum, itemSum, superIncreasing = prepare(size, weights, values, desc, O)
+    count, lessSizeItems, lessSizeValues, lessCountSum, itemSum, superIncreasing, partialSum09 = prepare(size, weights, values, desc, O)
 
     cornerCasesCheck = checkCornerCases(size, lessSizeItems, lessSizeValues, count, lessCountSum, itemSum, O)
 
@@ -1095,10 +1133,12 @@ def knapsack(size, weights, values, O, desc = True):
         itemValue, itemWeight   = lessSizeValues[i - 1], lessSizeItems[i - 1]
         prevDP,    curDP        = DP    [i - 1],      DP[i]       
 
+        partSumForItem09  = partialSum09[i - 1]
+
         prevPointCount, newPointCount = newPointCount, prevPointCount
         newPointCount = 0
 
-        for p in getPoints(itemWeight, size, circularPointQuene, prevPointCount, prevDP):          
+        for p in getPoints(itemWeight, size, circularPointQuene, partSumForItem09, prevPointCount, prevDP):          
 
             curValue,   curWeight   =  getValue(p,              prevDP) 
             posblValue, posblWeight =  getValue(p - itemWeight, prevDP) 
@@ -1231,16 +1271,10 @@ def knapsackNd(constrains, items, values, n, O, desc = True):
     def prepare(constrains, items, values, desc, O):
         count = len(items)
 
-        partialSum09 = []
-        lessSizeItems = []
-        lessSizeValues = []
+        lessSizeItems,   lessSizeValues, partialSum09 = [], [], []
+        superIncreasing, allValuesEqual, allValuesEqualToConstrains, allDesc  = desc, desc, desc, desc
+
         lessCount = 0
-
-        superIncreasing = desc
-        allValuesEqual = desc
-        allValuesEqualToConstrains = desc
-        allDesc = desc
-
         itemSum = emptyPoint
 
         if count > 0:
@@ -1251,7 +1285,7 @@ def knapsackNd(constrains, items, values, n, O, desc = True):
 
             for i in range(0, count):
 
-                item = items[i]
+                item      = items[i]
                 itemValue = values[i]
 
                 i0 = count - i - 1
@@ -1338,12 +1372,13 @@ def knapsackNd(constrains, items, values, n, O, desc = True):
                 yield quPoint 
                 circularPointQuene.append(quPoint)
 
-            yield oldPoint
-            circularPointQuene.append(oldPoint)
+            if not limit or oldPoint >= limit:
+                yield oldPoint
+                circularPointQuene.append(oldPoint)
 
             newPoint = oldPoint + itemDimensions
 
-            if not useItemItself and limit and newPoint < limit:
+            if limit and newPoint < limit:
                 continue
 
             if newPoint <= constrainPoint: 
@@ -1423,14 +1458,13 @@ def knapsackNd(constrains, items, values, n, O, desc = True):
 
     def solveSuperIncreasing(constrains, items, values, count, O):
 
-        def indexLargestLessThan(items, item, starting, O):   
+        def indexLargestLessThan(items, item, lo, O):   
 
             if item == emptyPoint:
                 return None  
 
             cnt = len(items)
 
-            lo = starting - 1
             hi = cnt - 1
 
             while lo <= hi:
@@ -1452,11 +1486,10 @@ def knapsackNd(constrains, items, values, n, O, desc = True):
             else:
                 return None
 
-        starting = 1
         resultItems = []
         resultValues = []
         resultSum = emptyPoint
-        index = indexLargestLessThan(items, constrains, starting, O)
+        index = indexLargestLessThan(items, constrains, 0, O)
 
         while index is not None:
             item = items[index]
@@ -1464,7 +1497,7 @@ def knapsackNd(constrains, items, values, n, O, desc = True):
             resultItems.append(item)
             resultValues.append(value)
             resultSum += item
-            index = indexLargestLessThan(items, constrains - resultSum, starting, O)
+            index = indexLargestLessThan(items, constrains - resultSum, index + 1, O)
             O[0] += 1
         
         if verbose:
@@ -1500,8 +1533,8 @@ def knapsackNd(constrains, items, values, n, O, desc = True):
         partSumForItem09  = partialSum09[i - 1]
         prevDP,    curDP  = DP[i - 1], DP[i]
 
-        #if printPct and i > 1:
-        #    print("| " + str(i) + " | " + str(prevPointCount) + " |" + str(O[0]) +  " |")
+        if printPct and i > 1:
+            print("| " + str(i) + " | " + str(prevPointCount) + " |" + str(O[0]) +  " |")
 
         prevPointCount, newPointCount = newPointCount, prevPointCount
         newPointCount = 0
@@ -1547,8 +1580,8 @@ def DecimalArray(data):
         data[i] = DecimalData(data[i])
 
 #https://github.com/dariusarnold/knapsack-problem
-# Here just for generating interation count report 
-def paretoKnapsack(weights, values, weight_limit, O):
+# Here just for generating interation count report
+def paretoKnapsack(weights, values, weight_limit, O, takeLast = False):
 
     class Item:
         def __init__(self, id, weight, profit):
@@ -1601,6 +1634,9 @@ def paretoKnapsack(weights, values, weight_limit, O):
         :return: Index of first item for which criterion returns true
        
         """
+        if takeLast:
+            return list_[-1]
+
         ind = len(list_)
         O[0] += math.log2(ind)       
         return next((index for index, el in enumerate(list_) if criterion(el)), default)
@@ -1705,50 +1741,14 @@ def paretoKnapsack(weights, values, weight_limit, O):
 
 dtNow = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
 random.seed(dtNow)
-randomTestCount = 10
+randomTestCount = 2
 
 if verbose:
-    print(f"Initial random seed id {dtNow}")
+    print(f"Initial random seed is {dtNow}")
 
-script_dir = os.path.dirname(__file__) #<-- absolute dir the script is in
+script_dir = os.path.dirname(__file__) # <-- absolute dir the script is in
 
-if True:
-
-    tests = []
-    O = [0]
-
-    A, NU = [20, 23, 25, 49, 45, 27, 40, 22, 19, 20, 23, 25, 49, 45, 27, 40, 22, 19], 6
-    tests.append((A, NU))
-
-    if True:
-        i = 4
-
-        newSeed = dtNow + datetime.timedelta(seconds=i)
-
-        random.seed(newSeed)
-
-        if verbose:
-            print(f"random seed is {newSeed}")
-
-        case = 0
-
-        for A, NU in tests:
-
-            case += 1
-
-            O[0] = 0
-
-            if verbose:        
-                print("case " + str(case))
-
-            partResult, reminder, optCount = partitionN(list(A), NU, 0, O)
-
-            if len(reminder) != 0 or len(partResult) != NU:
-                print("")
-
-    random.seed(dtNow)
-
-if True:
+if True: # Rational numbers tests for equal-subset-sum knapsack, 1-0 knapsack, and N dimension knapsacks, where N 2-4.
     if verbose:
         print("Rational numbers tests for equal-subset-sum knapsack, 1-0 knapsack, and N dimension knapsacks, where N 2-4.")
 
@@ -1773,10 +1773,10 @@ if True:
     opt, optWeights, optValues2 = knapsack(s, A, A, O)
     assert expectedValue == sum(optValues2)
 
-    opt, optValues1 = ssKnapsack(s, A, O)   
+    opt, optValues1 = subsKnapsack(s, A, O)   
     assert expectedValue == sum(optValues1)
 
-if True:
+if True: # Superincreasing integer tests.
     if verbose:
         print("Superincreasing integer numbers tests.")
     
@@ -1793,14 +1793,14 @@ if True:
     nLogN = len(A) * math.log2(len(A))
 
     O[0] = 0
-    opt, optValues1 = ssKnapsack(s, A, O)  
+    opt, optValues1 = subsKnapsack(s, A, O)  
     assert valuesEqual(optValues1, expected)
     assert O[0] <= nLogN
     
     O[0] = 0
     opt, optItems, optValues2 = knapsack(s, A, A, O)  
     assert  valuesEqual(optValues2, expected)
-    assert O[0] <= nLogN
+    assert O[0] <= len(A) + nLogN
 
     O[0] = 0
     opt, optItems3, optValues3 = knapsackNd(wPoint((s, s)), [wPoint((a, a)) for a in A], A, 2, O)  
@@ -1819,26 +1819,26 @@ if True:
     decS = DecimalData(s)
 
     O[0] = 0
-    opt, decOptValues1 = ssKnapsack(decS, decA, O)  
+    opt, decOptValues1 = subsKnapsack(decS, decA, O)  
     assert  valuesEqual(decOptValues1, decE)
     assert O[0] <= nLogN
    
     O[0] = 0
     opt, decOptItems, decOptValues2 = knapsack(decS, decA, decA, O)  
     assert  valuesEqual(decOptValues2, decE)
-    assert O[0] <= nLogN
+    assert O[0] <= len(A) + nLogN
     
     O[0] = 0
     opt, decOptItems3, optValues3 = knapsackNd(wPoint((decS, decS)), [wPoint((da, da)) for da in decA], decA, 2, O)  
     assert  valuesEqual(optValues3, decE)
     assert O[0] <= 2 * nLogN
 
-if True:
+if True: # 2D knapsack matching with classic DP solution results.
 
     if verbose:
-        print("3D knapsack matching with classic DP solution results.")
+        print("2D knapsack matching with classic DP solution results.")
 
-    def knapsack3d_dp(weightSize, volumeSize, weights, volumes, values):
+    def knapsack2d_dp(weightSize, volumeSize, weights, volumes, values):
    
         table = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
 
@@ -1877,7 +1877,7 @@ if True:
         for testKnapsackWeight in range(min(testCaseW), sum(testCaseW) - 1):
             for testKnapsackVolume in range(min(testCaseV), sum(testCaseV) - 1):
 
-                dpRes = knapsack3d_dp(testKnapsackWeight, testKnapsackVolume, testCaseW, testCaseV, testCaseVal)
+                dpRes = knapsack2d_dp(testKnapsackWeight, testKnapsackVolume, testCaseW, testCaseV, testCaseVal)
 
                 dims = [None] * len(s_weights)
 
@@ -1893,11 +1893,11 @@ if True:
 
                 if resVal != dpRes or resW > testKnapsackWeight or resVol > testKnapsackVolume:
                     if verbose:
-                        print("W: " +str(testKnapsackWeight) +  " V: " + str(testKnapsackVolume))
-                        print(" k sum val : " + str(sum(optValues)) +" dp: " + str(dpRes) + " k sum vol : " + str(resVol) + " k sum w : " + str(resW) + " all sum val: " + str(sum(s_values)) + " all sum vol: " + str(sum(s_volumes)) + " all sum w: " + str(sum(s_weights)))
+                        print(f"W: {testKnapsackWeight} V: {testKnapsackVolume}", end="")
+                        print(f" k sum val : {sum(optValues)}, dp: {dpRes}  k sum vol : {resVol} k sum w : {resW}  all sum val: {sum(s_values)} all sum vol: {sum(s_volumes)} all sum w: {sum(s_weights)}")
                     assert False
 
-if True:
+if True: # N equal-subset-sum tests.
 
     if verbose:
         print("N equal-subset-sum integer tests.")
@@ -2026,7 +2026,7 @@ if True:
 
                 assert False
 
-if True :
+if True : # Multiple knapsack sizes integer tests.
 
     if verbose:
         print("Multiple knapsack sizes integer tests.")
@@ -2101,95 +2101,7 @@ if True :
 
     random.seed(dtNow)
 
-if True:
-
-    if verbose:
-        print("Knapsack partition optimization integer tests.")
-
-    O = [0]
-    tests = []
-
-    A, NU = [3, 383, 401, 405, 580, 659, 730, 1024, 1100, 1175, 1601, 2299, 3908, 4391, 4485, 5524], 4
-    tests.append((A, NU))
-    A, NU = [4,5,3,2,5,5,5,1,5,5,5,5,3,5,5,2], 13
-    tests.append((A, NU))
-    A, NU = [4,4,6,2,3,8,10,2,10,7], 4
-    tests.append((A, NU))
-    A, NU = [4,15,1,1,1,1,3,11,1,10], 3
-    tests.append((A, NU))
-    A, NU =  [20, 23, 25, 49, 45, 27, 40, 22, 19], 3
-    tests.append((A, NU))
-    A, NU = [20, 23, 25, 49, 45, 27, 40, 22, 19, 20, 23, 25, 49, 45, 27, 40, 22, 19], 6
-    tests.append((A, NU))
-    A, NU =  [27, 9, 9, 9, 9, 9, 3, 3, 3], 3
-    tests.append((A, NU))
-    A, NU = [10,10,10,7,7,7,7,7,7,6,6,6], 3
-    tests.append((A, NU))
-    A, NU = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], 3
-    tests.append((A, NU))
-    A, NU = [10,12,1,2,10,7,5,19,13,1],4
-    tests.append((A, NU))
-    A, NU = [1,2,3,4,5,6,7,8,9],3
-
-    for i in range(randomTestCount):
-
-        newSeed = dtNow + datetime.timedelta(seconds=i)
-
-        random.seed(newSeed)
-
-        if verbose:
-            print(f"random seed is {newSeed}")
-
-        case = 0
-
-        for A, NU in tests:
-
-            case += 1
-
-            O[0] = 0
-
-            if verbose:        
-                print("case " + str(case))
-
-            testCase = list(A)
-
-            size = sum(A) // NU
-
-            singleTestSizes = []
-
-            for i in range(NU):
-                singleTestSizes.append(size)
-            
-            lenT = len(testCase)
-
-            reminderItem = random.randint(min(A), max(A))
-
-            testCase.append(reminderItem)
-
-            partResult, reminder, optCount = partitionN(testCase, singleTestSizes, 0, O)     
-
-            iterNum = O[0]
-            maxIter = (NU ** 3) * ((lenT // NU) ** 4) * 2
-
-            if len(reminder) == 0 or len(partResult) != NU or iterNum > maxIter:
-
-                if verbose:        
-                    print("case " + str(case))
-                    print("A " + str(A))
-                    print("testCase " + str(testCase))
-                    print("part result " + str(partResult))
-                    print("part reminder  " + str(reminder))
-                    print("reminderItem  " + str(reminderItem))
-                    print("optCount  " + str(optCount))
-                    print("len " + str(len(A)))
-                    print("sum " + str(sum(A)))
-                    print("sum // NU" + str(sum(A) // NU))
-                    print("iter " + str(iterNum))
-                    print("max iter " + str(maxIter))
-
-                assert False
-
-if True:
+if True: # Strict 3 and 6 partition problem tests.
 
     def unionTuples(tuples):
         rez = []
@@ -2351,7 +2263,7 @@ if True:
 
                 assert False
     
-if True:
+if True: # 1-0 knapsack solver for Silvano Martello and Paolo Toth 1990 tests.
     if verbose:
         print("1-0 knapsack solver for Silvano Martello and Paolo Toth 1990 tests.")
 
@@ -2394,7 +2306,7 @@ if True:
 
     testSilvano(W, V, R, c)
 
-if True:
+if True: # Run equal-subset-sum knapsack for hardinstances_pisinger subset sum test dataset.
 
     if verbose:
         print("Run equal-subset-sum knapsack for hardinstances_pisinger subset sum test dataset.")
@@ -2445,10 +2357,10 @@ if True:
 
                         testCase.sort(reverse=True)
 
-                        if fi > 5:
+                        if verbose:
                             print(caseNumber)
 
-                        opt, optItems = ssKnapsack(testKnapsack, testCase, O)
+                        opt, optItems = subsKnapsack(testKnapsack, testCase, O)
 
                         rezS = sum(optItems) 
                         expS = sum(testExpected)
@@ -2459,13 +2371,13 @@ if True:
                             good = False
                             allGood = False
                             if verbose:
-                                print(str(caseNumber) + " rez opt: " + str(opt) + " test opt:" +  str(testKnapsack) + " rez values: " + str(rezS) + " test values: " + str(expS))
+                                print(f"{caseNumber} rez opt: {opt}, test opt: {testKnapsack}, rez values: {rezS}, test values: {expS}")
 
                         maxIter = 4 * (len(testCase) ** 3)
 
                         if O[0] > maxIter:
                             if verbose:
-                                print(str(caseNumber) + " max iter exceeded: " + str(maxIter) + " rez iter: " + str(O[0]))
+                                print(f"{caseNumber} max iter exceeded: {maxIter} rez iter: {O[0]}")
 
                         writer.writerow({'file': str(f), 'case': str(caseNumber), 'size': str(testKnapsack), 'iter':  str(round(O[0])), 'max iter': str(maxIter), 'N': str(len(testCase)), 'good': str(good)})
 
@@ -2495,7 +2407,7 @@ if True:
                             testExpected.append(int(row[1]))
             assert allGood
 
-if True:   
+if True: # Run 1-0 knapsack for hardinstances_pisinger test dataset in case of integer and rational numbers.  
 
     if verbose:
         print("Run 1-0 knapsack for hardinstances_pisinger test dataset in case of integer and rational numbers.")
@@ -2513,14 +2425,15 @@ if True:
         testKnapsack = 0
         rowToSkip = 0
 
-        files = ["knapPI_11_20_1000", "knapPI_11_50_1000"]
-        #files = ["knapPI_11_20_1000", "knapPI_11_50_1000", "knapPI_11_100_1000", "knapPI_11_200_1000"]
+        #files = ["knapPI_11_20_1000", "knapPI_11_50_1000"]
+        files = ["knapPI_11_20_1000", "knapPI_11_50_1000", "knapPI_11_100_1000", "knapPI_11_200_1000"]
 
         for f in files:
 
             caseNumber = 1
 
-            print(f)          
+            if verbose:
+                print(f)          
 
             with open(os.path.join(script_dir, "hardinstances_pisinger/" + str(f) + ".csv")) as csvfile:
                 spamreader = csv.reader(csvfile, delimiter=',', quotechar='|')
@@ -2531,6 +2444,9 @@ if True:
                         continue
 
                     if row[0] == "-----":
+
+                        if verbose:
+                            print(caseNumber)
 
                         w, v = sortRevereseBoth(testCaseW, testCaseV)
 
@@ -2545,7 +2461,6 @@ if True:
                         testKnapsackDecimal = DecimalData(testKnapsack)                      
 
                         rezS = sum(optValues) 
-                     
 
                         rezWS = sum(optWeights)
 
@@ -2557,7 +2472,7 @@ if True:
                             good = False
 
                             if verbose:
-                                print(str(caseNumber) + " rez opt: " + str(opt) + " test size:" +  str(testKnapsack) + "rez sum weights: " + str(rezWS) + " rez values: " + str(rezS) + " test values: " + str(expS))
+                                print(f"{caseNumber}  rez opt: {opt}, test size: {testKnapsack}, rez sum weights: {rezWS},  rez values: {rezS},  test values: {expS}")
 
                             assert False
 
@@ -2566,7 +2481,7 @@ if True:
 
                         if rezIter > maxIter:
                             if verbose:
-                                print(str(caseNumber) + " max iter exceeded: " + str(maxIter) + " rez iter: " + str(rezIter))
+                                print(f"{caseNumber} max iter exceeded: {maxIter}  rez iter: {rezIter}")
 
                         writer.writerow({'file': str(f), 'case': str(caseNumber), 'size': str(testKnapsack), 'iter':  str(round(O[0])), 'max iter': str(maxIter), 'N': str(len(w)), 'good': str(good)})
 
@@ -2587,7 +2502,7 @@ if True:
                                 sum_wh += wh
 
                             if verbose:
-                                print(str(caseNumber) + " decimal values: " + str(rezSDec) +  " sum decimal w: " + str(sum_wh) + " test size:" +  str(testKnapsack) + " test decimal size:" +  str(testKnapsackDecimal) + " test values: " + str(expS))
+                                print(f"{caseNumber}  decimal values: {rezSDec}, sum decimal w: {sum_wh}, test size: {testKnapsack}, test decimal size: {testKnapsackDecimal}, test values: {expS}")
                             
                             assert False
 
@@ -2614,7 +2529,7 @@ if True:
                         if row[3] == "1":
                             testExpected.append(int(row[1]))
 
-if True:
+if True: # N equal-subset-sum using integer partiton generator.
 
     def generate_partition(number, limitCount):
         answer = set()
@@ -2685,7 +2600,7 @@ if True:
                         partResult, resultReminder, optCount = partitionN(subSet, partition, 0, O)
 
                         if verbose:
-                            print("item = " + str(item) + ", case i " + str(i) + " , case part limit " + str(partLimit) + " , n = " + str(len(subSet))  + " , partition " + str(partition) + " , iter " + str(round(O[0])) + ", optimizations " + str(optCount))
+                            print(f"item = {item}, case i {i}, case part limit {partLimit}, n = {len(subSet)}, partition {partition}, iter {round(O[0])}, optimizations {optCount}")
 
                         resultPart = len(partResult)
 
@@ -2705,7 +2620,7 @@ if True:
 
                             sumRem = sum(resultReminder)
 
-                            print("BAD: item = " + str(item) +  ", case i " + str(i) + " , case part limit " + str(partLimit) + " , n = " + str(len(subSet))  +  " , rezult partition " + str(resultPart) + " , expected partition " + str(partition) + " , rez sum " + str(rezSum) + " , total sum " + str(rezSum + sumRem) + " , expected sum " + str(expectedSum) + " , iter " + str(round(O[0])))
+                            print(f"BAD: item = {item}, case i {i}, case part limit {partLimit}, n = {len(subSet)}, rezult partition {resultPart}, expected partition {partition}, rez sum {rezSum}, total sum {rezSum + sumRem}, expected sum {expectedSum} , iter {round(O[0])}")
 
                         writer.writerow({'item': str(item), 'case': str(i), 'limit': str(partLimit), 'partition':  str(partition), 'N': str(len(subSet)), 'optimizations': str(optCount), 'iter': str(round(O[0])), 'max iter': str(((partition) ** 3) * ((len(subSet)//partition) ** 4)), 'good': str(good)})
 
@@ -2717,15 +2632,101 @@ if True:
 
         assert allGood
 
-# reports
-if False:
-    # iteration investigation test generator
-    
-    numbers = [1] * 100
+if True: # Knapsack partition optimization integer tests. randomTestCount * 100
 
     if verbose:
-        print("len " + str(len(numbers)))
-        print("sum " + str(sum(numbers)))        
+        print("Knapsack partition optimization integer tests.")
+
+    O = [0]
+    tests = []
+
+    A, NU = [3, 383, 401, 405, 580, 659, 730, 1024, 1100, 1175, 1601, 2299, 3908, 4391, 4485, 5524], 4
+    tests.append((A, NU))
+    A, NU = [4,5,3,2,5,5,5,1,5,5,5,5,3,5,5,2], 13
+    tests.append((A, NU))
+    A, NU = [4,4,6,2,3,8,10,2,10,7], 4
+    tests.append((A, NU))
+    A, NU = [4,15,1,1,1,1,3,11,1,10], 3
+    tests.append((A, NU))
+    A, NU =  [20, 23, 25, 49, 45, 27, 40, 22, 19], 3
+    tests.append((A, NU))
+    A, NU = [20, 23, 25, 49, 45, 27, 40, 22, 19, 20, 23, 25, 49, 45, 27, 40, 22, 19], 6
+    tests.append((A, NU))
+    A, NU =  [27, 9, 9, 9, 9, 9, 3, 3, 3], 3
+    tests.append((A, NU))
+    A, NU = [10,10,10,7,7,7,7,7,7,6,6,6], 3
+    tests.append((A, NU))
+    A, NU = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], 3
+    tests.append((A, NU))
+    A, NU = [10,12,1,2,10,7,5,19,13,1],4
+    tests.append((A, NU))
+    A, NU = [1,2,3,4,5,6,7,8,9],3
+
+    for i in range(randomTestCount * 100):
+
+        newSeed = dtNow + datetime.timedelta(seconds=i)
+
+        random.seed(newSeed)
+
+        if verbose:
+            print(f"random seed is {newSeed}")
+
+        case = 0
+
+        for A, NU in tests:
+
+            case += 1
+
+            O[0] = 0
+
+            if verbose:        
+                print("case " + str(case))
+
+            testCase = list(A)
+
+            size = sum(A) // NU
+
+            singleTestSizes = []
+
+            for i in range(NU):
+                singleTestSizes.append(size)
+            
+            lenT = len(testCase)
+
+            reminderItem = random.randint(min(A), max(A))
+
+            testCase.append(reminderItem)
+
+            partResult, reminder, optCount = partitionN(list(testCase), singleTestSizes, 0, O)     
+
+            iterNum = O[0]
+            maxIter = 10 * ((NU + 1) ** 4) * ((lenT // NU) ** 4) 
+
+            if len(reminder) == 0 or len(partResult) != NU or iterNum > maxIter:
+
+                if verbose:        
+                    print("case " + str(case))
+                    print("A " + str(A))
+                    print("testCase " + str(testCase))
+                    print("part result " + str(partResult))
+                    print("part reminder  " + str(reminder))
+                    print("reminderItem  " + str(reminderItem))
+                    print("optCount  " + str(optCount))
+                    print("len " + str(len(A)))
+                    print("sum " + str(sum(A)))
+                    print("sum // NU" + str(sum(A) // NU))
+                    print("iter " + str(iterNum))
+                    print("max iter " + str(maxIter))
+
+                assert False
+
+printPct = True
+
+if False: # knapsack report for [1] * 50
+    numbers = [1] * 50
+
+    if verbose:
+        print(f"len {len(numbers)} sum {sum(numbers)}")
 
     if True:
 
@@ -2748,7 +2749,7 @@ if False:
 
                 O[0] = 0
 
-                opt, optItems1 = ssKnapsack(s, numbers, O, True)
+                opt, optItems1 = subsKnapsack(s, numbers, O, True)
 
                 print(s)
 
@@ -2771,16 +2772,12 @@ if False:
                 prevO = o1
                 prevPareto = o2
 
-# reports
-if False:
-    # iteration investigation test generator
-    
-    numbers = ([1] * 50) + ([2] * 50)
+if False: # knapsack report for ([1] * 25) + ([2] * 25)
+    numbers = ([1] * 25) + ([2] * 25)
     numbers.reverse()
 
     if verbose:
-        print("len " + str(len(numbers)))
-        print("sum " + str(sum(numbers)))        
+        print(f"len {len(numbers)} sum {sum(numbers)}")
 
     if True:
 
@@ -2803,7 +2800,7 @@ if False:
 
                 O[0] = 0
 
-                opt, optItems1 = ssKnapsack(s, numbers, O, True)
+                opt, optItems1 = subsKnapsack(s, numbers, O, True)
 
                 print(s)
 
@@ -2826,16 +2823,12 @@ if False:
                 prevO = o1
                 prevPareto = o2
 
-# reports
-if False:
-    # iteration investigation test generator
-    
-    numbers = list(range(1, 101))
+if False: # knapsack report for list(range(1, 51))
+    numbers = list(range(1, 51))
     numbers.reverse()
 
     if verbose:
-        print("len " + str(len(numbers)))
-        print("sum " + str(sum(numbers)))        
+        print(f"len {len(numbers)} sum {sum(numbers)}")
 
     if True:
 
@@ -2858,7 +2851,7 @@ if False:
 
                 O[0] = 0
 
-                opt, optItems1 = ssKnapsack(s, numbers, O, True)
+                opt, optItems1 = subsKnapsack(s, numbers, O, True)
 
                 print(s)
 
@@ -2866,8 +2859,6 @@ if False:
                 
                 O[0] = 0
 
-
-                # cannot solve 101 in reasonable time
                 ids = paretoKnapsack(numbers, numbers, s, O)
 
                 o2 = round(O[0])
@@ -2883,21 +2874,17 @@ if False:
                 prevO = o1
                 prevPareto = o2
 
-# reports
-if False:
-    # iteration investigation test generator
-    
-    numbers = random.sample(range(1, 1000), 100)
+if False: # knapsack report for random.sample(range(1, 1000), 50)
+    numbers = random.sample(range(1, 1000), 50)
 
     numbers.sort(reverse=True)
 
     if verbose:
-        print("len " + str(len(numbers)))
-        print("sum " + str(sum(numbers)))        
+       print(f"len {len(numbers)} sum {sum(numbers)}")
 
     if True:
 
-        with open(script_dir + '\knapsack.paretoKnapsack.rand100.csv', 'w', newline='') as csvfile:
+        with open(script_dir + '\knapsack.paretoKnapsack.rand50.csv', 'w', newline='') as csvfile:
             
             O = [0]
 
@@ -2916,7 +2903,7 @@ if False:
 
                 O[0] = 0
 
-                opt, optItems1 = ssKnapsack(s, numbers, O, True)
+                opt, optItems1 = subsKnapsack(s, numbers, O, True)
 
                 print(s)
 
@@ -2924,7 +2911,6 @@ if False:
                 
                 O[0] = 0
 
-                # cannot solve 101 in reasonable time
                 ids = paretoKnapsack(numbers, numbers, s, O)
 
                 o2 = round(O[0])
@@ -2940,20 +2926,16 @@ if False:
                 prevO = o1
                 prevPareto = o2
 
-# reports
-if False:
-    # iteration investigation test generator
-    
+if False: # knapsack report for random.sample(range(1, 10000000000000000), 25)
     numbers = random.sample(range(1, 10000000000000000), 25)
     numbers.sort(reverse=True)
    
     if verbose:
-        print("len " + str(len(numbers)))
-        print("sum " + str(sum(numbers)))        
+        print(f"len {len(numbers)} sum {sum(numbers)}")
 
     if True:
 
-        with open(script_dir + '\knapsack.paretoKnapsack.rand1.from3upto10000000000000000.csv', 'w', newline='') as csvfile:
+        with open(script_dir + '\knapsack.paretoKnapsack.rand1.from1upto10000000000000000.csv', 'w', newline='') as csvfile:
             
             O = [0]
 
@@ -2972,7 +2954,7 @@ if False:
 
                 O[0] = 0
 
-                opt, optItems1 = ssKnapsack(s, numbers, O, True)
+                opt, optItems1 = subsKnapsack(s, numbers, O, True)
 
                 print(s)
 
@@ -2995,16 +2977,11 @@ if False:
                 prevO = o1
                 prevPareto = o2
 
-# reports
-if False:
-   
-    # iteration investigation test generator
+if False: # knapsack report for numbers = [1] * 25; numbers[i] *= numbers[i - 1] * 2
     numbers = [2] * 25
 
-    i = 1
-    while i < 25:
+    for i in range(1, 25):
         numbers[i] *=  numbers[i - 1] * 2
-        i += 1
     
     numbers.reverse()
    
@@ -3014,7 +2991,7 @@ if False:
 
     if True:
 
-        with open(script_dir + '\knapsack.paretoKnapsack.primes.csv', 'w', newline='') as csvfile:
+        with open(script_dir + '\knapsack.paretoKnapsack.worstCase.csv', 'w', newline='') as csvfile:
             
             O = [0]
 
@@ -3033,7 +3010,7 @@ if False:
 
                 O[0] = 0
 
-                opt, optItems1 = ssKnapsack(s, numbers, O, True)
+                opt, optItems1 = subsKnapsack(s, numbers, O, True)
 
                 print(s)
 
@@ -3043,7 +3020,7 @@ if False:
                 
                 O[0] = 0
 
-                ids = paretoKnapsack([], [], s, O)
+                ids = paretoKnapsack(numbers, numbers, s, O)
 
                 o2 = round(O[0])
 
@@ -3057,6 +3034,3 @@ if False:
 
                 prevO = o1
                 prevPareto = o2
-
-
-                        
