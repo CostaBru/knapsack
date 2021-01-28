@@ -1,4 +1,4 @@
-# Rethinking the knapsack and set partitions
+# Rethinking the knapsack and set partitions (Not released yet)
 
 This work contains the list of algorithms, performance analysis and reports:
 
