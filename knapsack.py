@@ -601,7 +601,7 @@ def partitionN(items, sizesOrPartitions, groupSize, O, optimizationLimit = -1):
         quotients, remainder, optCount = divideSet(items, sizes, groupSize, O)
     else:
         if  len(nonUniqueList) > len(sizes) and groupSize == 0 and sameSizes:
-            partResult = partitionOverSameCountDuplicates(nonUniqueList, sizes, groupSize, optimizationLimit, O)
+            partResult = partitionOverSameCountDuplicates(nonUniqueList, sizes, 0, optimizationLimit, O)
             if partResult:
                 return partResult
 
@@ -933,8 +933,8 @@ def subsKnapsack(size, items, O):
         newPointLimit = size - partSumForItem
         oldPointLimit = newPointLimit
 
-        if doSolveSuperInc and superIncreasingItem and allDesc:
-            oldPointLimit = size - items[i - 2] if allDesc or i == len(items) else size - items[i]
+        if doSolveSuperInc and superIncreasingItem:
+            oldPointLimit = size - items[i - 2] if allDesc else newPointLimit - items[i] if i < len(items) else newPointLimit
 
         return partSumForItem, oldPointLimit, newPointLimit  
     
@@ -964,8 +964,7 @@ def subsKnapsack(size, items, O):
         newPointCount = 0
 
         if printPct and i > 1:
-            #print("| " + str(i) + " | " + str(prevPointCount) + " | "  + str(((2 ** (i - 1))) - prevPointCount) + " |" + str(O[0]) +  " |")
-            print("| " + str(i) + " | " + str(prevPointCount) + " |" + str(O[0]) +  " |")
+            print(f"| {i} | {prevPointCount} | {round(O[0])} |")
 
         itemValue, itemWeight = items       [i - 1], items[i - 1]
         prevDP,    curDP      = DP          [i - 1],    DP[i]
@@ -1332,8 +1331,8 @@ def knapsack(size, weights, values, O):
         newPointLimit = size - partSumForItem
         oldPointLimit = newPointLimit
 
-        if doSolveSuperInc and superIncreasingItem and allDesc:
-            oldPointLimit = size - items[i - 2] if allDesc or i == len(items) else size - items[i]
+        if doSolveSuperInc and superIncreasingItem:
+            oldPointLimit = size - items[i - 2] if allDesc else newPointLimit - items[i] if i < len(items) else newPointLimit
 
         return partSumForItem, oldPointLimit, newPointLimit  
 
@@ -1836,8 +1835,8 @@ def knapsackNd(constraints, items, values, O):
         newPointLimit = size - partSumForItem if partSumForItem else None
         oldPointLimit = newPointLimit
 
-        if doSolveSuperInc and superIncreasingItem and allDesc:
-            oldPointLimit = size - items[i - 2] if allDesc or i == len(items) else size - items[i]
+        if doSolveSuperInc and superIncreasingItem:
+            oldPointLimit = size - items[i - 2] if allDesc else newPointLimit - items[i] if i < len(items) else newPointLimit
 
         return partSumForItem, oldPointLimit, newPointLimit  
 
@@ -1869,7 +1868,7 @@ def knapsackNd(constraints, items, values, O):
         prevDP,    curDP  = DP[i - 1], DP[i]
 
         if printPct and i > 1:
-            print("| " + str(i) + " | " + str(prevPointCount) + " |" + str(O[0]) +  " |")
+            print(f"| {i} | {prevPointCount} | {round(O[0])} |")
         
         itemLimit, oldPointLimit, newPointLimit  = getLimits(constraints, i, lessSizeItems, partialSums, superIncreasingItems, allDesc)
 
@@ -2034,11 +2033,19 @@ def paretoKnapsack(weights, values, weight_limit, O, takeLast = False):
             # merge other list if one doesn't contain a point with profit above the current limit
             # or the found point is above the weight limit
             if old_point_index is None or old_list[old_point_index].weight > weight_limit:
+
+                if not new_point_index:
+                    new_point_index = 0
+
                 merged_list += new_list[new_point_index:]
                 O[0] += len(new_list) - new_point_index
                 break
 
             if new_point_index is None or new_list[new_point_index].weight > weight_limit:
+
+                if not old_point_index:
+                    old_point_index = 0
+
                 merged_list += old_list[old_point_index:]
                 O[0] += len(old_list) - old_point_index
                 break
@@ -3516,7 +3523,7 @@ if True: # NP hard: integer partition optimization tests. randomTestCount * 200
 
 printPct = True
 
-if False: # Polynominal subsKnapsack report for [1] * 50
+if False: # Polynominal: subsKnapsack report for [1] * 50
     numbers = [1] * 50
 
     if verbose:
@@ -3543,7 +3550,11 @@ if False: # Polynominal subsKnapsack report for [1] * 50
 
                 O[0] = 0
 
+                t1 = time.perf_counter()
+
                 opt, optItems1 = subsKnapsack(s, numbers, O)
+
+                subsTime = time.perf_counter() - t1
 
                 print(s)
 
@@ -3566,9 +3577,8 @@ if False: # Polynominal subsKnapsack report for [1] * 50
                 prevO = o1
                 prevPareto = o2
 
-if False: # Polynominal subsKnapsack report for ([1] * 25) + ([2] * 25)
+if False: # Polynominal: subsKnapsack report for ([1] * 25) + ([2] * 25)
     numbers = ([1] * 25) + ([2] * 25)
-    numbers.reverse()
 
     if verbose:
         print(f"len {len(numbers)} sum {sum(numbers)}")
@@ -3617,9 +3627,8 @@ if False: # Polynominal subsKnapsack report for ([1] * 25) + ([2] * 25)
                 prevO = o1
                 prevPareto = o2
 
-if False: # Polynominal subsKnapsack report for list(range(1, 51))
+if False: # Polynominal: subsKnapsack report for list(range(1, 51))
     numbers = list(range(1, 51))
-    numbers.reverse()
 
     if verbose:
         print(f"len {len(numbers)} sum {sum(numbers)}")
@@ -3668,10 +3677,9 @@ if False: # Polynominal subsKnapsack report for list(range(1, 51))
                 prevO = o1
                 prevPareto = o2
 
-if False: # Polynominal subsKnapsack report for random.sample(range(1, 1000), 50)
+if False: # Polynominal: subsKnapsack report for random.sample(range(1, 1000), 50)
     numbers = random.sample(range(1, 1000), 50)
-
-    numbers.sort(reverse=True)
+    numbers.sort()
 
     if verbose:
        print(f"len {len(numbers)} sum {sum(numbers)}")
@@ -3720,9 +3728,9 @@ if False: # Polynominal subsKnapsack report for random.sample(range(1, 1000), 50
                 prevO = o1
                 prevPareto = o2
 
-if False: # Polynominal subsKnapsack report for random.sample(range(1, 10000000000000000), 25)
-    numbers = random.sample(range(1, 10000000000000000), 25)
-    numbers.sort(reverse=True)
+if False: # Polynominal: subsKnapsack report for random.sample(range(1, 10000000000000000), 15)
+    numbers = random.sample(range(1, 10000000000000000), 15)
+    numbers.sort(reverse=False)
    
     if verbose:
         print(f"len {len(numbers)} sum {sum(numbers)}")
@@ -3771,31 +3779,15 @@ if False: # Polynominal subsKnapsack report for random.sample(range(1, 100000000
                 prevO = o1
                 prevPareto = o2
 
-if False: # Polynominal subsKnapsack report for numbers = [1] * 25; numbers[i] *= numbers[i - 1] * 2
-    numbers = [1] * 25
+if False: # Polynominal: subsKnapsack report for geometric progression numbers = [1] * 25; numbers[i] *= (int(numbers[i - 1] * 2) - 1)
+    numbers = [10000] * 15
 
-    for i in range(1, 25):
-        numbers[i] *= int(numbers[i - 1] * 2)
+    for i in range(1, 15):
+        numbers[i] = (int(numbers[i - 1] * 2) - 1)
 
-    numbers.append(numbers[-1] + 1)
+    numbers.append(numbers[len(numbers) // 2])
 
-   # copy = list(numbers)
-
-    #for i in range(len(numbers)):
-    #    numbers.append(copy[i] + 1)
-
-    numbers.sort()
-
-    #numbers = [3, 5, 17, 31, 41, 59, 67, 83, 109, 211, 353, 709, 1409, 1471, 4349, 7517, 17509, 82339, 539111, 965801, 9121667, 36068261, 95937757, 99491389, 99942569111]
-
-    #copy = list(numbers)
-
-    #for i in range(len(numbers)):
-    #    numbers.append(copy[i] + 1)
-
-    #numbers.sort()
-
-    numbers.reverse()
+    numbers.sort(reverse=False)
    
     if verbose:
         print("len " + str(len(numbers)))
@@ -3831,7 +3823,63 @@ if False: # Polynominal subsKnapsack report for numbers = [1] * 25; numbers[i] *
                 
                 O[0] = 0
 
-                ids = paretoKnapsack([], [], s, O)
+                ids = paretoKnapsack(numbers, numbers, s, O)
+
+                o2 = round(O[0])
+
+                optItems2 = [numbers[id] for id in ids]
+                opt2 = sum(optItems2)
+
+                writer.writerow({'size': str(s), 'iter':  str(round(o1)), 'delta': str(round(o1 - prevO)), 'pareto iter':  str(round(o2)), 'pareto delta': str(round(o2 - prevPareto))})
+
+                prevO = o1
+                prevPareto = o2
+
+if False: # Exponental in ASC case only: subsKnapsack report for factorial numbers = [1] * 25; numbers[i] *= (numbers[i - 1] - 1) 
+    numbers = [10000] * 15
+
+    for i in range(1, 15):
+        numbers[i] *= (int(numbers[i - 1]) - 1)
+
+    numbers.append(numbers[len(numbers) // 2])
+
+    numbers.sort(reverse=False)
+   
+    if verbose:
+        print("len " + str(len(numbers)))
+        print("sum " + str(sum(numbers)))        
+
+    if True:
+
+        with open(script_dir + '\knapsack.paretoKnapsack.worstCase.csv', 'w', newline='') as csvfile:
+            
+            O = [0]
+
+            fieldnames = ['size', 'iter', 'delta', 'pareto iter', 'pareto delta']
+            
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+
+            writer.writeheader()
+
+            prevO = 0
+            prevPareto = 0
+
+            if True:
+                s = sum(numbers) - 1
+
+                O[0] = 0
+
+                opt1, optItems1 = subsKnapsack(s, numbers, O)
+
+                doSolveSuperInc = False
+
+                o1 = round(O[0])
+
+                print(o1)
+                
+                O[0] = 0
+
+                ids = paretoKnapsack(numbers, numbers, s, O)
 
                 o2 = round(O[0])
 
