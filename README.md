@@ -150,7 +150,7 @@ For now, the GitHub has two implementations of this algorithm. One of them which
 
 Please see and star https://github.com/dariusarnold/knapsack-problem repository.
 
-# Analysis and comparison
+# KB knapsack analysis and comparison with Nemhauser-Ullman
 
 Here are the ``w point`` growing speed table on each ``Nth`` iteration. 
 
@@ -160,7 +160,7 @@ Here are the ``w point`` growing speed table on each ``Nth`` iteration.
 Larger profit point search complexity for NU was considered as ``Log2N``, but was implemented by ``Darius Arnold`` in ``N``.
 
 <details>
-  <summary> Iteration table ASC. 1..50. ``N``=50 </summary>
+  <summary> Iteration table #1. [1..51]. `[N=50], ASC </summary>
 
 |  N  | KB sums | KB iter |     |  NU sums | NU iter |
 |-----|---------|---------|-----|----------|---------|
@@ -216,7 +216,7 @@ Larger profit point search complexity for NU was considered as ``Log2N``, but wa
 </details>
 
 <details>
-  <summary> Iteration table ASC. Iteration table. 1 and 2 values. ``N``=50 </summary>
+  <summary> Iteration table #2. Iteration table. 1 and 2 values. [N=50], ASC </summary>
 
 |  N  | KB sums | KB iter |     |  NU CNT | NU sums |
 |-----|---------|---------|-----|---------|---------|
@@ -273,7 +273,7 @@ Larger profit point search complexity for NU was considered as ``Log2N``, but wa
 </details> 
 
 <details>
-  <summary> Iteration table ASC. Iteration table ``1..50`` numbers. ``N``=50 </summary>
+  <summary> Iteration table #3. Iteration table [1..50] numbers. [N=50], ASC </summary>
   
 |  N  | KB sums | KB iter |     |  NU CNT | NU sums |
 |-----|---------|---------|-----|---------|---------|
@@ -330,7 +330,7 @@ Larger profit point search complexity for NU was considered as ``Log2N``, but wa
 </details> 
 
 <details>
-  <summary> Iteration table ASC. 50 random numbers in ``1..1000`` range</summary>
+  <summary> Iteration table #4. 50 random numbers in [1..1000] range, ASC</summary>
   
 |  N  | KB sums | KB iter |     |  NU CNT | NU sums |
 |-----|---------|---------|-----|---------|---------|
@@ -387,7 +387,7 @@ Larger profit point search complexity for NU was considered as ``Log2N``, but wa
 
 
 <details>
-  <summary> Iteration table ASC. Random numbers in ``1...10000000000000000``. ``N``=15 </summary>
+  <summary> Iteration table #5. Random numbers in [1...10000000000000000]. [N=15], ASC </summary>
 	
 |  N  | KB sums | KB iter |     |  NU CNT | NU sums |
 |-----|---------|---------|-----|---------|---------|
@@ -409,7 +409,7 @@ Larger profit point search complexity for NU was considered as ``Log2N``, but wa
 </details>
 
 <details>
-  <summary> Iteration table DESC. Geometric progression with factor equal 2.  ``N``=15 + 1. Last item is middle duplicated. </summary>
+  <summary> Iteration table #6. Geometric progression with factor equal 2.  [N=15 + 1]. ASC. Last item is middle duplicated. </summary>
 	
 |  N  | KB sums | KB iter |     |  NU CNT | NU sums |
 |-----|---------|---------|-----|---------|---------|
@@ -432,7 +432,7 @@ Larger profit point search complexity for NU was considered as ``Log2N``, but wa
 </details>
 
 <details>
-  <summary> Iteration table DESC. Factorial numbers ``numbers[i] *= (int(numbers[i - 1]) - 1)``. ``N``=15 + 1. Last item is middle duplicated. </summary>
+  <summary> Iteration table #7. Factorial numbers [numbers[i] *= (int(numbers[i - 1]) - 1)]. [N=15 + 1]. DESC. Last item is middle duplicated. </summary>
 	
 |  N  | KB sums | KB iter |     |  NU CNT | NU sums |
 |-----|---------|---------|-----|---------|---------|
@@ -455,7 +455,7 @@ Larger profit point search complexity for NU was considered as ``Log2N``, but wa
 </details>
 
 <details>
-  <summary> Iteration table ASC. Factorial numbers ``numbers[i] *= (int(numbers[i - 1]) - 1)``.  ``N``=15 + 1. Last item is middle duplicated. </summary>
+  <summary> Iteration table #8. Factorial numbers [numbers[i] *= (int(numbers[i - 1]) - 1)]. [N=15 + 1]. ASC. Last item is middle duplicated. </summary>
 	
 |  N  | KB sums | KB iter |     |  NU CNT | NU sums |
 |-----|---------|---------|-----|---------|---------|
@@ -477,11 +477,60 @@ Larger profit point search complexity for NU was considered as ``Log2N``, but wa
 	
 </details>
 
-Looking at the last table we can see exponential grow for KB knapsack in case of factorial numbers and ASC order. 
+## 2D dimensional KB knapsack
+
+Test dataset, N = 28:
+
+	(821, 0.8, 118), (1144, 1, 322), (634, 0.7, 166), (701, 0.9, 195),
+	(291, 0.9, 100), (1702, 0.8, 142), (1633, 0.7, 100), (1086, 0.6, 145),
+	(124, 0.6, 100), (718, 0.9, 208), (976, 0.6, 100), (1438, 0.7, 312),
+	(910, 1, 198), (148, 0.7, 171), (1636, 0.9, 117), (237, 0.6, 100),
+	(771, 0.9, 329), (604, 0.6, 391), (1078, 0.6, 100), (640, 0.8, 120),
+	(1510, 1, 188), (741, 0.6, 271), (1358, 0.9, 334), (1682, 0.7, 153),
+	(993, 0.7, 130), (99, 0.7, 100), (1068, 0.8, 154), (1669, 1, 289)
+
+<details>
+  <summary> Iteration table #9. KB 2D dimensional knapsack. </summary>
+  
+|  N  | KB sums | KB iter |  
+|-----|---------|---------|
+| 2 | 0 | 29 |
+| 3 | 1 | 32 |
+| 4 | 3 | 39 |
+| 5 | 7 | 54 |
+| 6 | 15 | 85 |
+| 7 | 31 | 148 |
+| 8 | 63 | 275 |
+| 9 | 127 | 529 |
+| 10 | 254 | 1035 |
+| 11 | 506 | 2041 |
+| 12 | 1006 | 3981 |
+| 13 | 1940 | 7693 |
+| 14 | 3712 | 14695 |
+| 15 | 7002 | 27459 |
+| 16 | 12764 | 50512 |
+| 17 | 23053 | 88286 |
+| 18 | 37774 | 146887 |
+| 19 | 58601 | 238337 |
+| 20 | 91450 | 360173 |
+| 21 | 121836 | 516931 |
+| 22 | 156758 | 706042 |
+| 23 | 189111 | 922406 |
+| 24 | 216364 | 1163378 |
+| 25 | 240972 | 1460700 |
+| 26 | 297322 | 1799769 |
+| 27 | 339069 | 2193476 |
+| 28 | 393707 | 2633346 |
+	
+</details>
+
+Result table #9 shows polynomial time for ``KB`` 2D knapsack with mixed integer and rational dimensions. Maximum iteration is ``2 ** N`` which is equal to 268 435 456; difference between max and actual is 262 184 958.	
+
+Looking at the table #8, we can see exponential grow for ``KB`` knapsack in case of factorial numbers and ASC order numbers given. 
 
 That exponential grow rate is subject for further investigation and improvement. 
 
-Those results shows that new KB knapsack algorithm performs much faster than NU and can accurate solve large number problems.
+Those results shows that new ``KB`` knapsack algorithm performs much faster than ``NU``, and solves large number problems in polynomial time and space.
 
 # New equal subset sum algorithm
 
@@ -492,7 +541,7 @@ We are going to use new knapsack solution to solve ``M`` equal subset sum proble
 
 Let's consider ``N`` input numbers as sequence we should divide into ``M`` groups with equal sums. Let's denote a knapsack solver be a grouping operator that returns first group that met sum and group count contrains. To solve that problem we need to run that grouping operations ``M`` times. If we get an empty ``reminder`` at the end then the problem is solved. 
 
-The knapsack solver over distinct desc sorted numbers divides the set into ``M`` partitions if and only if that ``M`` partitions are exist. We can consider sums like a hashing. Hence each unique number leave a unique trace in the point sums, and we know that knapsack search terminates execution once the size of knapsack has reached. Then we can backtrace those unique numbers and remove it from the input set and perform knapsack again and again until the set is not empty. If it is an empty that means we found the solution.
+The knapsack solver over distinct sorted numbers divides the set into ``M`` partitions if and only if that ``M`` partitions are exist. We can consider sums like a hashing. Hence each unique number leave a unique trace in the point sums, and we know that knapsack search terminates execution once the size of knapsack has reached. Then we can backtrace those unique numbers and remove it from the input set and perform knapsack again and again until the set is not empty. If it is an empty that means we found the solution.
 
 For case where duplicates are exist in the input set we will spread non distinct numbers into the pseudo descending cluster where each 3rd cluster is in descending order. That is a good heuristics that gives 99% good partitions in tests provided. 
 
