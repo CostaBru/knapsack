@@ -729,6 +729,23 @@ The subset sum and 1-0 knapsack algorithms were tested on hardinstances_pisinger
 
 Multiple knapsack and integer optimization tests were performed as well. Optimization iteration counter didn't exceed the declared maximum.
 
+The complete list of tests:
+
+- Rational numbers tests for equal-subset-sum knapsack, 1-0 knapsack, and N dimension knapsacks, where N 2-4.
+- Super-increasing integer tests for equal-subset-sum knapsack, 1-0 knapsack, and N dimension knapsacks, where N = 2.
+- Partial super-increasing numbers tests.
+- Partial geometric progression numbers tests.
+- 2D knapsack matching with classic DP solution results.
+- Integer and Decimal mixed multidimensional knapsack problem (MKP) test
+- N equal-subset-sum tests.
+- Multiple knapsack sizes integer tests.
+- Strict 3 and 6 partition problem tests.
+- 1-0 knapsack for Silvano Martello and Paolo Toth 1990 tests.
+- Equal-subset-sum knapsack for hardinstances_pisinger subset sum test dataset.
+- 1-0 knapsack for hardinstances_pisinger test dataset in case of integer and rational numbers.
+- N equal-subset-sum using integer partition generator.
+- Integer partition optimization tests. randomTestCount * 200
+
 # Implementations and usage
 
 The single ``knapsack.py`` script has all described algorithms, tests, and performance report generators. It is copy\paste friendly without 3d party dependencies. To run all knapsack tests, please, download test cases from [9], and copy those files to /hardinstances_pisinger directory. 
