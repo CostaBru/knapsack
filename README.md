@@ -1,44 +1,56 @@
-# Rethinking the knapsack and set partitions (Not released yet)
+# Rethinking the knapsack and set partitions. (Not released yet).
 
-This work contains the list of algorithms, performance analysis and reports:
+The classic dynamic programing algorithm for 1-0 unbounded knapsack problem was extended to work with rational numbers, and to has any number of independent dimensions. 
 
-- An exponental algorithm that has the polynominal time\space runtime for unbounded 1-0 knapsack problem. The comparison of the Nemhauser-Ullmann Algorithm [12] with that one.
+New knapsack algorithms were tested on the open source test datasets, and as a core part of equal subset problem algorithm. 
 
-- An exponental algorithm for abstract up to ``T`` dimensions unbounded 1-0 knapsack problem.
+The algorithm for equal subset problem complexity was improved to be exponential in number of partitions only. The integer input type limitation was removed. That new algorithm was tested on integer partition generator data, and on integer optimization tests.
 
-- ``M`` equal-subset-sum of ``N`` integer number set that is exponental in ``M`` only.
+This work contains the source code of new ``KB`` knapsack and partition algorithms, performance analysis and reports:
 
-- Algorithms for multiple knapsack and ``M`` strict partition problem.
+- The polynomial algorithm for unbounded 1-0 knapsack problem. The comparison of the Nemhauser-Ullmann ``NU`` Algorithm [12] with that one.
+
+- The exponential algorithm for abstract up to ``T`` dimensions unbounded 1-0 knapsack problem that performs as polynomial in most cases.
+
+- The ``M`` equal-subset-sum of ``N`` integer number set that is exponential in ``M`` only.
+
+- The algorithms for multiple knapsack and ``M`` strict partition problems. The run time complexity is exponential in number of partition, too. 
 
 - Test cases and iteration reports.
 
 # Abstract
 
-The knapsack problem is well known and described in many articles and books. 
-
-The classical knapsack problem is defined as follows: 
+The knapsack problem is defined as follows: 
 
 We are given a set of ``N`` items, each item ``J`` having a ``Pj`` value and a weight ``Wj`` . The problem is to choose a subset of the
 items such that their overall profit is maximized, while the overall weight does not exceed a given capacity ``C`` [6].
 
-Let's consider classical bottom-up dynamic programing solution for unbounded knapsack problem. Let's call it ``DPS``. Bounded version of that problem has known way of reduction to unbounded one [5].
+Let's consider classical bottom-up dynamic programing solution for unbounded knapsack problem. Let's call it ``DPS``. 
+
+Bounded version of that problem has known way of reduction to unbounded one [5].
 
 It uses recurrent formula to calculate maximum value going through item weights array and checks every weight possible, using DP table from 1 to size of knapsack. 
 ``DPS`` algorithm is very efficient on small numbers. It has a known limitation to use only positive integers as input. Time and memory Complexity is ``O(N * M)`` which is known as pseudopolynomial.
 
 During solving the equal subset sum problem [7] using knapsack, I noticed that ``DPS`` did extra work by considering possibilities those never would be a part of the optimal solution.
 
-Classic ``DPS`` works in integer set ``1..S`` integer numbers, where ``S`` is size of knapsack. [1] 
+Classic ``DPS`` works in integer set ``1..S`` integer numbers, where ``S`` is size of knapsack. [1]
 
-But the optimal solution can be only in subset ``W``, where ``W`` contains items and sums of all items that less than the size of knapsack. (``Axiom 1``)
+But the optimal solution can be only in subset ``W``, where ``W`` contains items and sums of all items that less than the size of knapsack. 
 
 When weight considered is not a part of sum of items then classic ``DPS`` algorithm compares and copies maximum value reached to next DP table cell. 
 
-# The main idea
+# The main idea of KB knapsack algorithm
+
+### Axiom 1
+
+The optimal solution could be found in set of all sums of items weights only. It is self-evident, because the optimal solution contains given items only. 
 
 Due to ``Axiom 1``, let's consider only weights and sums of weights. We will perform the DP algorithm over that collection for each item. 
 
-Let's call the sum of weight visited with current weight a ``w point``. We are going to generate the set of ``w points`` for each knapsack item. We will provide the current weight and sum of current item weight with all visited points before. And use DP recurrent formula for that new set. 
+Let's call the sum of weight visited with current weight a ``w point``. We are going to generate the set of ``w points`` for each knapsack item. 
+
+We will provide the current weight and sum of current item weight with all visited points before. Then, use DP recurrent formula for that new set. 
 
 That growing collection gives as next recurrent expression for inner loop for ``Nth`` iteration:
 
@@ -46,17 +58,28 @@ That growing collection gives as next recurrent expression for inner loop for ``
 
 where ``W`` is the weight, and ``I`` is the index in collection of given items. At each ``N`` iteration we have expected maximum numbers of item weights we need to visit to reach optimal solution. 
 
-The recurrent formula for that collection is ``(2 ** N) - 1``. Which is exponental in ``N``. That exponent is limited by ``C`` the size of knapsack.
+The recurrent formula for that collection is ``(2 ** N) - 1``. Which is exponential in ``N``. That exponent is limited by ``C`` the size of knapsack.
 
-The main driver of that exponental growth is the count of new distinct sums generated after each iteration of ``Nth`` item. Because the patrition function of each existing sum grows as an exponential function of the square root of its argument, the probabilty of new sum generated be an unuque falls down dramatically when count of sums grows up. This limitation function is non linear and it is the subject for further work.
+The main driver of that exponential growth is the count of new distinct sums generated after each iteration of ``Nth`` item. 
 
-In case of ``T`` dimensinal knapsack, each new dimension added decreases this limitiation effect. 
+Because the partition function of each existing sum grows as an exponential function of the square root of its argument, the probability of new sum generated be an unique falls down dramatically when count of sums grows up. This limitation function is non linear and it is the subject for further work.
 
-The best case for knapsack is all duplicate weights in given set. The compexity is ``O(N)`` in that case. Superincreasing sequence of weights [10] can be solved in ``O(N LogN)``. 
+In case of ``T`` dimensional knapsack, each new dimension added decreases this limitation effect. 
 
-The worst case for the algorithm is considering as much possible of unique weights as possible. We can state that the superincreasing set of prime numbers is the worst case, where each sums for previous ``N`` numbers grater than next ``N item`` in the ordered set.  
+The best case for knapsack is all duplicate weights in given set. The complexity is ``O(N**2)``,  in that case. 
 
-``DPS`` algorithm acumulates the result in ``[N x C]`` DP table, where ``C`` is size of knapsack. This new algorithm are not going to visit all weights possible from 1 to ``C``, but only sums and weights itself. To gether the result from DP table, we should keep track of maximum weight and value, we have archived for each ``w point`` visited. When all ``w points`` have processed, or we found optimal solution earlier (in case of item weight is equal item value) we can backtrace items using DP table in the same way as in ``DPS``. 
+Super-increasing sequence of weights [10] can be solved in ``O(N LogN)``.
+
+<details>
+  <summary> Super-increasing sequence definition </summary>
+
+Number sequence is called super-increasing if every element of the sequence is greater than the sum of all previous elements in the sequence.
+
+</details>
+
+The worst case for the algorithm is considering as much possible of unique weights as possible. We can state that the almost super-increasing set is the worst case, where each sums for previous ``N`` numbers minus one is equal to next ``N item`` in the ordered set.  
+
+``DPS`` algorithm accumulates the result in ``[N x C]`` DP table, where ``C`` is size of knapsack. This new algorithm are not going to visit all weights possible from 1 to ``C``, but only sums and weights itself. To gather the result from DP table, we should keep track of maximum weight and value, we have archived for each ``w point`` visited. When all ``w points`` have processed, or we found optimal solution earlier (in case of item weight is equal item value) we can backtrace items using DP table in the same way as in ``DPS``. 
 
 Instead of array of array as DP table, we are going to use array of map to keep ``O(1)`` access time for points that belong to ``W`` set, and to check whether new sum is distinct. The map key is ``w point``, the map value is accumulated weight (dimension) and value.
 We are going to process ``w points`` in ASC order. We will merge two sorted list into single one in ``O(N + M)``, where ``N`` previous point count, ``M`` is count of new points created. Hence the previous list has been ordered already, and the new one we get from previous list using current weight (dimension) addition. 
@@ -66,262 +89,406 @@ Classic ``DPS`` uses recurrent formula:
 ``max(value + DP[i][j - weight], DP[i][j])``.
 
 In our solution DP table contains values for processed points only. 
+
 The case ``[j - weight]`` can give a point that does not belong to set ``W``, that means it would never contribute to the optimal solution (``Axiom 1``), and we can assign 0 value for that outsider point. 
 
 # Three kind of problem
 
-We are going to investigate three kinds of knapsack problems.
 First one is knapsack where the item value and the item weight are the same, which is known as subset sum problem. That one and 1-0 knapsack problems are known as ``weakly NP hard`` problems in case of integer numbers.[2]
 
 ``N`` dimensional knapsack has ``N`` constrains, ``M`` items and ``M`` values, where ``Mth`` item is the vector of item dimensions of size ``N``. The multi-dimensional knapsacks are computationally harder than knapsack; even for ``D=2``, the problem does not have EPTAS unless ``P=NP``. [1]
 
-## Subset sum knapsack
+## New subset sum knapsack algorithm
 
 It is simpler than others, because we can terminate execution once we have found a solution equal to knapsack size. Here we can reduce the ``w point`` collection growing speed, because some new points created will not contribute to the optimal solution. The reason of it is the depth of execution tree and growing speed of the sum starting from current one. 
 
-Let's denote ``partial sum`` is the number we get for some ``Ith`` element from maximum item to current item. Our algorithm expects items in DESC order, so the highest and the first ``Nth`` partial sum is going to be equal ``Nth`` weight (dimension), for ``Nth + 1`` it is equal to ``[ S(N - 1) = S(N) +  Ith weight]`` and so on. 
+Let's denote ``partial sum`` is the number we get for some ``Ith`` element from maximum item to current item. 
 
-We are going to use that ``partial sum`` and the knowledge of desc iteration flow to skip new ``w points`` from growing collection.
-We use ``partial sum`` to decide to do we need add this weight or just use created new points. In addition, we could skip new sum point if that sum is less then knapsack size ``C`` minus ``partial sum``. (``Lemma 1``) 
+If our new algorithm gets items given in DESC then the highest and the first ``Nth`` partial sum is going to be equal ``Nth`` weight (dimension), for ``Nth + 1`` it is equal to ``[ S(N - 1) = S(N) +  Ith weight]`` and so on. of
 
-That optimization can be used in case of subset sum knapsack, or equal values knapsacks, or when value is equal to first dimension, no metter of knapsack dimension count. The main prerequisite is DESC order of items given.
+ASC order items will reverse partial sums array. 
+
+We spend a single iteration through ``M`` items to know:
+- the order of collection, 
+- given dimensions is super-increasing set or not,
+- values are equal in case of MKS,
+- values are equal to first item dimension in case of MKS.
+
+If given collection is sorted we also collect:
+- the flags for super-increasing items,
+- partial sums for each item.
+
+In case of sorted items we can define three limitation factors for growing collection of ``w point``. 
+
+- First one is ``NL``, is equal to ``C - Ith partial sum``, where ``C`` is size of knapsack. 
+- If item is super-increasing to previous one we will define ``OL`` lower bound factor. In case of DESC order it will be equal to ``C - previous item`` else if the order is ASC then ``NL - next item''. 
+- Third factor is ``PS`` which is partial sum for that item. If ``PS >= C/2`` where C is size of knapsack, then this item itself can be skipped. We are interested in contribution of this item to existing sums. 
+
+``OL`` is equal to ``NL`` if item is not super-increasing to previous one. All new generated points those less than ``NL`` will be skipped. All previous point those less than ``OL`` will be skipped as well. 
+
+Having those factors, we will define the sliding window where optimal solution is exist. All points that are out of our window will not contribute to optimal solution. 
+
+When items are non sorted we cannot use ``NL``, ``OL``, and ``PS`` limitation factors. Only distinct sums will work in that case and will give exponential grow up to ``M/2`` where M is items count.
+
+That optimization can be used in case of subset sum knapsack, equal values knapsacks, and when value is equal to first dimension, no matter of knapsack dimension count. The main prerequisite is DESC or ASC order of items given.
 
 ## 1-0 and N dimension knapsacks
 
-They are required to visit all dimension sums, and cannot skip any of them in case of non equal profits or non equal to first dimension. 
 Here we accumulate profit\dimension sum reached for each ``W point`` using the same DP recurrent formula. 
 
-Each new dimension requires more memory for storing that dimension in point list and in DP table map keys collection, and we need to compare more numbers as well. 
+Each new dimension requires more memory for storing it in point list and in DP table map keys collection. We also need to compare more numbers. 
 
 Once we get rid of integer indexes in the DP table, using a ``w point`` as key to access the profit value, and dimensions in DP map, we can use described algorithms for ``all positive rational numbers`` without converting knapsack constrains and item dimensions given to integers.
 
 Above solutions solve the knapsack problems which are strongly ``NP-complete`` if the weights and profits are given as rational numbers. https://en.wikipedia.org/wiki/Knapsack_problem#cite_note-Wojtczak18-12
 
-### Axiom 1
-
-The optimal solution could be found in set of all sums of items weights only. It is self-evident, because the optimal solution contains given items only.
-
-### Teor 1
-
-The dynamic programing recurrent formula ``max(DP[i], DP[i - w] + v)`` works for set of sums. Prof: Because the set ``W`` is existing in set ``S``, where set ``W`` are the items and sums, where set ``S`` are numbers starting 1 up to knapsack size,
-then ``DPS`` recurrent formula ``max(DP[i], DP[i - w] + v)`` works for ``W`` points as well. if ``[i - w]`` is not the sum of items it will not be in optimal solution anyway due to ``Axiom 1``, and we consider 0 value for that point-outsider.
-
-### Lemma 1: 
-
-If current ``partial sum`` is less than size of ``knapsack // 2`` then that item itself cannot be a first item of optimal solution. 
-It may be a part of solution, so we can consider only distinct previous points sums with this item. 
-
-### Lemma 2:
-
-We can consider the starting way of each point and the full way from that point to knapsack size as part of other sums.
-The ``W point`` cannot reach the size of knapsack as part of sums of next algorithm iterations and will not contribute to optimal solution if it less than ``knapsack size`` minus ``partial sum`` for current item.  
-
-# Nemhauser-Ullman
+# The Nemhauser-Ullman algorithm
 
 The Nemhauser-Ullman algorithm [12] for the knapsack problem computes the Pareto curve and returns the best solution from the curve.
 
-For now, github has two implementations of this algorithm. One of them which is written by ``Darius Arnold`` in python3, was included in knapsack.py with paretoKnapsack method. The code was modifeid a little bit to count interations and some corner cases patches applied to make it works on test dataset. 
+For now, the GitHub has two implementations of this algorithm. One of them which is written by ``Darius Arnold`` in python3, was included in knapsack.py with paretoKnapsack method. The code was modifeid a little bit to count interations and some corner cases patches applied to make it works on test dataset. 
 
 Please see and star https://github.com/dariusarnold/knapsack-problem repository.
 
-# Analysis
+# Analysis and comparison
 
 Here are the ``w point`` growing speed table on each ``Nth`` iteration where ``N=100`` and the ``C`` is sum of all minus two. 
 
-- ``N`` is iteration number, 
-- P1 is the case of the same value. Total sum is 100, ``C`` is 98.
-- I1 total iteration to that ``N`` for P1
-- P2 is the case where two different values and its duplicates.  Total sum is 150, ``C ``is 148.
-- I2 total iteration to that ``N`` for P2
-- P3 the integet numbers from 1 to 101. Total sum is 5050, ``C`` is 5048.
-- I3 total iteration to that ``N`` for P3
-- P4 random numbers in 1-1000 range.  Total sum is 51280, ``C`` is 51278.
-- I4 total iteration to that ``N ``for P4
+- ``KB`` is new algorithm.
+- ``NU`` is Nemhauser-Ullman algorithm.
+
+Larger profit point search complexity for NU was considered as ``Log2N``, but was implemented by ``Darius Arnold`` in ``N``.
 
 <details>
-  <summary> Iteration table 1 </summary>
+  <summary> Iteration table ASC. 1..50. ``N``=50 </summary>
 
-
-|  N  | P1  |  I1   |  |  P2  |  I2  |  |  P3 |    I3    |  |  P4 |    I4    |
-|-----|-----|-------|--|------|------|--|-----|----------|--|-----|----------|
-| 2 | 1 |101 ||  1 |101 ||   1 |101 ||1 |101 |
-| 3 | 2 |103 ||  2 |103 ||   3 |104 ||2 |103 |
-| 4 | 3 |106 ||  3 |106 ||   7 |111 ||3 |106 |
-| 5 | 4 |110 ||  4 |110 ||   14 |125 ||6 |112 |
-| 6 | 4 |114 ||  5 |115 ||   25 |150 ||7 |119 |
-| 7 | 5 |119 ||  5 |120 ||   41 |191 ||8 |127 |
-| 8 | 5 |124 ||  7 |127 ||   63 |254 ||12 |139 |
-| 9 | 6 |130 ||  6 |133 ||   92 |346 ||14 |153 |
-| 10 | 6 |136 ||  8 |141 ||   129 |475 || 22 |175 |
-| 11 | 7 |143 ||  8 |149 ||   175 |650 || 32 |207 |
-| 12 | 7 |150 ||  10 |159 ||  231 |881 || 46 |253 |
-| 13 | 8 |158 ||  9 |168 ||   298 |1179 || 60 |313 |
-| 14 | 8 |166 ||  11 |179 ||  377 |1556 || 86 |399 |
-| 15 | 9 |175 ||  11 |190 ||  468 |2024 || 125 |524 |
-
-
-|  N  | P1  |  I1   |  |  P2  |  I2  |  |  P3 |    I3    |  |  P4 |    I4    |
-|-----|-----|-------|--|------|------|--|-----|----------|--|-----|----------|
-| 16 | 9 |184 ||  13 |203 ||  560 |2584 || 162 |686 |
-| 17 | 10 |194 || 12 |215 ||  678 |3262 || 229 |915 |
-| 18 | 10 |204 || 14 |229 ||  812 |4074 || 315 |1230 |
-| 19 | 11 |215 || 14 |243 ||  963 |5037 || 492 |1722 |
-| 20 | 11 |226 || 16 |259 ||  1131 |6168 || 537 |2259 |
-| 21 | 12 |238 || 15 |274 ||  1257 |7425 || 680 |2939 |
-| 22 | 12 |250 || 17 |291 ||  1366 |8791 || 589 |3528 |
-| 23 | 13 |263 || 17 |308 ||  1477 |10268 || 910 |4438 |
-| 24 | 13 |276 || 19 |327 ||  1575 |11843 || 979 |5417 |
-| 25 | 14 |290 || 18 |345 ||  1650 |13493 || 715 |6132 |
-| 26 | 14 |304 || 20 |365 ||  1714 |15207 || 1008 |7140 |
-| 27 | 15 |319 || 20 |385 ||  1796 |17003 || 1221 |8361 |
-| 28 | 15 |334 || 22 |407 ||  1855 |18858 || 1170 |9531 |
-| 29 | 16 |350 || 21 |428 ||  1911 |20769 || 1379 |10910 |
-| 30 | 16 |366 || 23 |451 ||  1962 |22731 || 1093 |12003 |
-
-
-|  N  | P1  |  I1   |  |  P2  |  I2  |  |  P3 |    I3    |  |  P4 |    I4    |
-|-----|-----|-------|--|------|------|--|-----|----------|--|-----|----------|
-| 31 | 17 |383 || 23 |474 ||  2010 |24741 || 747 |12750 |
-| 32 | 17 |400 || 25 |499 ||  2056 |26797 || 1247 |13997 |
-| 33 | 18 |418 || 24 |523 ||  2101 |28898 || 925 |14922 |
-| 34 | 18 |436 || 26 |549 ||  2143 |31041 || 1182 |16104 |
-| 35 | 19 |455 || 26 |575 ||  2184 |33225 || 1425 |17529 |
-| 36 | 19 |474 || 28 |603 ||  2223 |35448 || 1521 |19050 |
-| 37 | 20 |494 || 27 |630 ||  2257 |37705 || 1982 |21032 |
-| 38 | 20 |514 || 29 |659 ||  2289 |39994 || 1756 |22788 |
-| 39 | 21 |535 || 29 |688 ||  2318 |42312 || 2265 |25053 |
-| 40 | 21 |556 || 31 |719 ||  2346 |44658 || 1866 |26919 |
-| 41 | 22 |578 || 30 |749 ||  2372 |47030 || 2163 |29082 |
-| 42 | 22 |600 || 32 |781 ||  2395 |49425 || 2204 |31286 |
-| 43 | 23 |623 || 32 |813 ||  2417 |51842 || 1863 |33149 |
-| 44 | 23 |646 || 34 |847 ||  2437 |54279 || 2215 |35364 |
-| 45 | 24 |670 || 33 |880 ||  2455 |56734 || 2297 |37661 
-
-
-|  N  | P1  |  I1   |  |  P2  |  I2  |  |  P3 |    I3    |  |  P4 |    I4    |
-|-----|-----|-------|--|------|------|--|-----|----------|--|-----|----------|
-| 46 | 24 |694 || 35 |915 ||  2470 |59204 || 1742 |39403 |
-| 47 | 25 |719 || 35 |950 ||  2484 |61688 || 2048 |41451 |
-| 48 | 25 |744 || 37 |987 ||  2496 |64184 || 2690 |44141 |
-| 49 | 26 |770 || 36 |1023 || 2506 |66690 || 3257 |47398 |
-| 50 | 26 |796 || 38 |1061 || 2514 |69204 || 2594 |49992 |
-| 51 | 27 |823 || 38 |1099 || 2520 |71724 || 2792 |52784 |
-| 52 | 27 |850 || 66 |1165 || 2524 |74248 || 2793 |55577 |
-| 53 | 28 |878 || 65 |1230 || 2524 |76772 || 2597 |58174 |
-| 54 | 4 |882 ||  65 |1295 || 2522 |79294 || 3269 |61443 |
-| 55 | 4 |886 ||  64 |1359 || 2518 |81812 || 2711 |64154 |
-| 56 | 4 |890 ||  64 |1423 || 2512 |84324 || 2119 |66273 |
-| 57 | 4 |894 ||  63 |1486 || 2504 |86828 || 1824 |68097 |
-| 58 | 4 |898 ||  63 |1549 || 2494 |89322 || 2421 |70518 |
-| 59 | 4 |902 ||  62 |1611 || 2482 |91804 || 2339 |72857 |
-| 60 | 4 |906 ||  62 |1673 || 2468 |94272 || 1988 |74845 |
-
-
-|  N  | P1  |  I1   |  |  P2  |  I2  |  |  P3 |    I3    |  |  P4 |    I4    |
-|-----|-----|-------|--|------|------|--|-----|----------|--|-----|----------|
-| 61 | 4 |910 ||  61 |1734 || 2452 |96724 || 2396 |77241 |
-| 62 | 4 |914 ||  61 |1795 || 2434 |99158 || 2363 |79604 |
-| 63 | 4 |918 ||  60 |1855 || 2414 |101572 || 2067 |81671 |
-| 64 | 4 |922 ||  60 |1915 || 2392 |103964 || 2517 |84188 |
-| 65 | 4 |926 ||  59 |1974 || 2368 |106332 || 2006 |86194 |
-| 66 | 4 |930 ||  40 |2014 || 2342 |108674 || 2273 |88467 |
-| 67 | 4 |934 ||  39 |2053 || 2314 |110988 || 1808 |90275 |
-| 68 | 4 |938 ||  38 |2091 || 2284 |113272 || 1811 |92086 |
-| 69 | 4 |942 ||  37 |2128 || 2252 |115524 || 1703 |93789 |
-| 70 | 4 |946 ||  36 |2164 || 2218 |117742 || 1042 |94831 |
-| 71 | 4 |950 ||  35 |2199 || 2182 |119924 || 1905 |96736 |
-| 72 | 4 |954 ||  34 |2233 || 2144 |122068 || 1144 |97880 |
-| 73 | 4 |958 ||  33 |2266 || 2063 |124131 || 1524 |99404 |
-| 74 | 4 |962 ||  32 |2298 || 2020 |126151 || 1844 |101248 |
-| 75 | 4 |966 ||  31 |2329 || 1975 |128126 || 1619 |102867 |
-
-
-|  N  | P1  |  I1   |  |  P2  |  I2  |  |  P3 |    I3    |  |  P4 |    I4    |
-|-----|-----|-------|--|------|------|--|-----|----------|--|-----|----------|
-| 76 | 4 |970 ||  30 |2359 || 1928 |130054 || 1749 |104616 |
-| 77 | 4 |974 ||  29 |2388 || 1879 |131933 || 1581 |106197 |
-| 78 | 4 |978 ||  28 |2416 || 1828 |133761 || 1142 |107339 |
-| 79 | 4 |982 ||             1775 |135536 || 1709 |109048 |
-| 80 | 4 |986 ||  26 |2469 || 1720 |137256 || 1823 |110871 |
-| 81 | 4 |990 ||  25 |2494 || 1663 |138919 || 1159 |112030 |
-| 82 | 4 |994 ||  24 |2518 || 1604 |140523 || 1325 |113355 |
-| 83 | 4 |998 ||  23 |2541 || 1543 |142066 || 1404 |114759 |
-| 84 | 4 |1002 ||            1480 |143546 || 1808 |116567 |
-| 85 | 4 |1006 || 21 |2584 || 1415 |144961 || 1168 |117735 |
-| 86 | 4 |1010 || 20 |2604 || 1348 |146309 || 1583 |119318 |
-
-|  N  | P1  |  I1   |  |  P2  |  I2  |  |  P3 |    I3    |  |  P4 |    I4    |
-|-----|-----|-------|--|------|------|--|-----|----------|--|-----|----------|
-| 87 | 4 |1014 || 19 |2623 || 1279 |147588 || 1030 |120348 |
-| 88 | 4 |1018 || 18 |2641 || 1208 |148796 || 1283 |121631 |
-| 89 | 4 |1022 || 17 |2658 || 1135 |149931 || 910 |122541 |
-| 90 | 4 |1026 || 16 |2674 || 1060 |150991 || 1301 |123842 |
-| 91 | 4 |1030 || 15 |2689 || 983 |151974 || 1544 |125386 |
-| 92 | 4 |1034 || 14 |2703 || 904 |152878 || 1412 |126798 |
-| 93 | 4 |1038 || 13 |2716 || 823 |153701 || 1266 |128064 |
-| 94 | 4 |1042 || 12 |2728 || 740 |154441 || 851 |128915 |
-| 95 | 4 |1046 || 11 |2739 || 655 |155096 || 439 |129354 |
-| 96 | 4 |1050 || 10 |2749 || 568 |155664 || 242 |129596 |
-| 97 | 4 |1054 || 9 |2758 ||  479 |156143 || 242 |129838 |
-| 98 | 4 |1058 || 8 |2766 ||  388 |156531 || 242 |130080 |
+|  N  | KB sums | KB iter |     |  NU sums | NU iter |
+|-----|---------|---------|-----|----------|---------|
+| 2 | 1 | 51 |     | 2 | 15 |
+| 3 | 2 | 53 |     | 3 | 34 |
+| 4 | 3 | 56 |     | 4 | 61 |
+| 5 | 3 | 59 |     | 5 | 97 |
+| 6 | 4 | 63 |     | 6 | 142 |
+| 7 | 3 | 66 |     | 7 | 197 |
+| 8 | 4 | 70 |     | 8 | 262 |
+| 9 | 3 | 73 |     | 9 | 337 |
+| 10 | 4 | 77 |    | 10 | 423 |
+| 11 | 3 | 80 |    | 11 | 520 |
+| 12 | 4 | 84 |    | 12 | 628 |
+| 13 | 3 | 87 |    | 13 | 748 |
+| 14 | 4 | 91 |    | 14 | 879 |
+| 15 | 3 | 94 |    | 15 | 1022 |
+| 16 | 4 | 98 |    | 16 | 1177 |
+| 17 | 3 | 101 |   | 17 | 1344 |
+| 18 | 4 | 105 |   | 18 | 1524 |
+| 19 | 3 | 108 |   | 19 | 1716 |
+| 20 | 4 | 112 |   | 20 | 1920 |
+| 21 | 3 | 115 |   | 21 | 2138 |
+| 22 | 4 | 119 |   | 22 | 2368 |
+| 23 | 3 | 122 |   | 23 | 2611 |
+| 24 | 4 | 126 |   | 24 | 2867 |
+| 25 | 3 | 129 |   | 25 | 3137 |
+| 26 | 4 | 133 |   | 26 | 3419 |
+| 27 | 3 | 136 |   | 27 | 3716 |
+| 28 | 4 | 140 |   | 28 | 4025 |
+| 29 | 3 | 143 |   | 29 | 4349 |
+| 30 | 3 | 146 |   | 30 | 4686 |
+| 31 | 3 | 149 |   | 31 | 5037 |
+| 32 | 3 | 152 |   | 32 | 5402 |
+| 33 | 3 | 155 |   | 33 | 5781 |
+| 34 | 3 | 158 |   | 34 | 6174 |
+| 35 | 3 | 161 |   | 35 | 6582 |
+| 36 | 3 | 164 |   | 36 | 7003 |
+| 37 | 3 | 167 |   | 37 | 7439 |
+| 38 | 3 | 170 |   | 38 | 7889 |
+| 39 | 3 | 173 |   | 39 | 8354 |
+| 40 | 3 | 176 |   | 40 | 8834 |
+| 41 | 3 | 179 |   | 41 | 9328 |
+| 42 | 3 | 182 |   | 42 | 9837 |
+| 43 | 3 | 185 |   | 43 | 10360 |
+| 44 | 3 | 188 |   | 44 | 10898 |
+| 45 | 3 | 191 |   | 45 | 11452 |
+| 46 | 3 | 194 |   | 46 | 12020 |
+| 47 | 3 | 197 |   | 47 | 12603 |
+| 48 | 3 | 200 |   | 48 | 13201 |
+| 49 | 3 | 203 |   | 49 | 13815 |
 
 </details>
 
-The following table shows the worst case described above. The almost superincreasing prime numbers sequence and random numbers.
+<details>
+  <summary> Iteration table ASC. Iteration table. 1 and 2 values. ``N``=50 </summary>
 
-P1 is prime numbers:
+|  N  | KB sums | KB iter |     |  NU CNT | NU sums |
+|-----|---------|---------|-----|---------|---------|
+| 2 | 1 | 51 |    | 2 | 15 | 
+| 3 | 2 | 53 |    | 3 | 34 |
+| 4 | 3 | 56 |    | 4 | 61 |
+| 5 | 3 | 59 |    | 5 | 97 |
+| 6 | 4 | 63 |    | 6 | 142 |
+| 7 | 3 | 66 |    | 7 | 197 |
+| 8 | 4 | 70 |    | 8 | 262 |
+| 9 | 3 | 73 |    | 9 | 337 |
+| 10 | 4 | 77 |   | 10 | 423 |
+| 11 | 3 | 80 |   | 11 | 520 |
+| 12 | 4 | 84 |   | 12 | 628 |
+| 13 | 3 | 87 |   | 13 | 748 |
+| 14 | 4 | 91 |   | 14 | 879 |
+| 15 | 3 | 94 |   | 15 | 1022 |
+| 16 | 4 | 98 |   | 16 | 1177 |
+| 17 | 3 | 101 |  | 17 | 1344 |
+| 18 | 4 | 105 |  | 18 | 1524 |
+| 19 | 3 | 108 |  | 19 | 1716 |
+| 20 | 4 | 112 |  | 20 | 1920 |
+| 21 | 3 | 115 |  | 21 | 2138 |
+| 22 | 4 | 119 |  | 22 | 2368 |
+| 23 | 3 | 122 |  | 23 | 2611 |
+| 24 | 4 | 126 |  | 24 | 2867 |
+| 25 | 3 | 129 |  | 25 | 3137 |
+| 26 | 4 | 133 |  | 26 | 3420 |
+| 27 | 5 | 138 |  | 28 | 3731 |
+| 28 | 4 | 142 |  | 30 | 4069 |
+| 29 | 5 | 147 |  | 32 | 4435 |
+| 30 | 4 | 151 |  | 34 | 4830 |
+| 31 | 5 | 156 |  | 36 | 5252 |
+| 32 | 4 | 160 |  | 38 | 5703 |
+| 33 | 5 | 165 |  | 40 | 6184 |
+| 34 | 4 | 169 |  | 42 | 6694 |
+| 35 | 4 | 173 |  | 44 | 7233 |
+| 36 | 4 | 177 |  | 46 | 7802 |
+| 37 | 4 | 181 |  | 48 | 8401 |
+| 38 | 4 | 185 |  | 50 | 9031 |
+| 39 | 4 | 189 |  | 52 | 9691 |
+| 40 | 4 | 193 |  | 54 | 10382 |
+| 41 | 4 | 197 |  | 56 | 11104 |
+| 42 | 4 | 201 |  | 58 | 11858 |
+| 43 | 4 | 205 |  | 60 | 12642 |
+| 44 | 4 | 209 |  | 62 | 13459 |
+| 45 | 4 | 213 |  | 64 | 14307 |
+| 46 | 4 | 217 |  | 66 | 15187 |
+| 47 | 4 | 221 |  | 68 | 16099 |
+| 48 | 4 | 225 |  | 70 | 17043 |
+| 49 | 4 | 229 |  | 72 | 18020 |
+| 50 | 6 | 235 |  | 74 | 19029 |
 
- ``[3, 5, 17, 31, 41, 59, 67, 83, 109, 211, 353, 709, 1409, 1471, 4349, 7517, 17509, 82339, 539111, 965801, 9121667, 36068261, 95937757, 99491389, 99942569111] ``
-
-P2 is random numbers 3 up to 99,942,569,111. Total sum is 1,127,081,334,901. C is 1,127,081,334,899
+</details> 
 
 <details>
-  <summary> Iteration table 2 </summary>
-	
-|  N  | P1  | 2**(N-1)-P1 |  I1  |      | P2  |  2**(N-1)-P2 |    I2    |
-|-----|-----|-------------|------|------|-----|--------------|----------|
-| 2 | 1 | 1 | 26 || 1 | 1 | 26 |
-| 3 | 3 | 1 | 29 || 3 | 1 | 29 |
-|   |   |   |   || 7 | 1 | 36 |
-| 5 | 15 | 1 | 51 || 15 | 1 | 51 |
-| 6 | 31 | 1 | 82 || 31 | 1 |82 |
-| 7 | 63 | 1 | 145 || 63 | 1 |145 |
-| 8 | 121 | 7 | 266 || 127 | 1 |272 |
-| 9 | 242 | 14 | 508 || 252 | 4 |524 |
-| 10 | 479 | 33 | 987 ||  500 | 12 |1024 |
-| 11 | 942 | 82 | 1929 || 999 | 25 |2023 |
-| 12 | 1868 | 180 | 3797 || 1989 | 59 |4012 |
-| 13 | 3660 | 436 | 7457 || 3954 | 142 |7966 |
+  <summary> Iteration table ASC. Iteration table ``1..50`` numbers. ``N``=50 </summary>
+  
+|  N  | KB sums | KB iter |     |  NU CNT | NU sums |
+|-----|---------|---------|-----|---------|---------|
+| 2 | 1 | 51 |      | 2 | 16 |
+| 3 | 3 | 54 |      | 4 | 45 |
+| 4 | 5 | 59 |      | 7 | 103 |
+| 5 | 6 | 65 |      | 11 | 204 |
+| 6 | 7 | 72 |      | 16 | 364 |
+| 7 | 9 | 81 |      | 22 | 600 |
+| 8 | 10 | 91 |     | 29 | 931 |
+| 9 | 11 | 102 |    | 37 | 1374 |
+| 10 | 12 | 114 |   | 46 | 1952 |
+| 11 | 13 | 127 |   | 56 | 2683 |
+| 12 | 14 | 141 |   | 67 | 3589 |
+| 13 | 15 | 156 |   | 79 | 4691 |
+| 14 | 16 | 172 |   | 92 | 6013 |
+| 15 | 17 | 189 |   | 106 | 7575 |
+| 16 | 18 | 207 |   | 121 | 9403 |
+| 17 | 19 | 226 |   | 137 | 11518 |
+| 18 | 20 | 246 |   | 154 | 13944 |
+| 19 | 21 | 267 |   | 172 | 16707 |
+| 20 | 22 | 289 |   | 191 | 19830 |
+| 21 | 23 | 312 |   | 211 | 23337 |
+| 22 | 24 | 336 |   | 232 | 27255 |
+| 23 | 25 | 361 |   | 254 | 31608 |
+| 24 | 26 | 387 |   | 277 | 36423 |
+| 25 | 27 | 414 |   | 301 | 41724 |
+| 26 | 28 | 442 |   | 326 | 47538 |
+| 27 | 29 | 471 |   | 352 | 53891 |
+| 28 | 30 | 501 |   | 379 | 60810 |
+| 29 | 31 | 532 |   | 407 | 68322 |
+| 30 | 32 | 564 |   | 436 | 76454 |
+| 31 | 33 | 597 |   | 466 | 85232 |
+| 32 | 34 | 631 |   | 497 | 94684 |
+| 33 | 35 | 666 |   | 529 | 104838 |
+| 34 | 36 | 702 |   | 562 | 115721 |
+| 35 | 37 | 739 |   | 596 | 127362 |
+| 36 | 38 | 777 |   | 631 | 139788 |
+| 37 | 39 | 816 |   | 667 | 153028 |
+| 38 | 39 | 855 |   | 704 | 167110 |
+| 39 | 40 | 895 |   | 742 | 182062 |
+| 40 | 41 | 936 |   | 781 | 197914 |
+| 41 | 42 | 978 |   | 821 | 214694 |
+| 42 | 43 | 1021 |  | 862 | 232431 |
+| 43 | 44 | 1065 |  | 904 | 251155 |
+| 44 | 45 | 1110 |  | 947 | 270894 |
+| 45 | 46 | 1156 |  | 991 | 291678 |
+| 46 | 47 | 1203 |  | 1036 | 313537 |
+| 47 | 48 | 1251 |  | 1082 | 336500 |
+| 48 | 49 | 1300 |  | 1129 | 360597 |
+| 49 | 97 | 1397 |  | 1177 | 385859 |
+| 50 | 101 | 1498 | | 1226 | 412314 |
 
-|  N  | P1  | 2**(N-1)-P1 |  I1  |      | P2  |  2**(N-1)-P2 |    I2    |
-|-----|-----|-------------|------|------|-----|--------------|----------|
-| 14 | 7130 | 1062 | 14587 || 7842 | 350 |15808 |
-| 15 | 13776 | 2608 | 28363 || 15463 | 921 |31271 |
-| 16 | 26359 | 6409 | 54722 ||  30257 | 2511 |61528 |
-| 17 | 48779 | 16757 | 103501 || 58490 | 7046 |120018 |
-| 18 | 85416 | 45656 | 188917 || 111122 | 19950 |231140 |
-| 19 | 141023 | 121121 | 329940 || 200639 | 61505 |431779 |
-| 20 | 172070 | 352218 | 502010 || 339778 | 184510 |771557 |
-| 21 | 215806 | 832770 | 717816 || 405214 | 643362 |1176771 |
-| 22 | 201721 | 1895431 | 919537 || 443753 | 1653399 |1620524 |
-| 23 | 147191 | 4047113 | 1066728 || 352107 | 3842197 |1972631 |
-| 24 | 75252 | 8313356 | 1141980 ||  188760 | 8199848 |2161391 |
-| 25 | 16816 | 16760400 | 1158796 || 44523 | 16732693 |2205914 |
+</details> 
+
+<details>
+  <summary> Iteration table ASC. 50 random numbers in ``1..1000`` range</summary>
+  
+|  N  | KB sums | KB iter |     |  NU CNT | NU sums |
+|-----|---------|---------|-----|---------|---------|
+| 2 | 1 | 51 |        | 2 | 16 |
+| 3 | 3 | 54 |        | 4 | 46 |
+| 4 | 6 | 60 |        | 8 | 118 |
+| 5 | 9 | 69 |        | 16 | 344 |
+| 6 | 12 | 81 |       | 32 | 818 |
+| 7 | 15 | 96 |       | 52 | 1850 |
+| 8 | 17 | 113 |      | 95 | 3680 |
+| 9 | 19 | 132 |      | 146 | 6587 |
+| 10 | 21 | 153 |     | 216 | 11094 |
+| 11 | 23 | 176 |     | 302 | 17300 |
+| 12 | 25 | 201 |     | 454 | 26757 |
+| 13 | 27 | 228 |     | 610 | 39694 |
+| 14 | 29 | 257 |     | 777 | 56475 |
+| 15 | 31 | 288 |     | 956 | 77475 |
+| 16 | 32 | 320 |     | 1137 | 102836 |
+| 17 | 34 | 354 |     | 1321 | 132710 |
+| 18 | 36 | 390 |     | 1507 | 167234 |
+| 19 | 38 | 428 |     | 1709 | 206916 |
+| 20 | 40 | 468 |     | 1965 | 253170 |
+| 21 | 42 | 510 |     | 2228 | 306296 |
+| 22 | 44 | 554 |     | 2521 | 367216 |
+| 23 | 46 | 600 |     | 2883 | 437820 |
+| 24 | 48 | 648 |     | 3251 | 518396 |
+| 25 | 50 | 698 |     | 3620 | 609105 |
+| 26 | 52 | 750 |     | 4006 | 710525 |
+| 27 | 54 | 804 |     | 4406 | 823192 |
+| 28 | 56 | 860 |     | 4856 | 948602 |
+| 29 | 58 | 918 |     | 5328 | 1087498 |
+| 30 | 60 | 978 |     | 5815 | 1240434 |
+| 31 | 62 | 1040 |    | 6319 | 1408007 |
+| 32 | 64 | 1104 |    | 6824 | 1590404 |
+| 33 | 66 | 1170 |    | 7371 | 1788939 |
+| 34 | 68 | 1238 |    | 7925 | 2003957 |
+| 35 | 70 | 1308 |    | 8507 | 2236471 |
+| 36 | 72 | 1380 |    | 9176 | 2489157 |
+| 37 | 74 | 1454 |    | 9868 | 2762836 |
+| 38 | 76 | 1530 |    | 10561 | 3057678 |
+| 39 | 77 | 1607 |    | 11258 | 3373956 |
+| 40 | 79 | 1686 |    | 11975 | 3712497 |
+| 41 | 81 | 1767 |    | 12797 | 4076608 |
+| 42 | 83 | 1850 |    | 13635 | 4466931 |
+| 43 | 85 | 1935 |    | 14475 | 4883688 |
+| 44 | 87 | 2022 |    | 15330 | 5327508 |
+| 45 | 89 | 2111 |    | 16213 | 5799407 |
+| 46 | 90 | 2201 |    | 17109 | 6299950 |
+| 47 | 180 | 2381 |   | 18029 | 6830026 |
+| 48 | 186 | 2567 |   | 18956 | 7390007 |
+| 49 | 192 | 2759 |   | 19900 | 7980581 |
+| 50 | 198 | 2957 |   | 20867 | 8602626 |
+</details> 
+
+
+<details>
+  <summary> Iteration table ASC. Random numbers in ``1...10000000000000000``. ``N``=15 </summary>
+	
+|  N  | KB sums | KB iter |     |  NU CNT | NU sums |
+|-----|---------|---------|-----|---------|---------|
+| 2 | 1 | 16 |     | 2 | 16 |
+| 3 | 3 | 19 |     | 4 | 46 |
+| 4 | 5 | 24 |     | 8 | 136 |
+| 5 | 7 | 31 |     | 16 | 370 |
+| 6 | 8 | 39 |     | 32 | 996 |
+| 7 | 9 | 48 |     | 64 | 2470 |
+| 8 | 10 | 58 |    | 128 | 5906 |
+| 9 | 11 | 69 |    | 256 | 13940 |
+| 10 | 12 | 81 |   | 512 | 32606 |
+| 11 | 13 | 94 |   | 1024 | 74236 |
+| 12 | 14 | 108 |  | 2048 | 166774 |
+| 13 | 14 | 122 |  | 4096 | 369728 |
+| 14 | 28 | 150 |  | 8192 | 809992 |
+| 15 | 32 | 182 |  | 16384 | 1757942 |
 	
 </details>
 
-Looking at the table we can see negative trend of growing speed in last 1/4. 
+<details>
+  <summary> Iteration table DESC. Geometric progression with factor equal 2.  ``N``=15 + 1. Last item is middle duplicated. </summary>
+	
+|  N  | KB sums | KB iter |     |  NU CNT | NU sums |
+|-----|---------|---------|-----|---------|---------|
+| 2 | 1 | 17 |      | 2 | 16 |
+| 3 | 3 | 20 |      | 4 | 46 |
+| 4 | 5 | 25 |      | 8 | 118 |
+| 5 | 7 | 32 |      | 16 | 288 |
+| 6 | 9 | 41 |      | 32 | 684 |
+| 7 | 11 | 52 |     | 64 | 1594 |
+| 8 | 13 | 65 |     | 128 | 3658 |
+| 9 | 15 | 80 |     | 256 | 8156 |
+| 10 | 29 | 109 |   | 384 | 17734 |
+| 11 | 59 | 168 |   | 768 | 36468 |
+| 12 | 118 | 286 |  | 1536 | 74790 |
+| 13 | 236 | 522 |  | 3072 | 155102 |
+| 14 | 472 | 994 |  | 6144 | 325283 |
+| 15 | 944 | 1938 | | 12288 | 687230 |
+| 16 | 1888 | 3826 || 24576 | 1457027 |
 
-The total iterations count for random case is 1,220,500. For primes case, it is 21,696,675. The max exponental iteration count is 33,554,432 for ``N``=25. 
+</details>
 
-Those results confim worst case statement and superpolinominal compexity for it. 
+<details>
+  <summary> Iteration table DESC. Factorial numbers ``numbers[i] *= (int(numbers[i - 1]) - 1)``. ``N``=15 + 1. Last item is middle duplicated. </summary>
+	
+|  N  | KB sums | KB iter |     |  NU CNT | NU sums |
+|-----|---------|---------|-----|---------|---------|
+| 2 | 1 | 17 |    | 2 | 18 |
+| 3 | 3 | 20 |    | 4 | 60 |
+| 4 | 5 | 25 |    | 8 | 167 |
+| 5 | 7 | 32 |    | 15 | 433 |
+| 6 | 9 | 41 |    | 30 | 886 |
+| 7 | 11 | 52 |   | 68 | 1680 |
+| 8 | 13 | 65 |   | 122 | 2858 |
+| 9 | 27 | 92 |   | 192 | 4458 |
+| 10 | 14 | 106 | | 278 | 6650 |
+| 11 | 15 | 121 | | 388 | 9496 |
+| 12 | 15 | 136 | | 522 | 13049 |
+| 13 | 15 | 151 | | 680 | 17198 |
+| 14 | 15 | 166 | | 854 | 21800 |
+| 15 | 15 | 181 | | 1036 | 27023 |
+| 16 | 15 | 196 | | 1234 | 32889 |
+	
+</details>
 
-# Equal subset sum algorithm
+<details>
+  <summary> Iteration table ASC. Factorial numbers ``numbers[i] *= (int(numbers[i - 1]) - 1)``.  ``N``=15 + 1. Last item is middle duplicated. </summary>
+	
+|  N  | KB sums | KB iter |     |  NU CNT | NU sums |
+|-----|---------|---------|-----|---------|---------|
+| 2 | 1 | 17 |         | 2 | 16 |
+| 3 | 3 | 20 |         | 4 | 46 |
+| 4 | 7 | 27 |         | 8 | 118 |
+| 5 | 15 | 42 |        | 16 | 288 |
+| 6 | 31 | 73 |        | 32 | 640 |
+| 7 | 63 | 136 |       | 60 | 1239 |
+| 8 | 127 | 263 |      | 101 | 2114 |
+| 9 | 129 | 392 |      | 154 | 3241 |
+| 10 | 257 | 649 |     | 166 | 4605 |
+| 11 | 515 | 1164 |    | 241 | 6480 |
+| 12 | 1031 | 2195 |   | 337 | 8935 |
+| 13 | 2063 | 4258 |   | 455 | 11985 |
+| 14 | 4127 | 8385 |   | 593 | 15628 |
+| 15 | 8255 | 16640 |  | 749 | 19835 |
+| 16 | 16511 | 33151 | | 920 | 24542 |
+	
+</details>
 
-Equal subsetsum is only ``weakly NP-hard`` - it is hard only when the numbers are encoded in non-unary system, and have value exponential in ``N``.
-When the values are polynomial in ``N``, Partition can be solved in polynomial time using the pseudopolynomial time number partitioning algorithm.
+Looking at the last table we can see exponential grow for KB knapsack in case of factorial numbers and ASC order. 
 
-We are going to use new knapsack solution to solve ``M`` equal subsetsum problem which is the exponental in ``M`` only. 
+That exponential grow rate is subject for further investigation and improvement. 
+
+Those results shows that new KB knapsack algorithm performs much faster than NU and can accurate solve large number problems.
+
+# New equal subset sum algorithm
+
+Equal subset sum is only ``weakly NP-hard`` - it is hard only when the numbers are encoded in non-unary system, and have value exponential in ``N``.
+When the values are polynomial in ``N``, Partition can be solved in polynomial time using the pseudo-polynomial time number partitioning algorithm.
+
+We are going to use new knapsack solution to solve ``M`` equal subset sum problem which is the exponential in ``M`` only. 
 
 Let's consider ``N`` input numbers as sequence we should divide into ``M`` groups with equal sums. Let's denote a knapsack solver be a grouping operator that returns first group that met sum and group count contrains. To solve that problem we need to run that grouping operations ``M`` times. If we get an empty ``reminder`` at the end then the problem is solved. 
 
@@ -333,32 +500,32 @@ If ``reminder`` is not empty then we need to optimize its size to 0.
 
 At this point we have the ``quotients`` and ``reminder``; quotients are ``M`` groups, ``reminder`` has ``T`` numbers. 
 
-Let's call an exisiting group a ``partion point``. It contains the number of partition, the set of numbers, and the indexes of quotient item. We will define addition operation for the ``partion point``. It unions both groups given, preserves quotient indexes and adds group partitions. 
+Let's call an existing group a ``partition point``. It contains the number of partition, the set of numbers, and the indexes of quotient item. We will define addition operation for the ``partion point``. It unions both groups given, preserves quotient indexes and adds group partitions. 
 
-We sorts ``quotient`` groups by its length in descending order of ``N`` way partition problem case. It is more likly that group that have more items combined with ``reminder`` can be splited into new groups by knapsack solver.
+We sorts ``quotient`` groups by its length in descending order of ``N`` way partition problem case. It is more likely that group that have more items combined with ``reminder`` can be splited into new groups by knapsack solver.
 
 So far, we have a collection of ``partition points`` and the ``reminder`` partition point. To optimize ``reminder`` we need to union its number set with other ``partition`` points and theirs sums and call knapsack solver for it. 
 
 We are going to loop over the partition points and increase the limit of same time partition optimization. So the limit is going to be an iterator counter ``H``. After all point processed for current ``H``, we check the ``reminder`` lenght. If the length is decreased we set up new ``quotients`` and new ``reminder`` for next ``H`` loop interation. Once ``half of H`` partiton combinations visited we have an optimal solution.
 
-So far the algorithm complexity of equal subset sum problem is ``2 ** ( M / 2) * ((N / M) ** 3)``.
+So far the algorithm complexity of equal subset sum problem is ``O(2 ** ( M / 2) * (W))`` where M is number of partitions, W is complexity of knapsack groping operator. W is polynomial. W could be an exponential in super-increasing non sorted set which cannot be partitioned to ``M`` groups.
 
 We can use the same approach to solve the ``strict 3(T) partition`` problem as well. That problem is ``NP complete`` in strong sense. https://en.wikipedia.org/wiki/3-partition_problem#cite_note-3. 
 
 We will use knapsack with ``2 constrains`` as a grouping operator. The second constrain is group size which is equal to``3(T)``. We apply two modifications to our algorithm to do not allow fall into local maximum. We add shuffling ``reminder`` set before union with partition point and shuffling new ``quotients`` we got after each optimization iteration. 
 
-# Partition performance
+# New partition algorithm performance
 
 Below table was generated using integer partition test. It is trimmed version to show how the iteration grow speed depends on partition and set size. The full file generated by the script ``knapsack.py``.
 
 Max iterations calculates by following expression: 
 
-``(len(partition) ** 3) * ((N /partition) ** 4)``. 
+``([P ** 3) * ((N /P) ** 4)``. where ``N`` is items number, ``P`` is number of partitions.
 
 Optimization column is the number of new quotients generated during the reminder optimization.  
 
 <details>
-  <summary> Partition iteration table 3 </summary>
+  <summary> Partition iteration table 3, TBD </summary>
 	
 | item | integer | generator limit | partitions |     N         |  optimizations  |  iterations    |  max iterations |
 |------|---------|-----------------|------------|---------------|-----------------|----------------|-----------------|
@@ -392,8 +559,8 @@ Optimization column is the number of new quotients generated during the reminder
 Using test iterations and optimization reports we can have 3 cases:
 
 1. No optimization performed. This means that first heuristics sorting and single knapsack grouping solved the case. 
-2. Single optimization layer. That means that first groping gives almost optimal solution, and we optimized reminder by visiting quotiens without mixing it with each other.
-3. Up to 4 optimiaztion layers. First heuristics gave bad grouping. We had to regenerate old quotiens by mixing it with each other to get up to 4 partitions in the optimize group.
+2. Single optimization layer. That means that first groping gives almost optimal solution, and we optimized reminder by visiting quotients without mixing it with each other.
+3. Up to 4 optimization layers. First heuristics gave bad grouping. We had to regenerate old quotients by mixing it with each other to get up to 4 partitions in the optimize group.
 
 # Results validation
 
@@ -401,24 +568,20 @@ The subset sum and 1-0 knapsack algorithms were tested on hardinstances_pisinger
 
 ``N`` dimension knapsack was tested along with classic 2 dimensional ``DPS`` solver on integer values. It also was tested using rational numbers on one dimension dataset, and as the grouping operator in strict ``T group M partition`` solution (tests provided for ``T=3`` and ``T=6``).
 
-M equal subset sum algorithm was tested by Leetcode test dataset https://leetcode.com/problems/partition-to-k-equal-sum-subsets/, and by testcases created by integer partition generator up to 102 549 items in the set and up to 10 000 partitions, and by rational numbers tests as well. First time heuristics made, works fine in 95% percent cases; for worst case where a lot of duplicates are present in given set the algorithm needs 1-2 optimizations in average and up to 5 optimization iterations for some cases. As much duplicate numbers in the input set as much optimization iterations required. 
+``M`` equal subset sum algorithm was tested by Leetcode test dataset https://leetcode.com/problems/partition-to-k-equal-sum-subsets/, and by testcases created by integer partition generator up to 102 549 items in the set and up to 10 000 partitions, and by rational numbers tests as well. First time heuristics made, works fine in 95% percent cases; for worst case where a lot of duplicates are present in given set the algorithm needs 1-2 optimizations in average and up to 5 optimization iterations for some cases. As much duplicate numbers in the input set as much optimization iterations required. 
 
-Mulitple knapsack and integer optimization tests were performed as well. Optimization iteration counter didn't exceed the declareted maximum.
+Multiple knapsack and integer optimization tests were performed as well. Optimization iteration counter didn't exceed the declared maximum.
 
 # Implementations and usage
 
-The single ``knapsack.py`` script has all described alogrithms, tests, and performance report generators. It is copy\paste friendly without 3d party dependencies. To run all knapsack tests, please, download test cases from [9], and copy those files to /hardinstances_pisinger directory. 
+The single ``knapsack.py`` script has all described algorithms, tests, and performance report generators. It is copy\paste friendly without 3d party dependencies. To run all knapsack tests, please, download test cases from [9], and copy those files to /hardinstances_pisinger directory. 
 
 There are 4 python methods to use:
-- partitionN, which gets number set to partition, partitions number or list of particular sizes of each partition, strict partition group size, and the iterator counter array.
-- knapsack1d (subset sum), which used in partitionN as set grouping operator. It requires the following parameters: size of knapsack, items, iterator counter array, and flag indicating whether items are sorted in desc order. 
-- knapsack2d (1-0 knapsack), gets size of knapsack, items, values, iterator counter array. 
-- knapsackNd, expects the single tuple as size constrains of knapsack, items as tuples of dimensions, values, iterator counter array. It is used in partitionN method in the strict group size case.
-- parettoKnapsack is slighly modified copy of the Nemhauser-Ullman algorithm implementation by ``Darius Arnold``.
-
-# Conclusion
-
-Classic ``DPS`` algorithm for 1-0 unbounded knapsack problem was extended to work with rational numbers, and to has any independend dimensions. The algorithm for equal subset problem complexity was improved to be exponental in number of partitions only.
+- ``partitionN``, which gets number set to partition, partitions number or list of particular sizes of each partition, strict partition group size.
+- ``subsKnapsack``, which used in partitionN as set grouping operator. It requires the following parameters: size of knapsack, items, iterator counter array. 
+- ``knapsack``, gets size of knapsack, items, values, iterator counter array. 
+- ``knapsackNd``, expects the single tuple as size constrains of knapsack, items as tuples of dimensions, values, iterator counter array. It is used in partitionN method in the strict group size case.
+- ``paretoKnapsack`` is slightly modified copy of the Nemhauser-Ullman algorithm implementation by ``Darius Arnold``.
 
 # References
 
