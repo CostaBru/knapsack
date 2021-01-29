@@ -2395,7 +2395,7 @@ if True: # NP hard: Integer and Decimal mixed multidimensional knapsack problem 
             (771, Decimal("0.9"), 329), 
             (604, Decimal("0.6"), 391), 
             (1078, Decimal("0.6"), 100),
-             (640, Decimal("0.8"), 120),
+            (640, Decimal("0.8"), 120),
             (1510, Decimal("1"), 188), 
             (741, Decimal("0.6"), 271), 
             (1358, Decimal("0.9"), 334), 
@@ -2444,7 +2444,13 @@ if True: # NP hard: Integer and Decimal mixed multidimensional knapsack problem 
 
     t1 = time.perf_counter()
 
+    prevPrintPct = printPct
+
+    printPct = True
+
     optValue, optItems, optValues = knapsackNd(constr, descDims, descValues, O)
+
+    printPct = prevPrintPct
 
     t2 = time.perf_counter()
 
