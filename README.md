@@ -152,7 +152,7 @@ Please see and star https://github.com/dariusarnold/knapsack-problem repository.
 
 # Analysis and comparison
 
-Here are the ``w point`` growing speed table on each ``Nth`` iteration where ``N=100`` and the ``C`` is sum of all minus two. 
+Here are the ``w point`` growing speed table on each ``Nth`` iteration. 
 
 - ``KB`` is new algorithm.
 - ``NU`` is Nemhauser-Ullman algorithm.
