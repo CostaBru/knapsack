@@ -1,4 +1,7 @@
-# Rethinking the knapsack and set partitions. (Not released yet).
+# Rethinking the knapsack and set partitions. 
+
+
+# Abstract
 
 The classic dynamic programing algorithm for 1-0 unbounded knapsack problem was extended to work with rational numbers, and to has any number of independent dimensions. Special cases were solved in polynomial time and used as part of new partition algorithm.
 
@@ -12,7 +15,7 @@ This work contains the source code of new ``KB`` knapsack and partition algorith
 
 - The exponential algorithm for unbounded 1-0 knapsack problem for positive integer and rational weights and profits, that performs in polynomial time\space for practical instances;
 
-- The comparison of the Nemhauser-Ullmann ``NU`` Algorithm [12] with new 1-0 knapsack algorithm.
+- The comparison of the Nemhauser-Ullmann ``NU`` Algorithm [12] with new KB 1-0 knapsack algorithm.
 
 - The exponential algorithm for ``T`` independent dimensions unbounded 1-0 knapsack problem. The counting and non increasing order cases were solved in polynomial time. Non exact greedy algorithm was introduced for general case.
 
@@ -24,7 +27,7 @@ This work contains the source code of new ``KB`` knapsack and partition algorith
 
 - Test cases and iteration reports.
 
-# Abstract
+# Introduction
 
 The knapsack problem is defined as follows: 
 
@@ -40,13 +43,13 @@ It uses recurrent formula to calculate maximum value going through item weights 
 
 During solving the equal subset sum problem [7] using knapsack, I noticed that ``DPS`` did extra work by considering possibilities those never would be a part of the optimal solution.
 
-Classic ``DPS`` works in integer set ``1..S`` integer numbers, where ``S`` is size of knapsack. [1]
+Classic ``DPS`` works in integer set ``1..C`` integer numbers, where ``C`` is size of knapsack. [1]
 
-But the optimal solution can be only in subset ``W``, where ``W`` contains items and sums of all items that less than the size of knapsack. 
+We observed that the optimal solution exists in subset ``W``, where ``W`` contains items and sums of all items that less than ``C``. This property solves weakness property of ``DPS`` algorithm - large memory requirements.  
 
 When weight considered is not a part of sum of items then classic ``DPS`` algorithm compares and copies maximum value reached to next DP table cell. 
 
-# The main idea of KB knapsack algorithm
+# The main idea of KB knapsack
 
 ### Axiom 1
 
@@ -54,7 +57,7 @@ The optimal solution could be found in set of all sums of items weights only. It
 
 Due to ``Axiom 1``, let's consider only weights and sums of weights. We will perform the DP algorithm over that collection for each item. 
 
-Let's call the sum of weight visited with current weight a ``w point``. Here we are going to generate the set of ``w points`` for each knapsack item. 
+Let's call the sum of weight visited with current weight a ``w point``. To solve the problem, we are going to generate the set of ``w points`` for each knapsack item. 
 
 We will provide the current weight and sum of current item weight with all visited points before. Then, use DP recurrent formula for that new set. 
 
@@ -66,7 +69,7 @@ where ``W`` is the weight, and ``I`` is the index in collection of given items. 
 
 The recurrent formula for that collection is ``(2 ** N) - 1``. Which is exponential in ``N``. That exponent is limited by ``C`` the size of knapsack. 
 
-Since the size of ``w points`` subset is less then set ``1..C``. New algorithm requires less iterations to find the optimal solution.
+Taking into account that the size of ``w points`` subset is less then set ``1..C`` the new algorithm requires less iterations and memory to find the optimal solution.
 
 The main driver of exponential growth is the count of new distinct sums generated after each iteration of ``Nth`` item. 
 
@@ -78,7 +81,7 @@ In case of ``T`` dimensional knapsack, each new dimension added decreases this l
 
 Having that we can state that the best case for knapsack is all duplicate weights in given set. The complexity is ``O(N**2)``,  in that case. 
 
-Super-increasing sequence of weights [10] can be solved in ``O(N LogN)``.
+On the other hand, the super-increasing sequence of weights [10] can be solved in ``O(N LogN)``.
 
 <details>
   <summary> Super-increasing sequence definition </summary>
@@ -87,39 +90,43 @@ Number sequence is called super-increasing if every element of the sequence is g
 
 </details>
 
-The worst case for the algorithm is considering as much of unique weights as possible. We can state that the almost super-increasing set is the worst case, where each sums for previous ``N`` numbers minus one is equal to next ``N item`` in the ordered set.  
+The worst case for the algorithm is considering as much of unique weights as possible. Moreover, as we would expect, the almost super-increasing set is the worst case, where each sums for previous ``N`` numbers minus one is equal to next ``N item`` in the ordered set.  
 
-``DPS`` algorithm accumulates the result in ``[N x C]`` DP table, where ``C`` is size of knapsack. This new algorithm are not going to visit all weights possible from 1 to ``C``, but only sums and weights itself. To gather the result from DP table, we should keep track of maximum weight and value,
- we have archived for each ``w point`` visited. When all ``w points`` have processed, or we found optimal solution earlier (in case of item weight is equal item value) we can backtrace items using DP table in the same way as in ``DPS``. 
+The ``DPS`` algorithm accumulates the result in ``[N x C]`` DP table, where ``C`` is size of knapsack. This new KB algorithm is not going to visit all weights possible from 1 to ``C``, but only sums and weights itself. In respect to previous statement, we should keep track of maximum weight and value,
+ we have archived for each ``w point`` visited. When all ``w points`` have processed, or we found optimal solution earlier (in case of item weight is equal item value) we can backtrace optimal solution using DP table filled out. 
 
 Instead of array of array as DP table, we are going to use array of map to keep ``O(1)`` access time for points that belong to ``W`` set, and to check whether new sum is distinct. The map key is ``w point``, the map value is accumulated weight (dimension) and value.
-We are going to process ``w points`` in ASC order. We will merge two sorted list into single one in ``O(N + M)``, where ``N`` previous point count, ``M`` is count of new points created. Hence the previous list has been ordered already, and the new one we get from previous list using current weight (dimension) addition. 
+We need to process ``w points`` in increasing order to make ``DPS`` works. However, it is known, that the map data structure cannot guarantee the order of keys. To overcome this we merge two sorted list into single one. 
+The first list is the previous ``w point`` set. The second one is new ``w point`` generated. We can merge them in ``O(N + M)``, where ``N`` previous point count, ``M`` is count of new points created.
+Hence the previous list has been ordered already, and the new one we get from previous list using current weight (dimension) addition. 
 
 Classic ``DPS`` uses recurrent formula: 
 
 ``max(value + DP[i][j - weight], DP[i][j])``.
 
-In our solution DP table contains values for processed points only. 
+In our solution, DP table contains the values for processed points only. 
 
-The case ``[j - weight]`` can give a point that does not belong to set ``W``, that means it would never contribute to the optimal solution (``Axiom 1``), and we can assign 0 value for that outsider point. 
+However, the case ``[j - weight]`` can give a point that does not belong to set ``W``, that means it would never contribute to the optimal solution (``Axiom 1``), and we can assign 0 value for that outsider point. 
 
-# Three kind of problem
+# Three kind of knapsacks
 
-First one is knapsack where the item value and the item weight are the same, which is known as subset sum problem. That one and 1-0 knapsack problems are known as ``weakly NP hard`` problems in case of integer numbers.[2]
+First one is knapsack, where the item value and the item weight are the same, which is known as subset sum problem. That one and 1-0 knapsack problems are known as ``weakly NP hard`` problems in case of integer numbers.[2]
 
 ``N`` dimensional knapsack has ``N`` constrains, ``M`` items and ``M`` values, where ``Mth`` item is the vector of item dimensions of size ``N``. The multi-dimensional knapsacks are computationally harder than knapsack; even for ``D=2``, the problem does not have EPTAS unless ``P=NP``. [1]
 
 ## New subset sum knapsack algorithm
 
-It is simpler than others, because we can terminate execution once we have found a solution equal to knapsack size. Here we can reduce the ``w point`` collection growing speed, because some new points created will not contribute to the optimal solution. The reason of it is the depth of execution tree and growing speed of the sum starting from current one. 
+It is simpler than others, because we can terminate execution once we have found a solution equal to knapsack size. This work proposes several improvments to reduce collection growing speed. 
 
-Let's denote ``partial sum`` is the number we get for some ``Ith`` element from maximum item to current item. 
+In short, some new points and old points at some step, will not contribute to the optimal solution. The reason of it is the depth of execution tree and growing speed of the sum starting from current one. 
+
+Let's denote ``partial sum``the number we get for some ``Ith`` element from maximum item to current item. 
 
 If our new algorithm gets items given in non increasing order then the highest and the first ``Nth`` partial sum is going to be equal ``Nth`` weight (dimension), for ``Nth + 1`` it is equal to ``[ S(N - 1) = S(N) +  Ith weight]`` and so on. of
 
-Increasing order items will reverse partial sums array since we are considering items in non increasing order.
+Increasing order items will reverse partial sums array, the input items and values.
 
-We spend a single iteration through ``M`` items to know:
+We apply pre-processing step to know about the input:
 - the flag indicating whether collection of items is in increasing or decreasing order, 
 - given dimensions is super-increasing set or not,
 - are all values equal,
@@ -129,17 +136,23 @@ If given collection is sorted order we also collect:
 - the flags for super-increasing items,
 - partial sums for each item.
 
-In case of sorted items we can define three limitation factors for growing collection of ``w point``. 
+Taking into account order of given items, we can define three limitation factors for growing collection of ``w point`` set. 
 
 - First one is ``NL``. It is equal to ``C - Ith partial sum``, where ``C`` is size of knapsack. 
 - If item is super-increasing to previous one we will define ``OL`` lower bound factor. It will be equal to ``NL + current item``. 
 - Third factor is ``PS`` which is partial sum for that item. If ``PS >= C/2`` where C is size of knapsack, then this item itself can be skipped. We are interested in contribution of this item to existing sums. 
 
-``OL`` is equal to ``NL`` if item is not super-increasing to previous one. All new generated points those less than ``NL`` will be skipped. All previous point those less than ``OL`` will be skipped as well. 
+``OL`` is equal to ``NL`` if item is not super-increasing to previous one. 
+
+Considering items in non increasing order, we can observe for superincreasing case, the part of optimal solutions can be generated by ``w points`` that greater than ``OL``, in order to speed up the runtime we will skip those old points out of consideration.
+
+``NL`` factor allows us omit new points without loss of optimality.
 
 Having those factors, we will define the sliding window where optimal solution is exist. All points that are out of our window will not contribute to optimal solution. 
 
-If items are non sorted then we cannot use ``NL``, ``OL``, and ``PS`` limitation factors. Only distinct sums will work in that case and will give exponential grow up to ``M/2`` where M is items count.
+We conclude remarking that, even if items is partially sorted those factor will work but it cannot guarantee the optimal solution for all inputs. Than more order have given items than more accurate the result we will archive.
+
+If items are non sorted then we cannot use ``NL``, ``OL``, and ``PS`` limitation factors to get exact optima. Only distinct sums will work in that case and will give exponential grow up to ``M/2`` where ``M`` is items count.
 
 That optimization can be used in case of subset sum knapsack, equal values knapsack items, and when value is equal to first dimension, no matter of knapsack dimension count. 
 
@@ -147,11 +160,11 @@ The main prerequisite is the increasing or decreasing order of items given.
 
 ## 1-0 and N dimension knapsacks
 
-Here we accumulate profit\dimension sum reached for each ``W point`` using the same DP recurrent formula. 
+According to previous definition of ``w point``, we can make it store a vector of dimensions. Having that we extend 1-0 knapsack to be ``N`` dimensional. 
 
-Each new dimension requires more memory for storing it in point list and in DP table map keys collection and more CPU operations to compare new dimension as well. 
+Each new dimension added requires more memory for storing it in point list and in DP table map keys collection and more CPU operations to compare new dimension as well. The map key access becomes more expensive, according to hashing and comparing vectors requirement.
 
-The results below show that N dimension algorithm N times slower than single dimensional one.
+The results below show that ``N`` dimension algorithm N times slower than single dimensional exact ``N`` times.
 
 Once we get rid of integer indexes in the DP table, using a ``w point`` as key to access the profit value, and dimensions in DP map, we can use described algorithms for ``all positive rational numbers`` without converting knapsack constrains and item dimensions given to integers.
 
@@ -161,7 +174,7 @@ Above solutions solve the knapsack problems which are strongly ``NP-complete`` i
 
 The Nemhauser-Ullman algorithm [12] for the knapsack problem computes the Pareto curve and returns the best solution from the curve.
 
-For now, the GitHub has two implementations of this algorithm. One of them which is written by ``Darius Arnold`` in python3, was included in knapsack.py with paretoKnapsack method. The code was modifeid a little bit to count interations and some corner cases patches applied to make it works on test dataset. 
+So far, the GitHub has two implementations of this algorithm. One of them which is written by ``Darius Arnold`` in python3, was included in knapsack.py with paretoKnapsack method. The code was modifeid a little bit to count interations and some corner cases patches applied to make it works on test dataset. 
 
 Please see and star https://github.com/dariusarnold/knapsack-problem repository.
 
@@ -169,15 +182,18 @@ Please see and star https://github.com/dariusarnold/knapsack-problem repository.
 
 Here are the ``w point`` growing speed table on each ``Nth`` iteration. 
 
-- ``KB`` is new algorithm.
+- ``KB sums`` is new algorithm subset sum knapsack.
+- ``KB 1-0`` is new algorithm 1-0 knapsack.
 - ``NU`` is Nemhauser-Ullman algorithm.
 
-Larger profit point search complexity for NU was considered as ``Log2N``, but was implemented by ``Darius Arnold`` in ``N``.
+The values are the same as dimensions for following cases for ``KB 1-0`` and ``NU``. 
+
+Larger profit point search complexity for ``NU`` was considered as ``Log2N``, but was implemented by ``Darius Arnold`` in ``N``.
 
 <details>
-  <summary> Iteration table #1. [1..51]. `[N=50], ASC </summary>
+  <summary> Iteration table #1. [1..51]. `[N=50] </summary>
 
-|  N  | KB sums | KB iter |     |  KB 1-0 sums | NU iter |      |  NU sums | NU iter |
+|  N  | KB sums | KB iter |     |  KB 1-0 | NU iter |      |  NU sums | NU iter |
 |-----|---------|---------|-----|--------------|---------|------|----------|---------|
 | 0 | 0 | 100 |   | 0 | 150 |      | 1 | 4 |
 | 1 | 1 | 101 |   | 1 | 151 |      | 2 | 15 |
@@ -232,12 +248,12 @@ Larger profit point search complexity for NU was considered as ``Log2N``, but wa
 
 </details>
 
-Both ``KB`` beat ``NU`` and proof O(N ** 2) complexity for best case.
+Table 1 reports proof of the best case and shows that the both ``KB`` knapsack performs significantly better than ``NU``.
 
 <details>
-  <summary> Iteration table #2. Iteration table. 1 and 2 values. [N=50], ASC </summary>
+  <summary> Iteration table #2. Iteration table. 1 and 2 values. [N=50] </summary>
 
-|  N  | KB sums | KB iter |     |  KB 1-0 sums | NU iter |      |  NU sums | NU iter |
+|  N  | KB sums | KB iter |     |  KB 1-0 | NU iter |      |  NU sums | NU iter |
 |-----|---------|---------|-----|--------------|---------|------|----------|---------|
 | 0 | 0 | 100 |    | 0 | 150 |   | 1 | 4 |
 | 1 | 1 | 101 |    | 1 | 151 |   | 2 | 15 |
@@ -292,12 +308,12 @@ Both ``KB`` beat ``NU`` and proof O(N ** 2) complexity for best case.
 
 </details> 
 
-Both ``KB`` beat ``NU``.
+The same results for the repeated items case.
 
 <details>
-  <summary> Iteration table #3. Iteration table [1..50] numbers. [N=50], ASC </summary>
+  <summary> Iteration table #3. Iteration table for [1..50] numbers. [N=50] </summary>
   
-|  N  | KB sums | KB iter |     |  KB 1-0 sums | NU iter |      |  NU sums | NU iter |
+|  N  | KB sums | KB iter |     |  KB 1-0 | NU iter |      |  NU sums | NU iter |
 |-----|---------|---------|-----|--------------|---------|------|----------|---------|
 | 0 | 0 | 100 |      | 0 | 150 |        | 1 | 4 |
 | 1 | 1 | 101 |      | 1 | 151 |        | 2 | 16 |
@@ -352,12 +368,12 @@ Both ``KB`` beat ``NU``.
 
 </details> 
 
-Again both ``KB`` beat ``NU``.
+For the sake of brevity, the proof is reported in Table 3 confirms that both ``KB`` over-perform ``NU`` in increasing number set case.
 
 <details>
   <summary> Iteration table #4. 50 random numbers in [1..1000] range, ASC</summary>
   
-|  N  | KB sums | KB iter |     |  KB 1-0 sums | NU iter |      |  NU sums | NU iter |
+|  N  | KB sums | KB iter |     |  KB 1-0 | NU iter |      |  NU sums | NU iter |
 |-----|---------|---------|-----|--------------|---------|------|----------|---------|
 | 0 | 0 | 100 |           | 0 | 0 | 150 |          | 1 | 4 |
 | 1 | 1 | 101 |           | 1 | 1 | 151 |          | 2 | 16 |
@@ -411,12 +427,12 @@ Again both ``KB`` beat ``NU``.
 | 49 | 1714 | 317803 |    | 49 | 1714 | 317853 |   | 23924 | 11543572 |
 </details> 
 
-The difference between is significant. ``KB`` performs much faster in term of iterations.
+The difference between number of iterations reached is significant. It is shown that both ``KB`` solvers performs much faster in term of iterations and runtime.
 
 <details>
-  <summary> Iteration table #5. Random numbers in [1...10000000000000000]. [N=15], ASC </summary>
+  <summary> Iteration table #5. Random numbers in [1...10000000000000000]. [N=15] </summary>
 	
-|  N  | KB sums | KB iter |     |  KB 1-0 sums | NU iter |      |  NU sums | NU iter |
+|  N  | KB sums | KB iter |     |  KB 1-0 | NU iter |      |  NU sums | NU iter |
 |-----|---------|---------|-----|--------------|---------|------|----------|---------|
 | 0 | 0 | 30 |      | 0 | 45 |        | 1 | 4 |
 | 1 | 1 | 31 |      | 1 | 46 |        | 2 | 16 |
@@ -436,12 +452,12 @@ The difference between is significant. ``KB`` performs much faster in term of it
 	
 </details>
 
-``NU`` shows exponential grow. ``KB`` behaves polynomial.
+``NU`` shows exponential grow. ``KB`` behaves polynomial which confirms the effectives of ``LO`` limitation factor.
 
 <details>
-  <summary> Iteration table #6. Geometric progression with factor equal 2.  [N=15 + 1]. ASC. Last item is middle duplicated. </summary>
+  <summary> Iteration table #6. Geometric progression with factor equals to 2.  [N=15 + 1]. Median item is duplicated to do not fall to superincreasing case. </summary>
 	
-|  N  | KB sums | KB iter |     |  KB 1-0 sums | NU iter |      |  NU sums | NU iter |
+|  N  | KB sums | KB iter |     |  KB 1-0 | NU iter |      |  NU sums | NU iter |
 |-----|---------|---------|-----|--------------|---------|------|----------|---------|
 | 0 | 0 | 32 |         | 0 | 0 | 48 |         | 1 | 4 |
 | 1 | 1 | 33 |         | 1 | 1 | 49 |         | 2 | 16 |
@@ -462,10 +478,13 @@ The difference between is significant. ``KB`` performs much faster in term of it
 
 </details>
 
+Both ``KB`` algorithms performs better than ``NU`` does.
+
+
 <details>
   <summary> Iteration table #7. Factorial numbers [numbers[i] *= (int(numbers[i - 1]) - 1)]. Random values in [1..1000] [N=15 + 1]. </summary>
 	
-|  N  | KB sums | KB iter |     |  NU CNT | NU sums |
+|  N  | KB 1-0 | KB iter |     |  NU CNT | NU sums |
 |-----|---------|---------|-----|---------|---------|
 | 0 | 0 | 60 |           | 1 | 4 |
 | 1 | 1 | 61 |           | 2 | 13 |
@@ -495,7 +514,7 @@ Above table shows exponential case for new ``KB`` algorithm. ``NU`` works as pol
 <details>
   <summary> Iteration table #8. Factorial numbers [9500..10000]. [N=25]. Values in [1..100000] </summary>
 	
-|  N  | KB sums | KB iter |     |  NU CNT | NU sums |
+|  N  | KB 1-0 | KB iter |     |  NU | NU iter |
 |-----|---------|---------|-----|---------|---------|
 | 0 | 0 | 25 |          | 1 | 4 |
 | 1 | 1 | 26 |          | 2 | 18 |
@@ -524,7 +543,7 @@ Above table shows exponential case for new ``KB`` algorithm. ``NU`` works as pol
 | 24 | 33500 | 212333 | | 157 | 18602 |	
 </details>
 
-``NU`` wins new ``KB`` algorithm.
+``NU`` performance wins new ``KB`` algorithm in 2 times.
 
 <details>
   <summary> Iteration table #10. KB subset sum knapsack solver for knapPI_16_2000_1000 dataset first 46 cases. N=2000, Max iter is 32 000 000 000. </summary>
@@ -580,8 +599,7 @@ Above table shows exponential case for new ``KB`` algorithm. ``NU`` works as pol
 
 </details>
 
-We can see here that new ``KB`` algorithm can solve large instances as well.
-
+Here we can see here that new ``KB`` algorithm can solve large instances as well.
 
 ## N dimensional KB knapsack
 
@@ -622,7 +640,7 @@ We can see here that new ``KB`` algorithm can solve large instances as well.
 <details>
   <summary> Iteration table #9. KB 2D dimensional knapsack. </summary>
   
-|  N  | KB sums | KB iter |  
+|  N  | KB | KB iter |  
 |-----|---------|---------|
 | 0 | 0 | 56 |
 | 1 | 1 | 58 |
@@ -658,7 +676,7 @@ We can see here that new ``KB`` algorithm can solve large instances as well.
 Result table #9 table shows that exponential grow ends at 18th element. Maximum iteration is ``2 ** N`` which is equal to 268 435 456, but actual is 10 727 972.	 
 
 <details>
-<summary> 2D knapsack counting case dataset.</summary>
+<summary> 2D knapsack counting case dataset. Second dimension equal to 1. N=11 </summary>
 
 [(821,  1,  821),
 (1144,  1,  1144), 
@@ -677,7 +695,7 @@ Result table #9 table shows that exponential grow ends at 18th element. Maximum 
 
 
 <details>
-  <summary> Iteration table #11. KB 2D knapsack counting case. Comparison with using and not using limit factors. N=11</summary>
+  <summary> Iteration table #11. KB 2D knapsack counting case. Comparison with using and not using limit factors. </summary>
 
 | I |no lim |iter|---| lim | iter|
 |---|---|----|-------|---|----|
@@ -696,13 +714,13 @@ Result table #9 table shows that exponential grow ends at 18th element. Maximum 
 
 </details>
 
-We can see that 2D dimensional knapsack can be solved in polynomial time in counting case. That case was used in new partition algorithm below.
+On the basis of the results of Table 11, we can see that 2D dimensional knapsack can be solved in polynomial time in counting case. That case was used in new partition algorithm below.
 
-## Results conclusion
+## Performance conclusion remarks
 
-Those results show that new ``KB`` knapsack algorithm performs much faster than the ``NU`` worst cases, and at the same time, ``NU`` works better for worst cases of ``KB``. 
+Summarizing those results show, we can assert that ``KB`` knapsack algorithm performs much faster than the ``NU`` worst cases, and at the same time, ``NU`` works better for worst cases of ``KB``. 
 
-So the hybrid algorithm can solve unbounded 1-0 knapsack in polynomial time and space. 
+From observation of result, we would note that the hybrid algorithm can solve unbounded 1-0 knapsack in polynomial time and space. 
 
 # New equal subset sum algorithm
 
