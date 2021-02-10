@@ -715,7 +715,7 @@ On the basis of the results of Table 11, we can see that 2D dimensional knapsack
 
 ## Performance conclusion remarks
 
-Summarizing those results show, we can assert that ``KB`` knapsack algorithm performs much faster than the ``NU`` worst cases, and at the same time, ``NU`` works better for worst cases of ``KB``. 
+Summarizing those results reported, we can assert that ``KB`` knapsack algorithm performs much faster than the ``NU`` worst cases, and at the same time, ``NU`` works better for worst cases of ``KB``. 
 
 From observation of result, we would note that the hybrid algorithm can solve unbounded 1-0 knapsack in polynomial time and space. 
 
