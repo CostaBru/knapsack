@@ -2958,7 +2958,7 @@ if True: # NP hard: Integer and Decimal mixed multidimensional knapsack problem 
 
     prevPrintPct = printPct
 
-    solver = knapsackNSolver(constr2d, descDims2d, descValues, O)
+    solver = knapsackNSolver(constr2d, descDims2d, descValues, O, wPoint((0, 0)))
     solver.forceUseDpSolver = True
 
     optValue, optItems, optValues = solver.solve()
