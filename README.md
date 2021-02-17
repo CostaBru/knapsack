@@ -12,11 +12,15 @@ This work contains the source code of new ``KB`` knapsack and partition algorith
 
 - The polynomial time and space algorithm for unbounded subset sum knapsack problem for positive integer and rational numbers. 
 
-- The exponential algorithm for unbounded 1-0 knapsack problem for positive integer and rational weights and profits, that performs in polynomial time\space for practical instances;
+- The enhanced exponential implementation of Nemhauser-Ullmann ``NU`` algorithm .
 
-- The comparison of the Nemhauser-Ullmann ``NU`` Algorithm [12] with new KB 1-0 knapsack algorithm.
+- The exponential ``KB`` algorithm for unbounded 1-0 knapsack problem for positive integer and rational weights and profits.
 
-- The exponential algorithm for ``T`` independent dimensions unbounded 1-0 knapsack problem. The counting and non increasing order cases were solved in polynomial time. Non exact greedy algorithm was introduced for general case.
+- The comparison of the ``NU`` with new ``KB``.
+
+- The polynomial hybrid ``KB-NU`` algorithm for unbounded 1-0 knapsack problem  for positive integer and rational weights and profits.
+
+- The exponential algorithm for ``T`` independent dimensions unbounded 1-0 knapsack problem. The counting and non increasing order cases were solved in polynomial time. A non exact greedy algorithm was introduced for general case.
 
 - The ``M`` equal-subset-sum of ``N`` integer number set that is exponential in ``M`` only.
 
@@ -169,23 +173,29 @@ Above solutions solve the knapsack problems which are strongly ``NP-complete`` i
 
 # The Nemhauser-Ullman algorithm
 
-The Nemhauser-Ullman algorithm [12] for the knapsack problem computes the Pareto curve and returns the best solution from the curve.
+The Nemhauser-Ullman algorithm [12] for the knapsack problem computes the Pareto curve and returns the best solution from the curve. Let's call it ``NU``.
 
-So far, the GitHub has two implementations of this algorithm. One of them which is written by ``Darius Arnold`` in python3, was included in knapsack.py with paretoKnapsack method. The code was modifeid a little bit to count interations and some corner cases patches applied to make it works on test dataset. 
+For ``i`` in ``[n]``, let ``Li`` be the list of all Pareto points over the solution set ``Si`` = ``2**i``, i.e., ``Si`` contains all subsets of the items ``1, . . . , i``. Recall that each Pareto
+point is a (weight, profit) pair. The points in Li are assumed to be listed in increasing order of their weights. Clearly, ``L1`` = ``[(0,0)``, ``(w1, p1)]``. The list ``Li+1`` can be computed from
+``Li`` as follows: Create a new ordered list ``L′`` by duplicating ``Li`` and adding ``(wi+1, pi+1)`` to each point. Now we merge the two lists into ``Li+1`` obeying the weight order of subsets.
+Finally, those solutions are removed from the list that are dominated by other solutions in the list. The list ``Li`` can be calculated from the list ``Li−1`` in time that is linear in the
+length of ``Li−1``.
 
-Please see and star https://github.com/dariusarnold/knapsack-problem repository.
+In case of profits are chosen according to the uniform distribution over [0,1] the run time complexity is O(n**4). Which was proven by Rene Beier1 and Berthold Vocking [14]
 
-# KB knapsack analysis and comparison with Nemhauser-Ullman
+The strong side of ``NU`` algorithm is omitting points by the best profit found. This algorithm is exponential like the ``KB`` one if it cannot omit points. It appears when the weights and profits have the same value. Which is known as good case of ``KB`` knapsack.
+
+Our implementation was inspired by ``Darius Arnold``'s code written in python3 [13]. We reduced run time complexity from ``(2 ** N)*((2 ** N) + 1)`` to be ``(2 ** N) * LogN``, space complexity from ``(2 ** (N + 1))`` to ``2 ** N`` 
+
+# KB knapsack analysis and comparison with the NU pareto knapsack
 
 Here are the ``w point`` growing speed table on each ``Nth`` iteration. 
 
 - ``KB sums`` is new algorithm subset sum knapsack.
 - ``KB 1-0`` is new algorithm 1-0 knapsack.
-- ``NU`` is Nemhauser-Ullman algorithm.
+- ``NU`` is Nemhauser-Ullman algorithm implementation.
 
 The values are the same as dimensions for following cases for ``KB 1-0`` and ``NU``. 
-
-Larger profit point search complexity for ``NU`` was considered as ``Log2N``, but was implemented by ``Darius Arnold`` in ``N``.
 
 <details>
   <summary> Iteration table #1. [1..51]. `[N=50] </summary>
@@ -717,7 +727,7 @@ On the basis of the results of Table 11, we can see that 2D dimensional knapsack
 
 Summarizing those results reported, we can assert that ``KB`` knapsack algorithm performs much faster than the ``NU`` worst cases, and at the same time, ``NU`` works better for worst cases of ``KB``. 
 
-From observation of result, we would note that the hybrid algorithm can solve unbounded 1-0 knapsack in polynomial time and space. 
+From observation of result, we would note that the hybrid ``KB-NU`` algorithm can solve unbounded 1-0 knapsack in polynomial time and space. 
 
 # New equal subset sum algorithm
 
@@ -830,12 +840,14 @@ The complete list of tests:
 
 The single ``knapsack.py`` script has all described algorithms, tests, and performance report generators. It is copy\paste friendly without 3d party dependencies. To run all knapsack tests, please, download test cases from [9], and copy those files to /hardinstances_pisinger directory. 
 
-There are 4 python methods to use:
+There are 7 python methods to use:
 - ``partitionN``, which gets number set to partition, partitions number or list of particular sizes of each partition, strict partition group size.
 - ``subsKnapsack``, which used in partitionN as set grouping operator. It requires the following parameters: size of knapsack, items, iterator counter array. 
 - ``knapsack``, gets size of knapsack, items, values, iterator counter array. 
 - ``knapsackNd``, expects the single tuple as size constrains of knapsack, items as tuples of dimensions, values, iterator counter array. It is used in partitionN method in the strict group size case.
-- ``paretoKnapsack`` is slightly modified copy of the Nemhauser-Ullman algorithm implementation by ``Darius Arnold``.
+- ``paretoKnapsack`` is implementation of Nemhauser-Ullman algorithm.
+- ``hybridKnapsack`` is hybrid of KB and NU.
+- ``hybridKnapsackNd`` NU algorithm called for worst exponential case of KB.
 
 # References
 
@@ -851,6 +863,8 @@ There are 4 python methods to use:
 - [10] https://en.wikipedia.org/wiki/Superincreasing_sequence
 - [11] http://www.cs.cmu.edu/~anupamg/advalgos15/lectures/lecture29.pdf
 - [12] http://www.roeglin.org/teaching/Skripte/ProbabilisticAnalysis.pdf
+- [13] https://github.com/dariusarnold/knapsack-problem
+- [14] An Experimental Study of Random Knapsack Problems. By Rene Beier1 and Berthold Vocking2
 
 ## How to cite ##
 
