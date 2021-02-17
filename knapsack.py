@@ -37,6 +37,10 @@ def knapsack(size, weights, values, O, forceUseLimits = False):
     solver = knapsackSolver(size, weights, values, O, forceUseLimits)
     return solver.solve()
 
+def paretoKnapsack(size, weights, values, O):
+    solver = knapsackParetoSolver(weights, values, values, paretoKnapsackConstraint(size), 0, O)
+    return solver.solve()
+
 def knapsackNd(constraints, items, values, O, forceUseLimits = False):
     solver = knapsackNSolver(constraints, items, values, O, wPoint([0] * constraints.getSize()), forceUseLimits)
     return solver.solve()
@@ -2399,7 +2403,7 @@ class knapsackNSolver:
 
         return partSumForItem, oldPointLimit, newPointLimit, skipCount
 
-    def dynamicProgramingSolver(self, constraints, count, lessSizeItems, lessSizeValues, partialSums, superIncreasingItems, allAsc, allDesc, forceUseLimits, canUsePartialSums, O):
+    def solveByDynamicPrograming(self, constraints, count, lessSizeItems, lessSizeValues, partialSums, superIncreasingItems, allAsc, allDesc, forceUseLimits, canUsePartialSums, O):
 
         DP = self.createDP(count)
 
@@ -2461,7 +2465,7 @@ class knapsackNSolver:
 
         return self.backTraceItems(DP, resultI, resultP, lessSizeItems, lessSizeValues, O) 
 
-    def greedyTopDownSolver(self, constraints, points, values, doSolveSuperInc, forceUseLimits, O):
+    def solveByGreedyTopDown(self, constraints, points, values, doSolveSuperInc, forceUseLimits, O):
 
         def sortBoth(w, v, reverse=True):
             sorted_pairs = sorted(zip(w, v), reverse=reverse, key=lambda t: (t[0], t[1]))
@@ -2678,12 +2682,12 @@ class knapsackNSolver:
                 lessSizeValues = list(reversed(lessSizeValues))
                 O[0] += len(lessSizeItems) * 2   
 
-            return self.dynamicProgramingSolver(constraints, count, lessSizeItems, lessSizeValues, partialSums, superIncreasingItems, allAsc, allDesc, forceUseLimits, canUsePartialSums, O)
+            return self.solveByDynamicPrograming(constraints, count, lessSizeItems, lessSizeValues, partialSums, superIncreasingItems, allAsc, allDesc, forceUseLimits, canUsePartialSums, O)
 
         if self.useParetoGreedy:
             return self.solveByPareto(constraints, lessSizeItems, lessSizeValues, self.emptyPoint, O)
 
-        return self.greedyTopDownSolver(constraints, lessSizeItems, lessSizeValues, doSolveSuperInc, False, O)
+        return self.solveByGreedyTopDown(constraints, lessSizeItems, lessSizeValues, doSolveSuperInc, False, O)
 
 # region: Functions for testing.
 
@@ -4422,7 +4426,7 @@ if True: # NP hard: multidimensional  N=100
     
 printPct = True
 
-if False: # Polynominal: subsKnapsack report for [1] * 50
+if True: # Polynominal: subsKnapsack report for [1] * 50
     
     if verbose:
         print("report:[1] * 50")
@@ -4447,7 +4451,7 @@ if False: # Polynominal: subsKnapsack report for [1] * 50
 
             t1 = time.perf_counter()
 
-            opt, optItems1 = subsKnapsack(s, numbers, O)
+            opt1, optItems1 = subsKnapsack(s, numbers, O)
 
             subsTime = time.perf_counter() - t1
 
@@ -4457,7 +4461,7 @@ if False: # Polynominal: subsKnapsack report for [1] * 50
 
             t1 = time.perf_counter()
 
-            opt2, optItems2, optVal3, _ = knapsack(s, numbers, numbers, O)
+            opt2, optDim2, optItems2, optVal2, _ = knapsack(s, numbers, numbers, O)
 
             knapTime = time.perf_counter() - t1
 
@@ -4467,23 +4471,20 @@ if False: # Polynominal: subsKnapsack report for [1] * 50
 
             t1 = time.perf_counter()
 
-            ids = paretoKnapsack(numbers, numbers, s, O)
+            opt3, optDim3, optItems3, optVal3, _ = paretoKnapsack(s, numbers, numbers, O)
 
             paretoTime = time.perf_counter() - t1
 
             o3 = round(O[0])
 
-            optItems3 = [numbers[id] for id in ids]
-            opt3 = sum(optItems2)
-
-            if opt != opt3 or opt2 != opt3:
-                print(f"{opt} - {opt2} - {opt3}, size {s}")
+            if opt1 != opt2 or opt2 != opt3:
+                print(f"{opt1} - {opt2} - {opt3}, size {s}")
                 assert False
 
             prevO = o1
             prevPareto = o2
 
-if False: # Polynominal: subsKnapsack report for ([1] * 25) + ([2] * 25)
+if True: # Polynominal: subsKnapsack report for ([1] * 25) + ([2] * 25)
     if verbose:
         print("report: [1] * 25) + ([2] * 25")
     
@@ -4513,7 +4514,7 @@ if False: # Polynominal: subsKnapsack report for ([1] * 25) + ([2] * 25)
 
             t1 = time.perf_counter()
 
-            opt2, optItems2, optVal3, _ = knapsack(s, numbers, numbers, O)
+            opt2, optDim2, optItems2, optVal3, _ = knapsack(s, numbers, numbers, O)
 
             knapTime = time.perf_counter() - t1
 
@@ -4521,22 +4522,18 @@ if False: # Polynominal: subsKnapsack report for ([1] * 25) + ([2] * 25)
             
             O[0] = 0
 
-            ids = paretoKnapsack(numbers, numbers, s, O)
+            opt3, optDim3, optItems3, optVal3, _ = paretoKnapsack(s, numbers, numbers, O)
 
             o2 = round(O[0])
-
-            optItems3 = [numbers[id] for id in ids]
-            opt3 = sum(optItems3)
 
             if opt != opt2 or opt != opt3:
                 print(f"{opt} - {opt2} - {opt3}, size {s}")
                 assert False
 
-
             prevO = o1
             prevPareto = o2
 
-if False: # Polynominal: subsKnapsack report for list(range(1, 51))
+if True: # Polynominal: subsKnapsack report for list(range(1, 51))
    
     if verbose:
         print("report: list(range(1, 51))")
@@ -4569,7 +4566,7 @@ if False: # Polynominal: subsKnapsack report for list(range(1, 51))
 
             t1 = time.perf_counter()
 
-            opt2, optItems2, optVal3, _ = knapsack(s, numbers, numbers, O)
+            opt2, optDim2, optItems2, optVal3, _ = knapsack(s, numbers, numbers, O)
 
             knapTime = time.perf_counter() - t1
 
@@ -4577,12 +4574,9 @@ if False: # Polynominal: subsKnapsack report for list(range(1, 51))
             
             O[0] = 0
 
-            ids = paretoKnapsack(numbers, numbers, s, O)
+            opt3, optDim3, optItems3, optVal3, _ = paretoKnapsack(s, numbers, numbers, O)
 
             o3 = round(O[0])
-
-            optItems3 = [numbers[id] for id in ids]
-            opt3 = sum(optItems3)
 
             if opt != opt2 or opt != opt3:
                 print(f"{opt} - {opt2} - {opt3}, size {s}")
@@ -4591,7 +4585,7 @@ if False: # Polynominal: subsKnapsack report for list(range(1, 51))
             prevO = o1
             prevPareto = o2
 
-if False: # Polynominal: subsKnapsack report for random.sample(range(1, 1000), 50)
+if True: # Polynominal: subsKnapsack report for random.sample(range(1, 1000), 50)
     
     if verbose:
         print("report: random.sample(range(1, 1000), 50)")
@@ -4624,7 +4618,7 @@ if False: # Polynominal: subsKnapsack report for random.sample(range(1, 1000), 5
 
             t1 = time.perf_counter()
 
-            opt2, optItems2, optVal3, _ = knapsack(s, numbers, numbers, O)
+            opt2, optDim2, optItems2, optVal3, _ = knapsack(s, numbers, numbers, O)
 
             knapTime = time.perf_counter() - t1
 
@@ -4632,21 +4626,18 @@ if False: # Polynominal: subsKnapsack report for random.sample(range(1, 1000), 5
             
             O[0] = 0
 
-            ids = paretoKnapsack(numbers, numbers, s, O)
+            opt3, optDim3, optItems3, optVal3, _ = paretoKnapsack(s, numbers, numbers, O)
 
             o3 = round(O[0])
 
-            optItems3 = [numbers[id] for id in ids]
-            opt3 = sum(optItems3)
-
-            if opt != opt2 or (opt != opt3 and opt3 < s):
+            if opt != opt2 or (opt != opt3):
                 print(f"{opt} - {opt2} size {s}")
                 assert False
 
             prevO = o1
             prevPareto = o2
 
-if False: # Polynominal: subsKnapsack report for random.sample(range(1, 10000000000000000), 15)
+if True: # Polynominal: subsKnapsack report for random.sample(range(1, 10000000000000000), 15)
     
     if verbose:
         print("report: random.sample(range(1, 10000000000000000), 15)")
@@ -4682,7 +4673,7 @@ if False: # Polynominal: subsKnapsack report for random.sample(range(1, 10000000
 
             t1 = time.perf_counter()
 
-            opt2, optItems2, optVal3, _ = knapsack(s, numbers, numbers, O)
+            opt2, optDim2, optItems2, optVal3, _ = knapsack(s, numbers, numbers, O)
 
             knapTime = time.perf_counter() - t1
 
@@ -4690,21 +4681,18 @@ if False: # Polynominal: subsKnapsack report for random.sample(range(1, 10000000
             
             O[0] = 0
 
-            ids = paretoKnapsack(numbers, numbers, s, O)
+            opt3, optDim3, optItems3, optVal3, _ = paretoKnapsack(s, numbers, numbers, O)
 
             o3 = round(O[0])
 
-            optItems3 = [numbers[id] for id in ids]
-            opt3 = sum(optItems3)
-
-            if opt != opt2 or (opt != opt3 and opt3 < s):
+            if opt != opt2 or (opt != opt3):
                 print(f"{opt} - {opt2} - {opt3}, size {s}, numbers: {numbers}")
                 assert False
 
             prevO = o1
             prevPareto = o2
 
-if False: # Polynominal: subsKnapsack report for geometric progression numbers = [10000] * 15; numbers[i] *= (int(numbers[i - 1] * 2) - 1)
+if True: # Polynominal: subsKnapsack report for geometric progression numbers = [10000] * 15; numbers[i] *= (int(numbers[i - 1] * 2) - 1)
     
     if verbose:
         print("report: numbers = [10000] * 15; numbers[i] *= (int(numbers[i - 1] * 2) - 1")
@@ -4744,7 +4732,7 @@ if False: # Polynominal: subsKnapsack report for geometric progression numbers =
 
             t1 = time.perf_counter()
 
-            opt2, optItems2, optVal3, _ = knapsack(s, numbers, numbers, O)
+            opt2, optDim2, optItems2, optVal3, _ = knapsack(s, numbers, numbers, O)
 
             knapTime = time.perf_counter() - t1
 
@@ -4752,12 +4740,9 @@ if False: # Polynominal: subsKnapsack report for geometric progression numbers =
             
             O[0] = 0
 
-            ids = paretoKnapsack(numbers, numbers, s, O)
+            opt3, optDim3, optItems3, optVal3, _ = paretoKnapsack(s, numbers, numbers, O)
 
             o3 = round(O[0])
-
-            optItems3 = [numbers[id] for id in ids]
-            opt3 = sum(optItems3)
 
             if opt1 != opt2 or opt1 != opt3:
                 print(f"{opt1} - {opt2} - {opt3}, size {s}")
@@ -4766,7 +4751,7 @@ if False: # Polynominal: subsKnapsack report for geometric progression numbers =
             prevO = o1
             prevPareto = o2
 
-if False: # Exponental: 1-0 KB knapsack report for geometric progression numbers = [1] * 15; numbers[i] *= (int(numbers[i - 1] * 2) - 1); values are random in [1..1000]
+if True: # Exponental: 1-0 KB knapsack report for geometric progression numbers = [1] * 15; numbers[i] *= (int(numbers[i - 1] * 2) - 1); values are random in [1..1000]
     
     if verbose:
         print("report: numbers = [1] * 15; numbers[i] *= (int(numbers[i - 1] * 2) - 1); values are random in [1..1000]")
@@ -4788,19 +4773,9 @@ if False: # Exponental: 1-0 KB knapsack report for geometric progression numbers
             
         O = [0]
 
-        numbers = [523763713, 261881857, 130940929, 65470465, 32735233, 16367617, 8183809, 4091905, 2045953, 1022977, 511489, 255745, 127873, 63937, 31969, 15985, 7993, 3997, 1999, 1000]
-        values = [1, 534, 386, 555, 540, 418, 85, 134, 502, 290, 955, 314, 858, 782, 106, 817, 881, 659, 252, 706]
-
-        def sortRevereseByProfit(w, v, reverse=True):
-            sorted_pairs = sorted(zip(w, v), reverse=reverse, key=lambda t: (t[1], t[0]))
-            tuples = zip(*sorted_pairs)
-            return [list(tuple) for tuple in  tuples]
-        
-        numbers, values  = sortRevereseByProfit(numbers, values)
-
         if True:
-            #sumCases = [(sum(numbers) // 2) - 1, ((sum(numbers)//4) * 3 - 1), sum(numbers) - 1,]
-            sumCases = [sum(numbers) - 1]
+            
+            sumCases = [(sum(numbers) // 2) - 1, ((sum(numbers)//4) * 3 - 1), sum(numbers) - 1,]
 
             for s in sumCases:
 
@@ -4808,10 +4783,7 @@ if False: # Exponental: 1-0 KB knapsack report for geometric progression numbers
 
                 O[0] = 0
 
-                ids = paretoKnapsack(numbers, values, s, O)
-
-                optValues3 = [values[id] for id in ids]
-                optValSum3 = sum(optValues3)
+                opt3, optDim3, optItems3, optVal3, _ = paretoKnapsack(s, numbers, values, O)
 
                 o3 = round(O[0])
 
@@ -4819,22 +4791,21 @@ if False: # Exponental: 1-0 KB knapsack report for geometric progression numbers
 
                 t1 = time.perf_counter()
 
-                opt2, optItems2, optVal2, _ = knapsack(s, numbers, values, O)
+                opt2, optDim2, optItems2, optVal2, _ = knapsack(s, numbers, values, O)
 
                 knapTime = time.perf_counter() - t1
 
                 o2 = round(O[0])
 
-                optValSum2 = sum(optVal2)
-                
                 O[0] = 0
 
                 print("pareto")
 
-                if optValSum2 != optValSum3:
-                    print(f"{optValSum2} - {optValSum3}, size {s}, numbers: {numbers}, values = {values}")
+                if opt2 != opt3:
+                    print(f"{opt2} - {opt3}, size {s}, numbers: {numbers}, values = {values}")
+                    assert False
 
-if False: # Polynominal: 1-0 knapsack report for range(9500, 10000), 25
+if True: # Polynominal: 1-0 knapsack report for range(9500, 10000), 25
    
     if verbose:
         print("report: range(9500, 10000), 25; values = random.sample(range(1, 100000), 25)")
@@ -4863,7 +4834,7 @@ if False: # Polynominal: 1-0 knapsack report for range(9500, 10000), 25
 
                 t1 = time.perf_counter()
 
-                opt2, optItems2, optVal2, _ = knapsack(s, numbers, values, O)
+                opt2, optDim2, optItems2, optVal2, _ = knapsack(s, numbers, values, O)
 
                 knapTime = time.perf_counter() - t1
 
@@ -4872,13 +4843,11 @@ if False: # Polynominal: 1-0 knapsack report for range(9500, 10000), 25
                 optValSum2 = sum(optVal2)
                 
                 O[0] = 0
-
-                ids = paretoKnapsack(numbers, values, s, O)
+ 
+                opt3, optDim3, optItems3, optVal3, _ = paretoKnapsack(s, numbers, values, O)
 
                 o3 = round(O[0])
 
-                optValues3 = [values[id] for id in ids]
-                optValSum3 = sum(optValues3)
-
-                if optValSum2 != optValSum3:
-                    print(f"{optValSum2} - {optValSum3}, size {s}, numbers: {numbers}, values = {values}")
+                if opt3 != opt2:
+                    print(f"{opt3} - {opt2}, size {s}, numbers: {numbers}, values = {values}")
+                    assert False
