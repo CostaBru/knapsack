@@ -844,13 +844,30 @@ The complete list of tests:
 The single ``knapsack.py`` script has all described algorithms, tests, and performance report generators. It is copy\paste friendly without 3d party dependencies. To run all knapsack tests, please, download test cases from [9], and copy those files to /hardinstances_pisinger directory. 
 
 There are 7 python methods to use:
+
 - ``partitionN``, which gets number set to partition, partitions number or list of particular sizes of each partition, strict partition group size.
-- ``subsKnapsack``, which used in partitionN as set grouping operator. It requires the following parameters: size of knapsack, items, iterator counter array. 
-- ``knapsack``, gets size of knapsack, items, values, iterator counter array. 
+
+	The result is tuple of quotients, reminder, optimizationCount.
+- ``subsKnapsack``, which used in partitionN as set grouping operator. It requires the following parameters: size of knapsack, items, iterator counter array.
+
+	The result is tuple of bestValue, bestItems.
+- ``knapsack``, gets size of knapsack, items, values, iterator counter array. Which used in greedy solver in knapsackNd.
+
+	The result is tuple of bestValue, bestSize, bestItems, bestValues.
 - ``knapsackNd``, expects the single tuple as size constrains of knapsack, items as tuples of dimensions, values, iterator counter array. It is used in partitionN method in the strict group size case.
-- ``paretoKnapsack`` is implementation of Nemhauser-Ullman algorithm.
+
+	The result is tuple of bestValue, bestSize, bestItems, bestValues.
+- ``paretoKnapsack`` is implementation of Nemhauser-Ullman algorithm. Gets size of knapsack, items, values, iterator counter array. It used in hybrid knapsack, and as greedy solver in knapsackNd.
+
+	The result is tuple of bestValue, bestSize, bestItems, bestValues.	
 - ``hybridKnapsack`` is hybrid of KB and NU.
+
+    The result is tuple of bestValue, bestSize, bestItems, bestValues.	
 - ``hybridKnapsackNd`` NU algorithm called for worst exponential case of KB.
+
+	The result is tuple of bestValue, bestSize, bestItems, bestValues.
+	
+	Please see test cases for usage.
 
 # References
 
@@ -870,6 +887,18 @@ There are 7 python methods to use:
 - [14] An Experimental Study of Random Knapsack Problems. By Rene Beier1 and Berthold Vocking2
 - [15] R. Bellman, Notes on the theory of dynamic programming iv - maximization over discrete sets, Naval. Research Logistics Quarterly, 3 (1-2), 67-70, 1956.
 - [16] Equal-Subset-Sum Faster Than the Meet-in-the-Middle. Marcin Mucha, Jesper Nederlof, Jakub Pawlewicz, Karol Węgrzycki. 3 Jul 2019. https://arxiv.org/abs/1905.02424
+
+# Roadmap
+
+The API of this library is frozen.
+
+Bug fixes and performance enhancement can be expected.
+
+New functionality might be included.
+
+Version numbers adhere to semantic versioning. https://semver.org/
+
+The only accepted reason to modify the API of this package is to handle issues that can't be resolved in any other reasonable way.
 
 ## How to cite ##
 
