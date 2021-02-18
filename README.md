@@ -4,11 +4,9 @@
 
 The classic dynamic programing algorithm for 1-0 unbounded knapsack problem was extended to work with rational numbers, and to has any number of independent dimensions. Special cases were solved in polynomial time and used as part of new partition algorithm.
 
-New algorithms were tested on the open source test datasets, and as a core part of equal subset problem algorithm. 
+The algorithm for equal subset problem complexity was improved to be exponential in number of partitions only. The integer input type limitation was removed.
 
-The algorithm for equal subset problem complexity was improved to be exponential in number of partitions only. The integer input type limitation was removed. That new algorithm was tested on integer partition generator data, and on integer optimization tests.
-
-This work contains the source code of new ``KB`` knapsack and partition algorithms, performance analysis and reports:
+This work contains the source code of below algorithms, performance analysis and reports:
 
 - The polynomial time and space algorithm for unbounded subset sum knapsack problem for positive integer and rational numbers. 
 
@@ -161,7 +159,7 @@ The main prerequisite is the increasing or decreasing order of items given.
 
 ## 1-0 and N dimension knapsacks
 
-According to previous definition of ``w point``, we can make it store a vector of dimensions. Having that we extend 1-0 knapsack to be ``N`` dimensional. 
+According to previous definition of ``w point``, we can make it store a vector of dimensions. Having that, we extend 1-0 knapsack to be ``N`` dimensional. 
 
 Each new dimension added requires more memory for storing it in point list and in DP table map keys collection and more CPU operations to compare new dimension as well. The map key access becomes more expensive, according to hashing and comparing vectors requirement.
 
@@ -173,7 +171,7 @@ Above solutions solve the knapsack problems which are strongly ``NP-complete`` i
 
 # The Nemhauser-Ullman algorithm
 
-The Nemhauser-Ullman algorithm [12] for the knapsack problem computes the Pareto curve and returns the best solution from the curve. Let's call it ``NU``.
+The Nemhauser-Ullman algorithm [12] for the knapsack problem computes the Pareto curve and returns the best solution from the curve. Let's call that algorithm ``NU``.
 
 For ``i`` in ``[n]``, let ``Li`` be the list of all Pareto points over the solution set ``Si`` = ``2**i``, i.e., ``Si`` contains all subsets of the items ``1, . . . , i``. Recall that each Pareto
 point is a (weight, profit) pair. The points in Li are assumed to be listed in increasing order of their weights. Clearly, ``L1`` = ``[(0,0)``, ``(w1, p1)]``. The list ``Li+1`` can be computed from
@@ -731,12 +729,17 @@ From observation of result, we would note that the hybrid ``KB-NU`` algorithm ca
 
 # New equal subset sum algorithm
 
-The equal subset sum is only ``weakly NP-hard`` - it is hard only when the numbers are encoded in non-unary system, and have value exponential in ``N``.
-When the values are polynomial in ``N``, Partition can be solved in polynomial time using the pseudo-polynomial time number partitioning algorithm.
+In computer science the subset sum problem is that:
 
-We are going to use new knapsack solution to solve ``M`` equal subset sum problem which is the exponential in ``M`` only. 
+In the ``Equal-Subset-Sum`` problem, we are given a set ``S`` of ``N`` numbers. The problem is to decide if there exist two disjoint nonempty subsets ``A``, ``B`` belongs to ``S``, whose elements sum up to the same value.
 
-Let's consider ``N`` input numbers as sequence we should divide into ``M`` groups with equal sums. Let's denote a knapsack solver be a grouping operator that returns first group that met sum and group count contrains. To solve that problem we need to run that grouping operations ``M`` times. If we get an empty ``reminder`` at the end then the problem is solved. 
+The problem is NP-complete. The state-of-the-art algorithm runs ``O(1.7088 ** N)`` worst case. That Monte Carlo algorithm introduced in Equal-Subset-Sum Faster Than the Meet-in-the-Middle work by Marcin Mucha, Jesper Nederlof, Jakub Pawlewicz, Karol Węgrzycki [16]
+
+New ``KB`` partition algorithm will answer to the target question and give best actual ``M`` partitions of ``N`` set. It also will make possible to divide the set by non equal ``M`` size and solve 3 (``T``) Partition problem.
+
+We are going to use new knapsack solution to solve ``M`` equal subset sum problem which is the exponential in ``M`` only in worst case, where no solution exist, and ``O((M ** 3) * (W))``, where ``W`` is knapsack complexity, in average case. 
+
+Let's consider ``N`` input numbers as sequence we should divide into ``M`` groups with equal sums. Let's denote a knapsack solver be a grouping operator that returns first group that met sum and group count constraints. To solve that problem we need to run that grouping operations ``M`` times. If we get an empty ``reminder`` at the end then the problem is solved. 
 
 The knapsack solver over distinct sorted numbers divides the set into ``M`` partitions if and only if that ``M`` partitions are exist. We can consider sums like a hashing. Hence each unique number leave a unique trace in the point sums, and we know that knapsack search terminates execution once the size of knapsack has reached. Then we can backtrace those unique numbers and remove it from the input set and perform knapsack again and again until the set is not empty. If it is an empty that means we found the solution.
 
@@ -865,6 +868,8 @@ There are 7 python methods to use:
 - [12] http://www.roeglin.org/teaching/Skripte/ProbabilisticAnalysis.pdf
 - [13] https://github.com/dariusarnold/knapsack-problem
 - [14] An Experimental Study of Random Knapsack Problems. By Rene Beier1 and Berthold Vocking2
+- [15] R. Bellman, Notes on the theory of dynamic programming iv - maximization over discrete sets, Naval. Research Logistics Quarterly, 3 (1-2), 67-70, 1956.
+- [16] Equal-Subset-Sum Faster Than the Meet-in-the-Middle. Marcin Mucha, Jesper Nederlof, Jakub Pawlewicz, Karol Węgrzycki. 3 Jul 2019. https://arxiv.org/abs/1905.02424
 
 ## How to cite ##
 
