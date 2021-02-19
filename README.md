@@ -1,7 +1,5 @@
 # Rethinking the knapsack and set partitions. 
 
-# Abstract
-
 The classic dynamic programing algorithm for 1-0 unbounded knapsack problem was extended to work with rational numbers, and to has any number of independent dimensions. Special cases were solved in polynomial time and used as part of new partition algorithm.
 
 The algorithm for equal subset problem complexity was improved to be exponential in number of partitions only. The integer input type limitation was removed.
@@ -27,6 +25,36 @@ This work contains the source code of algorithms, performance analysis and repor
 - ``M`` strict partition problem. The run time complexity is exponential in number of partition. That algorithm runtime is ``M`` times slower than the subset sum problem.
 
 - Test cases and iteration reports.
+
+# Implementations and usage
+
+The single ``knapsack.py`` script has all described algorithms, tests, and performance report generators. It is copy\paste friendly without 3d party dependencies. To run all knapsack tests, please, download test cases from [9], and copy those files to /hardinstances_pisinger directory. 
+
+There are 7 python methods to use:
+
+- ``partitionN``, which gets number set to partition, partitions number or list of particular sizes of each partition, strict partition group size.
+
+	The result is tuple of quotients, reminder, optimizationCount.
+- ``subsKnapsack``, which used in partitionN as set grouping operator. It requires the following parameters: size of knapsack, items, iterator counter array.
+
+	The result is tuple of bestValue, bestItems.
+- ``knapsack``, gets size of knapsack, items, values, iterator counter array. Which used in greedy solver in knapsackNd.
+
+	The result is tuple of bestValue, bestSize, bestItems, bestValues.
+- ``knapsackNd``, expects the single tuple as size constrains of knapsack, items as tuples of dimensions, values, iterator counter array. It is used in partitionN method in the strict group size case.
+
+	The result is tuple of bestValue, bestSize, bestItems, bestValues.
+- ``paretoKnapsack`` is implementation of Nemhauser-Ullman algorithm. Gets size of knapsack, items, values, iterator counter array. It used in hybrid knapsack, and as greedy solver in knapsackNd.
+
+	The result is tuple of bestValue, bestSize, bestItems, bestValues.	
+- ``hybridKnapsack`` is hybrid of KB and NU.
+
+    The result is tuple of bestValue, bestSize, bestItems, bestValues.	
+- ``hybridKnapsackNd`` NU algorithm called for worst exponential case of KB.
+
+	The result is tuple of bestValue, bestSize, bestItems, bestValues.
+	
+	Please see test cases for usage.
 
 # Introduction
 
@@ -840,36 +868,6 @@ The complete list of tests:
 - N equal-subset-sum using integer partition generator.
 - Integer partition optimization tests. randomTestCount * 200
 - Multidimensional  N=100 non exact greedy algorithm test
-
-# Implementations and usage
-
-The single ``knapsack.py`` script has all described algorithms, tests, and performance report generators. It is copy\paste friendly without 3d party dependencies. To run all knapsack tests, please, download test cases from [9], and copy those files to /hardinstances_pisinger directory. 
-
-There are 7 python methods to use:
-
-- ``partitionN``, which gets number set to partition, partitions number or list of particular sizes of each partition, strict partition group size.
-
-	The result is tuple of quotients, reminder, optimizationCount.
-- ``subsKnapsack``, which used in partitionN as set grouping operator. It requires the following parameters: size of knapsack, items, iterator counter array.
-
-	The result is tuple of bestValue, bestItems.
-- ``knapsack``, gets size of knapsack, items, values, iterator counter array. Which used in greedy solver in knapsackNd.
-
-	The result is tuple of bestValue, bestSize, bestItems, bestValues.
-- ``knapsackNd``, expects the single tuple as size constrains of knapsack, items as tuples of dimensions, values, iterator counter array. It is used in partitionN method in the strict group size case.
-
-	The result is tuple of bestValue, bestSize, bestItems, bestValues.
-- ``paretoKnapsack`` is implementation of Nemhauser-Ullman algorithm. Gets size of knapsack, items, values, iterator counter array. It used in hybrid knapsack, and as greedy solver in knapsackNd.
-
-	The result is tuple of bestValue, bestSize, bestItems, bestValues.	
-- ``hybridKnapsack`` is hybrid of KB and NU.
-
-    The result is tuple of bestValue, bestSize, bestItems, bestValues.	
-- ``hybridKnapsackNd`` NU algorithm called for worst exponential case of KB.
-
-	The result is tuple of bestValue, bestSize, bestItems, bestValues.
-	
-	Please see test cases for usage.
 
 # References
 
