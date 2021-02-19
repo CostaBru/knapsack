@@ -6,17 +6,17 @@ The classic dynamic programing algorithm for 1-0 unbounded knapsack problem was 
 
 The algorithm for equal subset problem complexity was improved to be exponential in number of partitions only. The integer input type limitation was removed.
 
-This work contains the source code of below algorithms, performance analysis and reports:
+This work contains the source code of algorithms, performance analysis and reports:
 
 - The polynomial time and space algorithm for unbounded subset sum knapsack problem for positive integer and rational numbers. 
 
-- The enhanced exponential implementation of Nemhauser-Ullmann ``NU`` algorithm .
+- The enhanced exponential implementation of Nemhauser-Ullmann ``NU`` algorithm.
 
 - The exponential ``KB`` algorithm for unbounded 1-0 knapsack problem for positive integer and rational weights and profits.
 
 - The comparison of the ``NU`` with new ``KB``.
 
-- The polynomial hybrid ``KB-NU`` algorithm for unbounded 1-0 knapsack problem  for positive integer and rational weights and profits.
+- The polynomial hybrid ``KB-NU`` algorithm for unbounded 1-0 knapsack problem for positive integer and rational weights and profits.
 
 - The exponential algorithm for ``T`` independent dimensions unbounded 1-0 knapsack problem. The counting and non increasing order cases were solved in polynomial time. A non exact greedy algorithm was introduced for general case.
 
@@ -115,7 +115,7 @@ First one is knapsack, where the item value and the item weight are the same, wh
 
 ## New subset sum knapsack algorithm
 
-It is simpler than others, because we can terminate execution once we have found a solution equal to knapsack size. This work proposes several improvments to reduce collection growing speed. 
+It is simpler than others, because we can terminate execution once we have found a solution equal to knapsack size. This work proposes several improvements to reduce collection growing speed. 
 
 In short, some new points and old points at some step, will not contribute to the optimal solution. The reason of it is the depth of execution tree and growing speed of the sum starting from current one. 
 
@@ -181,11 +181,13 @@ length of ``Li−1``.
 
 In case of profits are chosen according to the uniform distribution over [0,1] the run time complexity is O(n**4). Which was proven by Rene Beier1 and Berthold Vocking [14]
 
-The strong side of ``NU`` algorithm is omitting points by the best profit found. This algorithm is exponential like the ``KB`` one if it cannot omit points. It appears when the weights and profits have the same value. Which is known as good case of ``KB`` knapsack.
+The strong side of ``NU`` algorithm is omitting points by the best profit found for less weight. This algorithm is exponential like the ``KB`` one if it cannot omit points. It appears when the profits are greater or equal than the weights. Which is known as good case of ``KB`` knapsack.
 
-Our implementation was inspired by ``Darius Arnold``'s code written in python3 [13]. We reduced run time complexity from ``(2 ** N)*((2 ** N) + 1)`` to be ``(2 ** N) * LogN``, space complexity from ``(2 ** (N + 1))`` to ``2 ** N`` 
+Our implementation was inspired by ``Darius Arnold``'s code written in python3 [13]. We reduced run time complexity from ``(2 ** N)*((2 ** N) + 1)`` to be ``(2 ** N) * LogN``, space complexity from ``(2 ** (N + 1))`` to ``2 ** N``. 
 
-# KB knapsack analysis and comparison with the NU pareto knapsack
+Instead of collecting indexes of items in each point we store only one index per point and the source of particular point in linked list manner. While iterating points in increasing order of profits we can use binary search for next max profit point look up. We also applied the ``KB`` distinct sum optimization to reduce complexity in case of many duplicated points. 
+
+# KB and NU analysis and comparison 
 
 Here are the ``w point`` growing speed table on each ``Nth`` iteration. 
 
@@ -749,9 +751,9 @@ If ``reminder`` is not empty then we need to optimize its size to 0.
 
 At this point we have the ``quotients`` and ``reminder``; quotients are ``M`` groups, ``reminder`` has ``T`` numbers. 
 
-Let's call an existing group a ``partition point``. It contains the number of partition, the set of numbers, and the indexes of quotient item. We will define addition operation for the ``partion point``. It unions both groups given, preserves quotient indexes and adds group partitions. 
+Let's call an existing group a ``partition point``. It contains the number of partition, the set of numbers, and the indexes of quotient item. We will define addition operation for the ``partition point``. It unions both groups given, preserves quotient indexes and adds group partitions. 
 
-We sort ``quotient`` groups by its length in descending order of ``N`` way partition problem case. It is more likely that group that have more items combined with ``reminder`` can be splited into new groups by knapsack solver.
+We sort ``quotient`` groups by its length in descending order of ``N`` way partition problem case. It is more likely that group that have more items combined with ``reminder`` can be split into new groups by knapsack solver.
 
 So far, we have a collection of ``partition points`` and the ``reminder`` partition point. To optimize ``reminder`` we need to union its number set with other ``partition`` points and theirs sums and call knapsack solver for it. 
 
@@ -774,7 +776,7 @@ Max iterations calculates by following expression:
 Optimization column is the number of new quotients generated during the reminder optimization.  
 
 <details>
-  <summary> Partition iteration table 3, TBD </summary>
+  <summary> Partition iteration table 3 </summary>
 	
 | item | integer | generator limit | partitions |     N         |  optimizations  |  iterations    |  max iterations |
 |------|---------|-----------------|------------|---------------|-----------------|----------------|-----------------|
@@ -896,7 +898,7 @@ Bug fixes and performance enhancement can be expected.
 
 New functionality might be included.
 
-Version numbers adhere to semantic versioning. https://semver.org/
+Version numbers adhere to semantic versioning: https://semver.org/
 
 The only accepted reason to modify the API of this package is to handle issues that can't be resolved in any other reasonable way.
 
@@ -911,4 +913,5 @@ The only accepted reason to modify the API of this package is to handle issues t
 	}
 
 ## License
+
 [MIT](https://choosealicense.com/licenses/mit/)
