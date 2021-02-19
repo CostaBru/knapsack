@@ -4521,8 +4521,8 @@ if True: # NP hard: multidimensional  N=100
 
   
     values = [p[2] for p in lwData100]
-    items = [wPoint2(p[0] * dimensionMultiplier, p[1] * dimensionMultiplier) for p in lwData100]
-    constraints =  wPoint2(lConstraint * dimensionMultiplier, wConstraint * dimensionMultiplier)
+    items = [wPoint((p[0] * dimensionMultiplier, p[1] * dimensionMultiplier)) for p in lwData100]
+    constraints =  wPoint((lConstraint * dimensionMultiplier, wConstraint * dimensionMultiplier))
 
     if verbose:
         print(f"multidimensional N={len(values)} knapsack test")
@@ -4531,7 +4531,7 @@ if True: # NP hard: multidimensional  N=100
 
     t1 = time.perf_counter()
 
-    opt, optDims, optItems, optValues = hybridKnapsackNd(constraints, items, values, O, wPoint2(0, 0))
+    opt, optDims, optItems, optValues = hybridKnapsackNd(constraints, items, values, O)
 
     if verbose:
         print(f"hybridKnapsackNd: total val: {opt} opt: {optDims}, testOpt: {greedyOptimumValue} iter: {round(O[0])}, time: {time.perf_counter() - t1}, items: {optItems}")
@@ -4540,7 +4540,7 @@ if True: # NP hard: multidimensional  N=100
 
     t1 = time.perf_counter()
 
-    opt, optDims, optItems, optValues = knapsackNd(constraints, items, values, O, wPoint2(0, 0))
+    opt, optDims, optItems, optValues = knapsackNd(constraints, items, values, O)
 
     if verbose:
         print(f"knapsackNd: total val: {opt} opt: {optDims}, testOpt: {greedyOptimumValue} iter: {round(O[0])}, time: {time.perf_counter() - t1}, items: {optItems}")
