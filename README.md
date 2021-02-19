@@ -54,7 +54,39 @@ There are 7 python methods to use:
 
 	The result is tuple of bestValue, bestSize, bestItems, bestValues.
 	
-	Please see test cases for usage.
+	<details>
+		<summary> Example </summary>
+  
+	```python
+	
+	O = [0]
+	
+	partN, A  = 3, list(reversed(list(range(1, (81 * 9) + 1))))
+	 
+	quotients, reminder, optCount = partitionN(items = A, sizesOrPartitions = partN, groupSize = 0, O=O, optimizationLimit = -1)
+
+    assert len(reminder) == 0 and len(quotients) == partN
+
+    s, A = Decimal("10.5"), list(reversed([Decimal("0.2"), Decimal("1.200001"), Decimal("2.9000001"), Decimal("3.30000009"), Decimal("4.3"), Decimal("5.5"), Decimal("6.6"), Decimal("7.7"), Decimal("8.8"), Decimal("9.8")]))
+
+    expectedValue = Decimal("10.20000109")    
+
+    bestProfitD2, optDimD2, optItemsD2, optValuesD2 = knapsackNd(constraints = wPoint((s, s)), items = [wPoint((a, a)) for a in A], values = A, O=O)
+    assert expectedValue == bestProfitD2
+
+    bestProfit10, optDim10, optItems10, optValues10 = knapsack(size = s, items = A, values = A, O=O)
+    assert expectedValue == bestProfit10
+
+    bestProfitP, optDimP, optItemsP, optValuesP = paretoKnapsack(size = s, items = A, values = A, O=O)
+    assert expectedValue == bestProfitP
+
+    bestProfitS, optItemsS = subsKnapsack(size = s, items = A, O=O)   
+    assert expectedValue == bestProfitS
+	
+	```
+	</details>
+	
+	Please see more test cases for examples of usage.
 
 # Introduction
 
