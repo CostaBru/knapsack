@@ -2919,7 +2919,7 @@ if runTests:
     if verbose:
         print(f"Initial random seed is {dtNow}")
 
-    if True: # NP complete: Rational numbers tests for equal-subset-sum knapsack, 1-0 knapsack, and N dimension knapsacks, where N 2-4.
+    if False: # NP complete: Rational numbers tests for equal-subset-sum knapsack, 1-0 knapsack, and N dimension knapsacks, where N 2-4.
         if verbose:
             print("Rational numbers tests for equal-subset-sum knapsack, 1-0 knapsack, and N dimension knapsacks, where N 2-4.")
 
@@ -2950,7 +2950,7 @@ if runTests:
         opt, optValues1 = subsKnapsack(s, A, O)   
         assert expectedValue == opt
 
-    if True: # Polynominal: Superincreasing integer tests for equal-subset-sum knapsack, 1-0 knapsack, and N dimension knapsacks, where N = 2.
+    if False: # Polynominal: Superincreasing integer tests for equal-subset-sum knapsack, 1-0 knapsack, and N dimension knapsacks, where N = 2.
         if verbose:
             print("Superincreasing integer numbers tests.")
 
@@ -3039,7 +3039,7 @@ if runTests:
         
         doSolveSuperInc = prevDoSolveSuperInc   
     
-    if True: # Polynominal: Partial superincreasing numbers tests.
+    if False: # Polynominal: Partial superincreasing numbers tests.
         if verbose:
             print("Partial superincreasing numbers tests.")
 
@@ -3091,7 +3091,7 @@ if runTests:
                     opt4, optDim, optItems, optValues4 = paretoKnapsack(s, testCase, testCase, O)  
                     assert  listValuesEqual(optValues4, expected) or sum(expected) == opt4
                 
-    if True: # Polynominal: Partial geometric progression numbers tests.
+    if False: # Polynominal: Partial geometric progression numbers tests.
         if verbose:
             print("Partial geometric progression numbers tests.")
 
@@ -3152,7 +3152,7 @@ if runTests:
 
         doSolveSuperInc = prevDoSolveSuperInc
 
-    if True: # NP complete: 2D knapsack matching with classic DP solution results. N=13
+    if False: # NP complete: 2D knapsack matching with classic DP solution results. N=13
 
         O = [0]
         O_dp = [0]
@@ -3191,7 +3191,7 @@ if runTests:
                             print(f" k sum val : {sum(optValues)}, dp: {dpRes}  k sum vol : {resVol} k sum w : {resW}  all sum val: {sum(s_values)} all sum vol: {sum(s_volumes)} all sum w: {sum(s_weights)}")
                         assert False
 
-    if True: # NP hard: Integer and Decimal mixed multidimensional knapsack problem (MKP) test
+    if False: # NP hard: Integer and Decimal mixed multidimensional knapsack problem (MKP) test
         
         data = [(821, Decimal("0.8"), 118),
                 (1144, Decimal("1"), 322), 
@@ -3281,7 +3281,7 @@ if runTests:
 
         assert good
 
-    if True: # NP hard: Integer multidimensional knapsack problem (MKP) with same profit value limits tests
+    if False: # NP hard: Integer multidimensional knapsack problem (MKP) with same profit value limits tests
 
         mixDimData =[(821,  976,  1),
                     (1144,  718,  1), 
@@ -3363,7 +3363,7 @@ if runTests:
 
         doUseLimits = prevDoUseLimits
 
-    if True: # NP hard: Integer multidimensional knapsack problem (MKP) T partition grouping opertator tests
+    if False: # NP hard: Integer multidimensional knapsack problem (MKP) T partition grouping opertator tests
 
         mixDimData =[(821,  1,  821),
                     (1144,  1,  1144), 
@@ -3445,7 +3445,7 @@ if runTests:
 
         doUseLimits = prevDoUseLimits
 
-    if True: # NP complete: Integer 1-0 knapsack problem limits tests
+    if False: # NP complete: Integer 1-0 knapsack problem limits tests
 
         mixDimData =[(821,  100),
                     (1144,  100), 
@@ -3540,7 +3540,7 @@ if runTests:
         doUseLimits = prevDoUseLimits
         printPct = prevPrintPct
 
-    if True: # NP complete: N equal-subset-sum tests.
+    if False: # NP complete: N equal-subset-sum tests.
 
         if verbose:
             print("N equal-subset-sum integer tests.")
@@ -3601,12 +3601,21 @@ if runTests:
 
                 case += 1
 
+                if case != 10:
+                    continue
+
                 O[0] = 0
 
                 if verbose:        
-                    print("case " + str(case))
+                    print("case " + str(case), end="")
+
+                t1 = time.perf_counter()
 
                 partResult, reminder, optCount = partitionN(list(A), NU, 0, O)
+
+                tt = round(time.perf_counter() - t1, 4)
+
+                print(f" time {tt}")
 
                 if len(reminder) != 0 or len(partResult) != NU:
 
@@ -3641,6 +3650,8 @@ if runTests:
 
             for A, NU in tests:
 
+                break
+
                 case += 1
 
                 O[0] = 0
@@ -3669,7 +3680,7 @@ if runTests:
 
                     assert False
 
-    if True : # NP complete: Multiple knapsack sizes integer tests.
+    if False : # NP complete: Multiple knapsack sizes integer tests.
 
         if verbose:
             print("Multiple knapsack sizes integer tests.")
@@ -3783,6 +3794,8 @@ if runTests:
         tests.append((unionTuples(AT), NU))  
 
         for i in range(randomTestCount):
+
+            break
 
             newSeed = dtNow + datetime.timedelta(seconds=i)
 
@@ -3906,7 +3919,7 @@ if runTests:
 
                     assert False
         
-    if True: # NP complete: 1-0 knapsack for Silvano Martello and Paolo Toth 1990 tests.
+    if False: # NP complete: 1-0 knapsack for Silvano Martello and Paolo Toth 1990 tests.
         if verbose:
             print("1-0 knapsack solver for Silvano Martello and Paolo Toth 1990 tests.")
 
@@ -3951,7 +3964,7 @@ if runTests:
 
         testSilvano(W, V, R, c)
 
-    if True: # NP weak: Equal-subset-sum knapsack for hardinstances_pisinger subset sum test dataset.
+    if False: # NP weak: Equal-subset-sum knapsack for hardinstances_pisinger subset sum test dataset.
 
         if verbose:
             print("Run equal-subset-sum knapsack for hardinstances_pisinger subset sum test dataset.")
@@ -4116,7 +4129,7 @@ if runTests:
                                 testExpected.append(int(row[1]))
                 assert allGood
 
-    if True: # NP complete: 1-0 knapsack for hardinstances_pisinger test dataset in case of integer and rational numbers.  
+    if False: # NP complete: 1-0 knapsack for hardinstances_pisinger test dataset in case of integer and rational numbers.  
 
         if verbose:
             print("Run 1-0 knapsack for hardinstances_pisinger test dataset in case of integer and rational numbers.")
@@ -4348,7 +4361,7 @@ if runTests:
 
             assert allGood
 
-    if True: # NP weak: N equal-subset-sum using integer partiton generator.
+    if False: # NP weak: N equal-subset-sum using integer partiton generator.
 
         def generate_partition(number, limitCount):
             answer = set()
@@ -4457,7 +4470,7 @@ if runTests:
 
             assert allGood
 
-    if True: # NP hard: integer partition optimization tests. randomTestCount * 200
+    if False: # NP hard: integer partition optimization tests. randomTestCount * 200
 
         if verbose:
             print("NP hard partition optimization integer tests.")
@@ -4556,7 +4569,7 @@ if runTests:
 
                     assert False
 
-    if True: # NP hard: multidimensional  N=100
+    if False: # NP hard: multidimensional  N=100
         lConstraint = 20789
         wConstraint = 23681
         greedyOptimumValue  = 121105212 
@@ -4619,7 +4632,7 @@ if runTests:
         
     printPct = True
 
-    if True: # KB knapsacks and pareto reports for [1] * 50
+    if False: # KB knapsacks and pareto reports for [1] * 50
         
         if verbose:
             print("KB knapsacks and pareto reports for [1] * 50")
@@ -4677,7 +4690,7 @@ if runTests:
                 prevO = o1
                 prevPareto = o2
 
-    if True: # KB knapsacks and pareto reports for ([1] * 25) + ([2] * 25)
+    if False: # KB knapsacks and pareto reports for ([1] * 25) + ([2] * 25)
         if verbose:
             print("KB knapsacks and pareto reports for ([1] * 25) + ([2] * 25)")
         
@@ -4726,7 +4739,7 @@ if runTests:
                 prevO = o1
                 prevPareto = o2
 
-    if True: # KB knapsacks and pareto reports for list(range(1, 51))
+    if False: # KB knapsacks and pareto reports for list(range(1, 51))
     
         if verbose:
             print("KB knapsacks and pareto reports for list(range(1, 51))")
@@ -4778,7 +4791,7 @@ if runTests:
                 prevO = o1
                 prevPareto = o2
 
-    if True: # KB knapsacks and pareto reports for random.sample(range(1, 1000), 50)
+    if False: # KB knapsacks and pareto reports for random.sample(range(1, 1000), 50)
         
         if verbose:
             print("KB knapsacks and pareto reports for random.sample(range(1, 1000), 50)")
@@ -4830,7 +4843,7 @@ if runTests:
                 prevO = o1
                 prevPareto = o2
 
-    if True: # KB knapsacks and pareto reports for random.sample(range(1, 10000000000000000), 15)
+    if False: # KB knapsacks and pareto reports for random.sample(range(1, 10000000000000000), 15)
         
         if verbose:
             print("KB knapsacks and pareto reports for random.sample(range(1, 10000000000000000), 15)")
@@ -4885,7 +4898,7 @@ if runTests:
                 prevO = o1
                 prevPareto = o2
 
-    if True: # KB knapsacks and pareto reports for geometric progression numbers = [10000] * 15; numbers[i] *= (int(numbers[i - 1] * 2) - 1)
+    if False: # KB knapsacks and pareto reports for geometric progression numbers = [10000] * 15; numbers[i] *= (int(numbers[i - 1] * 2) - 1)
         
         if verbose:
             print("KB knapsacks and pareto reports for geometric progression numbers = [10000] * 15; numbers[i] *= (int(numbers[i - 1] * 2) - 1)")
@@ -4944,7 +4957,7 @@ if runTests:
                 prevO = o1
                 prevPareto = o2
 
-    if True: # KB knapsacks and pareto reports for geometric progression numbers = [1] * 15; numbers[i] *= (int(numbers[i - 1] * 2) - 1); values are random in [1..1000]
+    if False: # KB knapsacks and pareto reports for geometric progression numbers = [1] * 15; numbers[i] *= (int(numbers[i - 1] * 2) - 1); values are random in [1..1000]
         
         if verbose:
             print("reports for geometric progression numbers = [1] * 15; numbers[i] *= (int(numbers[i - 1] * 2) - 1); values are random in [1..1000]")
@@ -4996,7 +5009,7 @@ if runTests:
                         print(f"ERROR: {opt2} - {opt3}, size {s}, numbers: {numbers}, values = {values}")
                         assert False
 
-    if True: # Exponental: reports KB NU for geometric progression numbers and values, non equals case
+    if False: # Exponental: reports KB NU for geometric progression numbers and values, non equals case
 
         if verbose:
             print("reports KB NU for geometric progression numbers and values, non equals case")
@@ -5052,7 +5065,7 @@ if runTests:
                         print(f"ERROR: {opt2} - {opt3}, size {s}, numbers: {numbers}, values = {values}")
                         assert False
 
-    if True: # KB knapsacks and pareto reports for 25 random numbers in range(9500, 10000), values are random in [1..1000]
+    if False: # KB knapsacks and pareto reports for 25 random numbers in range(9500, 10000), values are random in [1..1000]
    
         if verbose:
             print("KB knapsacks and pareto reports for 25 random numbers in range(9500, 10000), values are random in [1..1000]")
