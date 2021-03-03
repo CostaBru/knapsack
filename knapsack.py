@@ -16,12 +16,12 @@ TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR TH
 from collections import defaultdict
 from collections import deque
 from decimal import Decimal
-from typing import List 
+from typing import List
 
 import datetime
 import random
 import time
-import math 
+import math
 import csv
 import sys
 import os
@@ -30,7 +30,7 @@ import os
 
 doSolveSuperInc = True
 doUseLimits = True
-printToFile = False
+printToFile = True
 printPct = False
 verbose = True
 
@@ -38,7 +38,7 @@ def subsKnapsack(size, items, O):
     solver = subsetSumKnapsackSolver(size, items, O, forceUseLimits=False)
 
     solver.printInfo = printPct
-    solver.printSuperIncreasingInfo = verbose 
+    solver.printSuperIncreasingInfo = verbose
     solver.doSolveSuperInc = doSolveSuperInc
     solver.doUseLimits = doUseLimits
 
@@ -69,23 +69,57 @@ def hybridKnapsack(size, items, values, O):
     bestValue, bestSize, bestItems, bestValues, bestIndexes = solver.solve()
     return bestValue, bestSize, bestItems, bestValues
 
-def paretoKnapsack(size, items, values, O):
-    solver = knapsackParetoSolver(items, values, values, paretoKnapsackConstraint(size), 0, O)
+def paretoKnapsack(size, items, values, O, useRatioSort = False):
+   
+    paretoItems = [wPoint1(item) for item in items]
+   
+    solver = knapsackParetoSolver(paretoItems, values, range(len(values)), wPoint1(size), paretoPoint1(0, 0), wPoint1(0), O)
    
     solver.printInfo = printPct
+    solver.forceUsePareto = True
+    solver.useRatioSort = useRatioSort
    
     bestValue, bestSize, bestItems, bestValues, bestIndexes = solver.solve()
-    return  bestValue, bestSize, bestItems, bestValues
+    return  bestValue, bestSize.getDimension(0), bestItems, bestValues
+
+def hybridParetoKnapsack(size, items, values, O, useRatioSort = False):
+   
+    paretoItems = [wPoint1(item) for item in items]
+   
+    solver = knapsackParetoSolver(paretoItems, values, range(len(values)), wPoint1(size), paretoPoint1(0, 0), wPoint1(0), O)
+   
+    solver.printInfo = printPct
+    solver.forceUsePareto = False
+    solver.useRatioSort = useRatioSort
+
+    bestValue, bestSize, bestItems, bestValues, bestIndexes = solver.solve()
+    return  bestValue, bestSize.getDimension(0), bestItems, bestValues
+
+def subsParetoKnapsack(size, items, O):
+   
+    paretoItems = [wPoint1(item) for item in items]
+
+    O[0] += len(paretoItems)
+   
+    solver = knapsackParetoSolver(paretoItems, items, range(len(items)), wPoint1(size), paretoPoint0(0), wPoint1(0), O)
+   
+    solver.printInfo = printPct
+    solver.doUseLimits = doUseLimits
+    solver.canBackTraceWhenSizeReached = True
+   
+    bestValue, bestSize, bestItems, bestValues, bestIndexes = solver.solve()
+    return  bestValue, bestItems
 
 def knapsackNd(constraints, items, values, O):
     solver = knapsackNSolver(constraints, items, values, O, wPoint([0] * constraints.getSize()), forceUseLimits=False)
-  
+ 
     solver.forceUseDpSolver = True
     solver.printInfo = printPct
+    solver.printDpInfo = printPct
     solver.printSuperIncreasingInfo = verbose
     solver.doSolveSuperInc = doSolveSuperInc
     solver.doUseLimits = doUseLimits
-  
+ 
     bestValue, bestSize, bestItems, bestValues = solver.solve()
     return bestValue, bestSize, bestItems, bestValues
 
@@ -93,7 +127,7 @@ def hybridKnapsackNd(constraints, items, values, O):
     solver = knapsackNSolver(constraints, items, values, O, wPoint([0] * constraints.getSize()), forceUseLimits=False)
    
     solver.forceUseDpSolver = False
-    solver.useParetoAsNGreadySolver = True
+    solver.useParetoAsNGreedySolver = True
     solver.printInfo = printPct
     solver.printSuperIncreasingInfo = verbose
     solver.doSolveSuperInc = doSolveSuperInc
@@ -106,17 +140,311 @@ def partitionN(items, sizesOrPartitions, groupSize, O, optimizationLimit = -1):
     solver = partitionSolver(items, sizesOrPartitions, groupSize, O, optimizationLimit)
    
     solver.printOptimizationInfo = True
+    solver.printInfo = printPct
+    solver.useHybridParetoGrouping = False
+   
+    quotients, reminder, optimizationCount = solver.solve()
+    return quotients, reminder, optimizationCount
+
+def hybridPartitionN(items, sizesOrPartitions, groupSize, O, optimizationLimit = -1):
+    solver = partitionSolver(items, sizesOrPartitions, groupSize, O, optimizationLimit)
+   
+    solver.printOptimizationInfo = True
+    solver.printInfo = printPct
+    solver.useHybridParetoGrouping = True
    
     quotients, reminder, optimizationCount = solver.solve()
     return quotients, reminder, optimizationCount
 
 # </ PUBLIC API >
 
+class wPoint:
+    def __init__(self, dimensions):
+        self.dimensions = tuple(dimensions)
+        self.dimHash =  397 ^ hash(self.dimensions)
+
+    def createNew(self, tuples):
+        return wPoint(tuples)
+   
+    def getDimension(self, index):
+        return self.dimensions[index]
+   
+    def getDimensions(self):
+        return self.dimensions
+
+    def __str__(self):
+        return str(self.dimensions)
+   
+    def __repr__(self):
+        return str(self.dimensions)
+
+    def firstDimensionEqual(self, number):
+        return self.dimensions[0] == number
+   
+    def getSize(self):
+        return len(self.dimensions)
+
+    def divideBy(self, number):
+
+        l = len(self.dimensions)
+
+        newDim = [0] * l
+
+        for i in range(l):
+            newDim[i] = self.dimensions[i] / number
+
+        return wPoint(newDim)
+   
+    def adjustMin(self, other):
+        l = len(self.dimensions)
+
+        newDim = [0] * l
+
+        for i in range(l):
+            newDim[i] = min(self.dimensions[i], other.dimensions[i])
+       
+        return wPoint(newDim)
+   
+    def __truediv__(self, other):
+        l = len(self.dimensions)
+
+        newDim = [0] * l
+
+        for i in range(l):
+            newDim[i] = self.dimensions[i] / other
+
+        return wPoint(newDim)
+   
+    def __rtruediv__(self, other):
+
+        l = len(self.dimensions)
+
+        newDim = [0] * l
+
+        for i in range(l):
+            newDim[i] = other / self.dimensions[i]
+
+        return wPoint(newDim)
+   
+    def __add__(self, item):
+
+        l = len(self.dimensions)
+
+        newDim = [0] * l
+
+        for i in range(l):
+            newDim[i] = self.dimensions[i] + item.getDimension(i)
+
+        return wPoint(newDim)
+   
+    def __sub__(self, item):
+
+        l = len(self.dimensions)
+        newDim = [0] * l
+
+        for i in range(l):
+            newDim[i] = self.dimensions[i] - item.getDimension(i)
+
+        return wPoint(newDim)  
+       
+    # <
+    def __lt__(self, other):
+        l = len(self.dimensions)
+
+        allLess = False
+        for i in range(l):
+
+            if self.dimensions[i] == other.getDimension(i):
+                continue
+
+            if self.dimensions[i] < other.getDimension(i):                
+                allLess = True
+            else:
+                return False
+
+        return allLess  
+
+    # <=
+    def __le__(self, other):
+
+        l = len(self.dimensions)
+        for i in range(l):
+           
+            if self.dimensions[i] > other.getDimension(i):
+                return False
+
+        return True  
+    # >
+    def __gt__(self, other):
+        l = len(self.dimensions)
+
+        allGreater = False
+        for i in range(l):
+
+            if self.dimensions[i] == other.getDimension(i):
+                continue
+
+            if other.dimensions[i] < self.getDimension(i):                
+                allGreater = True
+            else:
+                return False
+
+        return allGreater  
+    # >=
+    def __ge__(self, other):
+        l = len(self.dimensions)
+        for i in range(l):
+           
+            if self.dimensions[i] < other.getDimension(i):
+                return False
+
+        return True  
+   
+    def __eq__(self, other):
+        return self.dimensions == other.getDimensions()
+
+    def __hash__(self):
+        return self.dimHash
+
+class wPoint2:
+    def __init__(self, dim1, dim2):
+        self.dim1 = dim1
+        self.dim2 = dim2
+        self.dimHash =  397 ^ hash(self.dim1) ^  hash(self.dim2)
+
+    def createNew(self, tuples):
+        return wPoint2(tuples[0], tuples[1])
+
+    def getDimension(self, index):
+        return self.dim1 if index == 0 else self.dim2
+   
+    def getDimensions(self):
+        return (self.dim1, self.dim2)
+
+    def __str__(self):
+        return f"[{self.dim1},{self.dim2}]"
+   
+    def __repr__(self):
+         return f"[{self.dim1},{self.dim2}]"
+
+    def firstDimensionEqual(self, number):
+        return self.dim1 == number
+   
+    def getSize(self):
+        return 2
+
+    def divideBy(self, number):
+        return wPoint2(self.dim1/number, self.dim2/number)
+   
+    def adjustMin(self, other):
+        return wPoint2(min(self.dim1, other.dim1), min(self.dim2, other.dim2))
+
+    def __truediv__(self, other):
+        return wPoint2( self.dim1 / other, self.dim2 / other)
+   
+    def __rtruediv__(self, other):
+        return wPoint2( other/self.dim1, other/self.dim2)
+   
+    def __add__(self, item):
+        return wPoint2(self.dim1 + item.dim1, self.dim2 + item.dim2)
+   
+    def __sub__(self, item):
+        return wPoint2(self.dim1 - item.dim1, self.dim2 - item.dim2)
+       
+    # <
+    def __lt__(self, other):
+
+        if self.dim1 <= other.dim1 and self.dim2 < other.dim2:
+            return True
+
+        if self.dim2 <= other.dim2 and self.dim1 < other.dim1:
+             return True
+
+        return False
+    # <=
+    def __le__(self, other):
+        return self.dim1 <= other.dim1 and self.dim2 <= other.dim2
+    # >
+    def __gt__(self, other):
+        return  self == other or (not self < other)
+    # >=
+    def __ge__(self, other):
+
+        return not self < other
+   
+    def __eq__(self, other):
+        return self.dim1 == other.dim1 and self.dim2 == other.dim2
+
+    def __hash__(self):
+        return self.dimHash
+
+class wPoint1:
+    def __init__(self, dimensions):
+        self.dimensions = dimensions
+        self.dimHash = 397 ^ hash(self.dimensions)
+
+    def createNew(self, tuples):
+        return wPoint1(tuples[0])
+
+    def getDimension(self, index):
+        return self.dimensions
+   
+    def getDimensions(self):
+        return (self.dimensions)
+
+    def __str__(self):
+        return f"[{self.dimensions}]"
+   
+    def __repr__(self):
+         return f"[{self.dimensions}]"
+
+    def firstDimensionEqual(self, number):
+        return self.dimensions == number
+   
+    def getSize(self):
+        return 1
+
+    def divideBy(self, number):
+        return wPoint1(self.dimensions / number)
+   
+    def adjustMin(self, other):
+        return wPoint1(min(self.dimensions, other.getDimension(0)))
+
+    def __truediv__(self, other):
+        return wPoint1(self.dimensions / other)
+   
+    def __rtruediv__(self, other):
+        return wPoint1(other / self.dimensions)
+   
+    def __add__(self, item):
+        return wPoint1(self.dimensions + item.getDimension(0))
+   
+    def __sub__(self, item):
+        return wPoint1(self.dimensions - item.getDimension(0))
+    # <
+    def __lt__(self, other):
+        return self.dimensions < other.getDimension(0)
+    # <=
+    def __le__(self, other):
+        return self.dimensions <= other.getDimension(0)
+    # >
+    def __gt__(self, other):
+        return self.dimensions > other.getDimension(0)
+    # >=
+    def __ge__(self, other):
+        return self.dimensions >= other.getDimension(0)
+   
+    def __eq__(self, other):
+        return self.dimensions == other.getDimension(0)
+
+    def __hash__(self):
+        return self.dimHash
+
 class partitionItem:
     def __init__(self, itemSet, sizes):
         self.Items = itemSet
         self.Sizes = sizes
-    
+   
     def __len__(self):
         return len(self.Items)
 
@@ -133,7 +461,9 @@ class partitionSolver:
         self.sizesOrPartitions = sizesOrPartitions
         self.groupSize = groupSize
         self.O = O
+        self.useHybridParetoGrouping = True
         self.optimizationLimit = optimizationLimit
+        self.printInfo = False
         self.printOptimizationInfo = False
 
     def prepareGrouping(self, A, O):
@@ -141,12 +471,12 @@ class partitionSolver:
         group = defaultdict(list)
 
         for c in A:
-            group[c].append(c) 
-        
+            group[c].append(c)
+       
         O[0] += len(A)
 
         return group
-    
+   
     def groupItems(self, group, O):
 
         allUnique = True
@@ -155,7 +485,7 @@ class partitionSolver:
         for k in group.keys():        
 
             nonUniqueList[k] += len(group[k])
-            
+           
             if len(group[k]) > 1:
                 allUnique = False
 
@@ -182,13 +512,13 @@ class partitionSolver:
 
                     if qs <= size:
                         currentQuotient.append(item)
-                    
+                   
                     if qs >= size:
                         qs = 0
                         quotientResult.append(partitionItem(currentQuotient, [size]))
                         currentQuotient = []
 
-            remainderList = currentQuotient 
+            remainderList = currentQuotient
 
             for item in stack:
                 remainderList.append(item)
@@ -196,7 +526,7 @@ class partitionSolver:
             remainderResult = partitionItem(remainderList, ls)
 
             return  quotientResult, remainderResult, 0
-                      
+                     
         else:
 
             stack = list(items)
@@ -212,21 +542,23 @@ class partitionSolver:
                         quotientResult.append(partitionItem(currentQuotient, [groupSize * currentQuotient[0]]))
                         currentQuotient = []  
 
-            remainderResult = currentQuotient 
+            remainderResult = currentQuotient
 
             for item in stack:
                 remainderResult.append(item)
 
-            return  quotientResult, partitionItem(remainderResult, [len(remainderResult) // groupSize]), 0 
+            return  quotientResult, partitionItem(remainderResult, [len(remainderResult) // groupSize]), 0
 
     def optimizePartitions(self, quotients, remainder, sizes, groupSize, optimizationLimit, O):
 
-        def mergeTwoSortedReversedIter(itemSet1, itemSet2):
+        def mergeTwoSorted(itemSet1, itemSet2):
+
+            result = []
 
             moveL1, moveL2 = True, True
             n1,     n2     = True, True
 
-            iter_1 = iter(itemSet1) 
+            iter_1 = iter(itemSet1)
             iter_2 = iter(itemSet2)
 
             val1,   val2   = 0, 0
@@ -235,70 +567,67 @@ class partitionSolver:
 
                 if moveL1:
                     val1 = next(iter_1, -sys.maxsize)
-                
+               
                 if moveL2:
                     val2 = next(iter_2, -sys.maxsize)
 
                 n1 = val1 > -sys.maxsize
                 n2 = val2 > -sys.maxsize
-                
+               
                 if n1 and n2:
-                    if val1 > val2:
-                        yield val1
+                    if val1 < val2:
+                        result.append(val1)
                         moveL1 = True
                         moveL2 = False                        
-                    elif val2 > val1:
-                        yield val2
-                        moveL1 = False 
+                    elif val2 < val1:
+                        result.append(val2) 
+                        moveL1 = False
                         moveL2 = True                            
                     else:
-                        yield val1
-                        yield val2
+                        result.append(val1)
+                        result.append(val2)
                         moveL1 = True
                         moveL2 = True
                 elif n1 and not n2:
-                    yield val1
+                    result.append(val1)
                     moveL1 = True
                     moveL2 = False
                 elif n2 and not n1:
-                    yield val2
-                    moveL1 = False 
-                    moveL2 = True   
+                    result.append(val2) 
+                    moveL1 = False
+                    moveL2 = True  
+            return result
 
         class partitionPoint:
             def __init__(self, itemSet, sizes, itemIndexes=None):
                 self.Items = tuple(itemSet)
-                self.Sizes = sizes 
+                self.Sizes = sizes
                 self.Indexes = set()
                 if itemIndexes:
-                    self.Indexes.update(itemIndexes)   
-            
+                    self.Indexes.update(itemIndexes)  
+           
             def GetPartitions(self):
                 return len(self.Sizes)
 
             def __str__(self):
                 return f"< Size: {self.Sizes}, Items: {self.Items}, QI: {self.Indexes} >"
-        
+       
             def __repr__(self):
                 return f"< Size: {self.Sizes}, Items: {self.Items}, QI: {self.Indexes} >"
-                
-            def __add__(self, item): 
+               
+            def __add__(self, item):
 
                 resultIndexes = set(self.Indexes)
                 resultSizes = list(self.Sizes)
-                
-                for ind in item.Indexes:
-                    resultIndexes.add(ind)
+               
+                resultIndexes.update(item.Indexes)
 
-                for s in item.Sizes:
-                    resultSizes.append(s)
+                resultSizes += item.Sizes
 
-                iters = mergeTwoSortedReversedIter(self.Items, item.Items)
-
-                resultSet = list(iters)
+                resultSet = mergeTwoSorted(self.Items, item.Items)
 
                 return partitionPoint(resultSet, resultSizes, resultIndexes)        
-            
+           
             def __eq__(self, other):
                 return self.Items == other.Items and self.Sizes == other.Sizes
 
@@ -309,45 +638,37 @@ class partitionSolver:
 
             newSet = []
             newSizes = []
-            
+           
             if limit <= 2:
-                newSet = list(mergeTwoSortedReversedIter(remainderItem.Items, p.Items))
-                newSizes = list(remainderItem.Sizes)
-
-                for s in p.Sizes:
-                    newSizes.append(s)
+                newSet   += mergeTwoSorted(remainderItem.Items, p.Items)
+                newSizes += remainderItem.Sizes
+                newSizes += p.Sizes
 
                 O[0] += len(p.Items) + len(remainderItem.Items)
                 O[0] += len(p.Sizes) + len(remainderItem.Sizes)  
 
             elif limit == 3:
-                newSet = list(remainderItem.Items)
-                random.shuffle(newSet)
+                newSet += remainderItem.Items
+                newSizes += remainderItem.Sizes
 
-                newSizes = list(remainderItem.Sizes)
+                random.shuffle(newSet)
                 random.shuffle(newSizes)
 
                 for s in reversed(p.Sizes):
                     newSizes.append(s)
-                
+               
                 for r in reversed(p.Items):
-                    newSet.append(r) 
+                    newSet.append(r)
 
                 O[0] += len(p.Items) + len(remainderItem.Items)
                 O[0] += len(p.Sizes) + len(remainderItem.Sizes)          
             else:
-                for s in p.Sizes:
-                    newSizes.append(s)
-                
-                for s in remainderItem.Sizes:
-                    newSizes.append(s)
-
-                for r in p.Items:
-                    newSet.append(r) 
-                
-                for r in remainderItem.Items:
-                    newSet.append(r) 
-                
+                newSizes += p.Sizes
+                newSizes += remainderItem.Sizes
+               
+                newSet += p.Items
+                newSet += remainderItem.Items
+               
                 random.shuffle(newSet)
                 random.shuffle(newSizes)
 
@@ -361,7 +682,7 @@ class partitionSolver:
             itemPoint = partitionPoint(item.Items, item.Sizes)
             itemPoint.Indexes.add(i)
 
-            if itemPoint not in uniqueSet: 
+            if itemPoint not in uniqueSet:
                 yield itemPoint
 
             for prevPoint in uniqueSet:
@@ -391,7 +712,7 @@ class partitionSolver:
                 incOForPoint(O, optPoint)
 
             optimizationCount += len(optimizationsMade)
-            
+           
             for i in range(len(originalQuotient)):
                 if i in skipIndexes:
                     continue
@@ -409,35 +730,35 @@ class partitionSolver:
         def prepareQuotientsAndRemainder(quotients, groupSize, remainder, limit, O):
 
             if limit == 0:
-                if groupSize == 0:
-                    remainder.Items.sort(reverse = True)
 
-                    O[0] += len( remainder.Items) * math.log2(len( remainder.Items))
-                    O[0] += 1
+                remainder.Items.sort()
+
+                O[0] += len(remainder.Items) * math.log2(len(remainder.Items))
+                O[0] += 1
 
                 for q in quotients:
-                    q.Items.sort(reverse = True)
+                    q.Items.sort()
 
-                    O[0] += len( q.Items) * math.log2(len( q.Items))
-                    O[0] += 1         
+                    O[0] += len( q.Items) * math.log2(len(q.Items))
+                    O[0] += 1        
 
             elif limit > 2:
                 random.shuffle(quotients)
                 random.shuffle(remainder.Items)
 
-                O[0] += len(quotients)     
-                O[0] += len(remainder.Items)     
-            else: 
+                O[0] += len(quotients)    
+                O[0] += len(remainder.Items)    
+            else:
                 random.shuffle(quotients)
                 random.shuffle(remainder.Items)
 
-                O[0] += len(quotients)       
-                O[0] += len(remainder.Items)     
-            
+                O[0] += len(quotients)      
+                O[0] += len(remainder.Items)    
+           
         prepareQuotientsAndRemainder(quotients, groupSize, remainder,  0, O)    
 
         remainderItem = remainder
-        minRemiderLen = len(remainderItem) 
+        minReminderLen = len(remainderItem)
 
         startLayer = 1
         endLayer = startLayer + (len(sizes) // 2)
@@ -448,12 +769,12 @@ class partitionSolver:
         optimizationCount = 0
 
         for limit in range(startLayer, endLayer):
-            
+           
             optimizedIndexes,  uniqueSet = set(), set()
             optimizationsMade, newPoints = [], []
 
             remainderItem = remainder
-            minRemiderLen = len(remainderItem) 
+            minReminderLen = len(remainderItem)
 
             if self.printOptimizationInfo:
                 print(f"performing optimizations at the same time is limited by: {limit}; quotients: {len(quotients)} reminder len {len(remainder)}")
@@ -470,34 +791,34 @@ class partitionSolver:
                     if len(optimizedIndexes) > 0 and not p.Indexes.isdisjoint(optimizedIndexes):
                         continue
 
-                    optQuotient, optReminder, _ = optimize(p, remainderItem, groupSize, limit, O) 
+                    optQuotient, optReminder, _ = optimize(p, remainderItem, groupSize, limit, O)
 
                     incOForPoint(O, p)
 
-                    if  len(optReminder) < minRemiderLen or len(optReminder.Sizes) < len(remainderItem.Sizes):
+                    if  len(optReminder) < minReminderLen or len(optReminder.Sizes) < len(remainderItem.Sizes):
                        
                         for optItem in optQuotient:
                             optimizationsMade.append(partitionPoint(optItem.Items, optItem.Sizes, p.Indexes))
                             optimizedIndexes.update(p.Indexes)
                             incOForPartition(O, optItem)
-                        
+                       
                         remainderItem = optReminder
-                        minRemiderLen = len(remainderItem) 
+                        minReminderLen = len(remainderItem)
 
                         if len(optReminder.Sizes) == 0:
                             return backTrace(optimizationsMade, remainderItem, quotients, remainder, optimizationCount, O)
                     else:
                         newPoints.append(p)
 
-                    if  minRemiderLen == 0:
+                    if  minReminderLen == 0:
                         return backTrace(optimizationsMade, remainderItem, quotients, remainder, optimizationCount, O)
 
             if len(optimizedIndexes) > 0:
                 quotients, remainder, optimizations = backTrace(optimizationsMade, remainderItem, quotients, remainder, optimizationCount, O)
                 optimizationCount += optimizations
-            
-            prepareQuotientsAndRemainder(quotients, groupSize, remainder, limit, O) 
-                
+           
+            prepareQuotientsAndRemainder(quotients, groupSize, remainder, limit, O)
+               
         return  quotients, remainder, optimizationCount
 
     def sortDuplicatesForPartitioning(self, group, count, nonUniqueList, O):
@@ -507,7 +828,7 @@ class partitionSolver:
         keysCount = len(keys)
         O[0] += keysCount
 
-        keys.sort(reverse=True)
+        keys.sort()
         O[0] += keysCount * math.log2(keysCount)
 
         i = 0
@@ -522,16 +843,16 @@ class partitionSolver:
                 if  key in nonUniqueList and nonUniqueList[key] > 0:
                     A_sort.append(key)
                     nonUniqueList[key] -= 1
-                    
+                   
                     if  nonUniqueList[key] <= 0:
                         del nonUniqueList[key]
                         removeKeys.append(key)
-            
+           
             if len(removeKeys) > 0:
                 for k in removeKeys:
-                    keys.remove(k) 
+                    keys.remove(k)
                 removeKeys.clear()
-                
+               
         O[0] += count
 
         return A_sort
@@ -572,7 +893,7 @@ class partitionSolver:
                 newSizes = [size] * newN
 
             O[0] += newLen
-            
+           
             quotients, remainder, optCount = self.divideSet(nonUKeys, newSizes, groupSize, O)
 
             quotientResult, remainderResult  = [], []
@@ -590,11 +911,69 @@ class partitionSolver:
 
         return None
 
+    def paretoGroupingOperator(self, size, reminderItems, forceUseLimits, O):
+        paretoItems = [wPoint1(item) for item in reminderItems]
+   
+        solver = knapsackParetoSolver(paretoItems, reminderItems, range(0, len(reminderItems)), wPoint1(size), paretoPoint0(0), wPoint1(0), O)
+   
+        solver.printInfo = self.printInfo
+        solver.forceUseLimits = forceUseLimits
+        solver.forceUsePareto = False
+        solver.subsetSum = True
+   
+        bestValue, bestSize, bestItems, bestValues, bestIndexes = solver.solve()
+
+        return  bestValue, bestValues
+   
+    def dpGroupingOperator(self, size, reminderItems, forceUseLimits, O):
+   
+        solver = subsetSumKnapsackSolver(size, reminderItems, O)
+   
+        solver.printInfo = self.printInfo
+        solver.forceUseLimits = forceUseLimits
+        bestValue, bestItems = solver.solve()
+
+        return  bestValue, bestItems
+
+    def paretoGrouping2dOperator(self, size, reminderItems, groupSize, forceUseLimits, O):
+        paretoItems, constraints = [wPoint2(item, 1) for item in reminderItems], wPoint2(size, groupSize)
+        O[0] += len(reminderItems)  
+
+        solver = knapsackParetoSolver(paretoItems, reminderItems, range(0, len(reminderItems)), constraints, paretoPoint2(0, 0, 0), wPoint2(0, 0), O)
+   
+        solver.printInfo = self.printInfo
+        solver.forceUseLimits = forceUseLimits
+        solver.forceUsePareto = False
+        solver.canBackTraceWhenSizeReached = True
+   
+        _, bestSize, __, bestValues, ___ = solver.solve()
+
+        return  bestSize, bestValues
+   
+    def dpGrouping2dOperator(self, size, reminderItems, groupSize, forceUseLimits, O):
+   
+        dimensions, constraints  = [wPoint2(item, 1) for item in reminderItems], wPoint2(size, groupSize)
+        O[0] += len(reminderItems)  
+
+        solver = knapsackNSolver(constraints, dimensions, reminderItems, O, wPoint2(0, 0), forceUseLimits)
+   
+        solver.printInfo = self.printInfo
+        solver.printDpInfo =  self.printInfo
+        solver.forceUseLimits = forceUseLimits
+        solver.canBackTraceWhenSizeReached = True
+   
+        _, optDims, __, optValues =  solver.solve()
+
+        return  optDims, optValues
+
     def divideSet(self, items, sizes, groupSize, O, forceUseLimits = False):    
 
         quotients = []
         reminderSizes = []
         reminderItems = items
+
+        subsDivider       = self.paretoGroupingOperator   if self.useHybridParetoGrouping else self.dpGroupingOperator
+        knapsack2dDivider = self.paretoGrouping2dOperator if self.useHybridParetoGrouping else self.dpGrouping2dOperator
 
         ls = len(sizes)
 
@@ -611,19 +990,16 @@ class partitionSolver:
                     remSum = sum(reminderItems)
 
                     if remSum == size and len(reminderItems) == groupSize:
-                        quotients.append(partitionItem(list(reminderItems), [size])) 
+                        quotients.append(partitionItem(list(reminderItems), [size]))
                         reminderItems.clear()
                         break  
                     elif remSum < size:
                         reminderSizes.append(size)
                         break  
 
-                dimensions, constraints  = [wPoint2(item, 1) for item in reminderItems], wPoint2(size, groupSize)
-                O[0] += len(reminderItems)   
+                optDims, optValues = knapsack2dDivider(size, reminderItems, groupSize, forceUseLimits, O)
 
-                _, optDims, __, optValues = knapsackNSolver(constraints, dimensions, reminderItems, O, wPoint2(0, 0), forceUseLimits).solve()
-
-                if (optDims.getDimension(0) == size and optDims.getDimension(1) == groupSize): 
+                if (optDims.getDimension(0) == size and optDims.getDimension(1) == groupSize):
 
                     quotients.append(partitionItem(optValues, [size]))
 
@@ -642,14 +1018,14 @@ class partitionSolver:
                     remSum = sum(reminderItems)
 
                     if remSum == size:
-                        quotients.append(partitionItem(list(reminderItems), [size])) 
+                        quotients.append(partitionItem(list(reminderItems), [size]))
                         reminderItems.clear()
                         break  
                     elif remSum < size:
                         reminderSizes.append(size)
                         break
 
-                optimal, optimalList = subsetSumKnapsackSolver(size, reminderItems, O, forceUseLimits=forceUseLimits).solve()
+                optimal, optimalList = subsDivider(size, reminderItems, forceUseLimits, O)
 
                 if optimal == size:          
 
@@ -691,8 +1067,8 @@ class partitionSolver:
 
         if  count < len(sizes):
             return [], [], 0
-        
-        group = self.prepareGrouping(items, O)   
+       
+        group = self.prepareGrouping(items, O)  
         allUnique, nonUniqueList = self.groupItems(group, O)
 
         if len(nonUniqueList) == 1:
@@ -703,10 +1079,10 @@ class partitionSolver:
         if  allUnique:
 
             items = list(items)
-            items.sort(reverse = True)
+            items.sort()
 
             O[0] += count * math.log2(count)
-            O[0] += count 
+            O[0] += count
 
             quotients, remainder, optCount = self.divideSet(items, sizes, groupSize, O)
         else:
@@ -717,11 +1093,11 @@ class partitionSolver:
 
             sortedDuplicates = self.sortDuplicatesForPartitioning(group, count, nonUniqueList, O)
             quotients, remainder, optCount = self.divideSet(sortedDuplicates, sizes, groupSize, O, forceUseLimits = True)    
-    
+   
         if  len(remainder) == 0 or len(quotients) == len(sizes) or len(quotients) == 0:
             return quotients, remainder, optCount
 
-        return self.optimizePartitions(quotients, remainder, sizes, groupSize, optimizationLimit, O)   
+        return self.optimizePartitions(quotients, remainder, sizes, groupSize, optimizationLimit, O)  
 
 class subsetSumKnapsackSolver:
 
@@ -742,7 +1118,7 @@ class subsetSumKnapsackSolver:
         self.doUseLimits = True
 
     def preProcess(self, size, items, forceUseLimits, O):
-        
+       
         count = len(items)
         itemSum1, itemSum2, lessCountSum = 0, 0, 0
 
@@ -753,14 +1129,14 @@ class subsetSumKnapsackSolver:
         starting, ending = 1, count
 
         if count > 0 :
-            
+           
             i = 0
             prevItem1 = items[-1]
 
             for item2 in items:
                 iBack = count - i - 1
 
-                item1 = items[iBack]               
+                item1 = items[iBack]              
 
                 superIncreasingItem1 = False
                 superIncreasingItem2 = False
@@ -771,7 +1147,7 @@ class subsetSumKnapsackSolver:
                         isSuperIncreasing1 = False
                     else:
                         superIncreasingItem1 = True
-                
+               
                 if item2 <= size:
 
                     if item2 < itemSum2:
@@ -782,20 +1158,20 @@ class subsetSumKnapsackSolver:
                 itemSum1 += item1
                 itemSum2 += item2
 
-                partialSums1[iBack] = itemSum2   
-                partialSums2[iBack] = itemSum1   
+                partialSums1[iBack] = itemSum2  
+                partialSums2[i] = itemSum1  
 
                 if allDesc:
                     if not prevItem1 <= item1:
                         allDesc = False
-                
+               
                 if allAsc:
                     if prevItem1 < item1:
                         allAsc = False
 
                 if i > 0:
-                    superIncreasingItems1[iBack] = superIncreasingItem1
-                    superIncreasingItems2[iBack] = superIncreasingItem2
+                    superIncreasingItems1[iBack] = superIncreasingItem2
+                    superIncreasingItems2[iBack] = superIncreasingItem1
 
                 if item2 <= size:
                     lessCountSum += item2  
@@ -805,24 +1181,25 @@ class subsetSumKnapsackSolver:
                     ending = min(i, ending)
 
                 prevItem1 = item1
-                
+               
                 i += 1
-            
+           
             partialSums = []
             superIncreasingItems = []
             isSuperIncreasing = False
-            itemSum = itemSum2        
-                      
-            if allDesc or forceUseLimits:
+            itemSum = itemSum2      
+
+            if allAsc:                
+                partialSums = partialSums2
+                superIncreasingItems = superIncreasingItems2
+                isSuperIncreasing = isSuperIncreasing2
+                itemSum = itemSum2  
+            elif allDesc or forceUseLimits:
                 partialSums = partialSums1
                 superIncreasingItems = superIncreasingItems1
                 isSuperIncreasing = isSuperIncreasing1
                 itemSum = itemSum1
-            elif allAsc:                
-                partialSums = partialSums2
-                superIncreasingItems = superIncreasingItems2 
-                isSuperIncreasing = isSuperIncreasing2 
-                itemSum = itemSum2 
+
             else:
                 starting = 1
                 ending = count
@@ -835,7 +1212,7 @@ class subsetSumKnapsackSolver:
             itemSum = 0    
 
         size = min(itemSum, size)    
-        
+       
         O[0] += count
         return size, count, itemSum, lessCountSum, partialSums, starting, ending, isSuperIncreasing, superIncreasingItems, allAsc, allDesc
 
@@ -843,9 +1220,9 @@ class subsetSumKnapsackSolver:
 
         if  lessCountSum == 0:
             return [0,[]]
-        
+       
         if  lessCountSum <= size:
-            
+           
             lessCountItems = []
 
             for item in items:
@@ -862,27 +1239,29 @@ class subsetSumKnapsackSolver:
             return [sum, items]  
 
         return None      
-  
-    def yieldOrPushBack(self, circularPointQuene, newPoint, greaterQu):
-        if len(circularPointQuene) > 0:
-                peek = circularPointQuene[0]
+ 
+    def yieldOrPushBack(self, circularPointQueue, newPoint, greaterQu, O):
+        if len(circularPointQueue) > 0:
+                peek = circularPointQueue[0]
 
-                if newPoint < peek:                   
+                if newPoint < peek:                  
                     yield newPoint
-                    circularPointQuene.append(newPoint)
+                    circularPointQueue.append(newPoint)
                 else:
+
+                    O[0] += 1
+
                     if len(greaterQu) > 0 and newPoint < greaterQu[0]:
                         greaterQu.insert(0, newPoint)
                     else:
                         greaterQu.append(newPoint)
         else:
             yield newPoint
-            circularPointQuene.append(newPoint)         
+            circularPointQueue.append(newPoint)        
 
-    def getPoints(self, itemWeight, size, circularPointQuene, itemLimit, oldPointLimit, newPointLimit, prevCyclePointCount, uniquePointSet, skipCount):
+    def getPoints(self, itemWeight, size, circularPointQueue, itemLimit, oldPointLimit, newPointLimit, prevCyclePointCount, uniquePointSet, skipCount, O):
        
-
-        # merges ordered visited points with new points with keeping order in O(N) using single circular queue. 
+        # merges ordered visited points with new points with keeping order in O(N) using single circular queue.
         # each getPoints method call starts fetching visited points from qu start, pops visited point and pushes new point and visited to the end of qu in ASC order.
         # we skip new point if it in list already
         # skips points if they will not contribute to optimal solution
@@ -892,29 +1271,29 @@ class subsetSumKnapsackSolver:
         useItemItself = itemLimit >= size // 2
 
         if useItemItself and not itemWeight in uniquePointSet:
-            for p in self.yieldOrPushBack(circularPointQuene, itemWeight, greaterQu):
+            for p in self.yieldOrPushBack(circularPointQueue, itemWeight, greaterQu, O):
                 yield p
         else:
             if useItemItself:
-                self.skippedPointsByMap += skipCount 
+                self.skippedPointsByMap += skipCount
             else:
                 self.skippedPointsByLimits += skipCount
 
         for i in range(prevCyclePointCount):
 
-            oldPoint = circularPointQuene.popleft()             
+            oldPoint = circularPointQueue.popleft()            
 
             while len(greaterQu) > 0 and greaterQu[0] < oldPoint:
                 quPoint = greaterQu.popleft()
                
-                yield quPoint 
-                circularPointQuene.append(quPoint)
+                yield quPoint
+                circularPointQueue.append(quPoint)
 
             if  oldPoint >= oldPointLimit:
-                for p in self.yieldOrPushBack(circularPointQuene, oldPoint, greaterQu):
+                for p in self.yieldOrPushBack(circularPointQueue, oldPoint, greaterQu, O):
                     yield p
             else:
-                self.skippedPointsByLimits  += skipCount   
+                self.skippedPointsByLimits  += skipCount  
          
             newPoint = oldPoint + itemWeight
 
@@ -922,30 +1301,30 @@ class subsetSumKnapsackSolver:
                 self.skippedPointsByLimits += skipCount
                 continue
 
-            if newPoint <= size:   
+            if newPoint <= size:  
 
                 if not newPoint in uniquePointSet:
-                    for p in self.yieldOrPushBack(circularPointQuene, newPoint, greaterQu):
+                    for p in self.yieldOrPushBack(circularPointQueue, newPoint, greaterQu, O):
                         yield p
                 else:
                     self.skippedPointsByMap += skipCount
             else:
-                self.skippedPointsBySize += skipCount 
-        
+                self.skippedPointsBySize += skipCount
+       
         while len(greaterQu) > 0:
 
             quPoint = greaterQu.popleft()
 
-            yield quPoint 
-            circularPointQuene.append(quPoint)    
+            yield quPoint
+            circularPointQueue.append(quPoint)    
 
     def getValue(self, point, dp):
 
         if point in dp:
            return dp[point]
-        
+       
         return 0
-    
+   
     def getPossibleValue(self, point, itemValue, dp):
 
         if point in dp:
@@ -953,14 +1332,14 @@ class subsetSumKnapsackSolver:
 
         if point < 0:
             return None
-        
+       
         return itemValue
 
     def setValue(self, curDP, p, curVal, O):
-        curDP[p] = curVal     
+        curDP[p] = curVal    
         O[0] += 1
 
-    def backTraceItems(self, DP, resultI, resultP, items, O):
+    def backTraceItems(self, DP, resultI, resultP, items, lessItemsRange, allAsc, O):
        
         opt = 0
         res = DP[resultI][resultP]
@@ -972,11 +1351,11 @@ class subsetSumKnapsackSolver:
         if self.printInfo:
             print(f"Skipped points by MAP: {self.skippedPointsByMap}, by LIMITS: {self.skippedPointsByLimits}; by SIZE: {self.skippedPointsBySize};  Max points: {(2 ** len(items)) if len(items) < 15 else -1}; Total points: {self.totalPointCount}; N={len(items)}, Use limits: {doUseLimits};")
 
-        for i in range(resultI, 0, -1): 
+        for i in range(resultI, 0, -1):
            
             O[0] += 1
 
-            if res <= 0: 
+            if res <= 0:
                 break      
 
             prevDP = DP[i - 1]
@@ -986,13 +1365,14 @@ class subsetSumKnapsackSolver:
             if point in prevDP:
                 skip = res == prevDP[point]
            
-            if not skip:       
-                item = items[i - 1] 
-                optWeights.append(item)   
+            if not skip:    
+
+                itemIndex = self.getItemIndex(lessItemsRange, i, allAsc)
+                item = items[itemIndex]
+                optWeights.append(item)  
 
                 res   -= item
                 point -= item
-
                
                 opt += item
 
@@ -1005,7 +1385,7 @@ class subsetSumKnapsackSolver:
 
     def solveSuperIncreasing(self, size, items, starting, ending, count, allAsc, O):
 
-        def indexLargestLessThanDesc(items, item, lo, hi, O):   
+        def indexLargestLessThanDesc(items, item, lo, hi, O):  
 
             if item == 0:
                 return None  
@@ -1030,8 +1410,8 @@ class subsetSumKnapsackSolver:
                 return lo
             else:
                 return None
-        
-        def indexLargestLessThanAsc(items, item, lo, hi, O):   
+       
+        def indexLargestLessThanAsc(items, item, lo, hi, O):  
 
             if item == 0:
                 return None  
@@ -1059,7 +1439,7 @@ class subsetSumKnapsackSolver:
 
         resultItems = []
         resultSum = 0
-        index = binSearch(items, size, starting - 1, ending - 1, O) 
+        index = binSearch(items, size, starting - 1, ending - 1, O)
 
         while index is not None:
             value = items[index]
@@ -1070,30 +1450,33 @@ class subsetSumKnapsackSolver:
             else:
                 index = binSearch(items, size - resultSum, index + 1, ending - 1, O)
             O[0] += 1
-        
+       
         if self.printSuperIncreasingInfo:
             print(f"Superincreasing subset sum solver called for size {size} and count {count}. ASC={allAsc}")
-        
+       
         return resultSum, resultItems
-    
-    def getLimits(self, size, i, items, partialSums, superIncreasingItems):
+   
+    def getLimits(self, size, itemIndex, items, partialSums, superIncreasingItems):
 
         if not self.doUseLimits:
             return sys.maxsize, -sys.maxsize, -sys.maxsize, 0
 
-        skipCount = 2 ** (len(items) - i) if self.printInfo else 0
+        skipCount = 2 ** (len(items) - (itemIndex + 1)) if self.printInfo else 0
 
-        partSumForItem = partialSums[i - 1]
-        superIncreasingItem = superIncreasingItems[i - 1]
+        partSumForItem = partialSums[itemIndex]
+        superIncreasingItem = superIncreasingItems[itemIndex]
 
         newPointLimit = size - partSumForItem
         oldPointLimit = newPointLimit
 
         if self.doSolveSuperInc and superIncreasingItem:
-            oldPointLimit = newPointLimit + items[i - 1]
-        
+            oldPointLimit = newPointLimit + items[itemIndex]
+       
         return partSumForItem, oldPointLimit, newPointLimit, skipCount
-    
+   
+    def getItemIndex(self, lessItemsRange, i, allAsc):
+        return lessItemsRange - i if allAsc else i - 1
+
     def solve(self):
 
         size, items, forceUseLimits, O = self.size, self.items, self.forceUseLimits, self.O
@@ -1106,18 +1489,18 @@ class subsetSumKnapsackSolver:
             return cornerCasesCheck
 
         if self.doSolveSuperInc and isSuperIncreasing:
-            return self.solveSuperIncreasing(size, items, starting, ending, count, allAsc, O) 
+            return self.solveSuperIncreasing(size, items, starting, ending, count, allAsc, O)
+
+        lessItemsRange = 0
 
         if allAsc:
-            starting, ending = count - ending + 1, count
-            items = list(reversed(items))
-            O[0] += len(items) 
+            lessItemsRange = ending + 1 - starting
 
         DP = self.createDP(count, starting)
 
         resultI, resultP = 1, 1
 
-        circularPointQuene = deque()
+        circularPointQueue = deque()
 
         maxValue, prevPointCount, newPointCount = -sys.maxsize, 0, 0
 
@@ -1125,26 +1508,25 @@ class subsetSumKnapsackSolver:
             print(f"1-0 knapsack: N={count}, Use limits={doUseLimits}, allAsc={allAsc}, allDesc={allDesc}, forceUseLimits={forceUseLimits}")
 
         for i in range(starting, ending + 1):
-        
+
+            itemIndex = self.getItemIndex(lessItemsRange, i, allAsc)
+
             DP[i] = defaultdict()
 
             prevPointCount, newPointCount = newPointCount, prevPointCount
-            newPointCount = 0     
+            newPointCount = 0    
 
-            itemValue, itemWeight = items       [i - 1], items[i - 1]
+            itemValue, itemWeight = items       [itemIndex], items[itemIndex]
             prevDP,    curDP      = DP          [i - 1],    DP[i]
 
             self.totalPointCount += prevPointCount
 
-            if self.printInfo:
-                print(f"| {i - 1} | {prevPointCount} | {round(O[0])} |")
-
-            itemLimit, oldPointLimit, newPointLimit, skipCount  = self.getLimits(size, i, items, partialSums, superIncreasingItems)
-
-            for p in self.getPoints(itemWeight, size, circularPointQuene, itemLimit, oldPointLimit, newPointLimit, prevPointCount, prevDP, skipCount):          
+            itemLimit, oldPointLimit, newPointLimit, skipCount  = self.getLimits(size, itemIndex, items, partialSums, superIncreasingItems)
+           
+            for p in self.getPoints(itemWeight, size, circularPointQueue, itemLimit, oldPointLimit, newPointLimit, prevPointCount, prevDP, skipCount, O):          
 
                 curValue    =  self.getValue(p, prevDP)  
-                posblValue  =  self.getPossibleValue(p - itemWeight, itemValue, prevDP) 
+                posblValue  =  self.getPossibleValue(p - itemWeight, itemValue, prevDP)
 
                 if posblValue and curValue < posblValue and posblValue <= size:
                     curValue = posblValue
@@ -1157,41 +1539,37 @@ class subsetSumKnapsackSolver:
                     maxValue = curValue            
 
                 if  size == curValue:
-                    return self.backTraceItems(DP, resultI, resultP, items, O)  
+                    return self.backTraceItems(DP, resultI, resultP, items, lessItemsRange, allAsc, O)  
 
-                newPointCount += 1 
+                newPointCount += 1
+           
+            if self.printInfo:
+                print(f"| {i - 1} | {newPointCount} | {round(O[0])} |")
 
-        return self.backTraceItems(DP, resultI, resultP, items, O)
+        return  self.backTraceItems(DP, resultI, resultP, items, lessItemsRange, allAsc, O)
 
-class paretoItem:
-    def __init__(self, id, dimensions, profit):
-        self.id = id
-        self.dimensions = dimensions
+class paretoPoint(wPoint):
+    def __init__(self, dimensions, profit, id=None):
         self.profit = profit
-
-    def __repr__(self):
-        return f"paretoItem(id={self.id}, dimensions={self.dimensions}, profit={self.profit})"
-
-class paretoKnapsackConstraint:
-    def __init__(self, dimensions):
-        self.dimensions = dimensions
-
-    def __repr__(self):
-        return f"paretoKnapsackConstraint(dimensions={self.dimensions})"
-    
-    def canFit(self, item1, item2):
-        return (item1.dimensions + item2.dimensions) <= self.dimensions
-
-class paretoPoint:
-    def __init__(self, dimensions, profit):
-        self.dimensions = dimensions
-        self.profit = profit
-        self.itemId = None
+        self.itemId = id
         self.source = None
+        super().__init__(dimensions)
+   
+    def createNew(self, dimensions, profit, id):
+        return paretoPoint(dimensions, profit, id)
+   
+    def getProfit(self):
+        return self.profit
 
-    def __add__(self, item):               
-        newPoint = paretoPoint(self.dimensions + item.dimensions, self.profit + item.profit)
-        newPoint.itemId = item.id
+    def __add__(self, item):
+
+        dims = [0] * len(self.dimensions)    
+
+        for i in range(len(self.dimensions)):
+            dims[i] = self.dimensions[i] + item.getDimension(i)
+
+        newPoint = paretoPoint(dims, self.profit + item.profit)
+        newPoint.itemId = item.itemId
         newPoint.source = self
         return newPoint
 
@@ -1203,47 +1581,187 @@ class paretoPoint:
         if self.source:
             for id in self.source.getItemIds():
                 yield id
-      # <
-    def __lt__(self, other):
-        return self.dimensions < other.dimensions
+
+    def isDimensionEquals(self, other):
+        if self.dimHash != other.dimHash:
+            return False
        
-    # <=
-    def __le__(self, other):
-       return self.dimensions <= other.dimensions
-
-    # >
-    def __gt__(self, other):
-        return self.dimensions > other.dimensions
-
-    # >=
-    def __ge__(self, other):
-        return self.dimensions >= other.dimensions
-    
-    def __eq__(self, other):
-        return self.dimensions == other.dimensions
-
+        return super().__eq__(other)
+ 
     def __hash__(self):
-        return hash(self.dimensions) ^ hash(self.profit)
+        return super().__hash__() ^ hash(self.profit)
+
+    def __eq__(self, other):
+        return super().__eq__(other) and self.profit == other.profit
 
     def __repr__(self):
         return f"paretoPoint(dimensions={self.dimensions}, profit={self.profit}, items={list(self.getItemIds())})"
 
+class paretoPoint1(wPoint1):
+    def __init__(self, dimensions, profit, id=None):
+        self.profit = profit
+        self.itemId = id
+        self.source = None
+       
+        super().__init__(dimensions)
+   
+    def getProfit(self):
+        return self.profit
+   
+    def createNew(self, dimensions, profit, id):
+        return paretoPoint1(dimensions, profit, id)
+
+    def isDimensionEquals(self, other):
+        if self.dimHash != other.dimHash:
+            return False
+       
+        return super().__eq__(other)
+
+    def __add__(self, item):        
+        itemDim = item.getDimension(0)      
+        selfDim = self.dimensions
+        newDim = selfDim + itemDim
+        newPoint = paretoPoint1(newDim, self.profit + item.profit)
+        newPoint.itemId = item.itemId
+        newPoint.source = self
+        return newPoint
+
+    def getItemIds(self):
+
+        if self.itemId is not None:
+            yield self.itemId
+
+        if self.source:
+            for id in self.source.getItemIds():
+                yield id
+
+    def __hash__(self):
+        return  397 ^ self.dimHash ^ hash(self.profit)
+
+    def __eq__(self, other):
+        if self.dimHash != other.dimHash:
+            return False
+        return self.dimensions == other.dimensions and self.profit == other.profit
+
+    def __repr__(self):
+        return f"paretoPoint1(dimensions={self.dimensions}, profit={self.profit}, items={list(self.getItemIds())})"
+
+class paretoPoint2(wPoint2):
+    def __init__(self, dim1, dim2, profit, id=None):
+        self.profit = profit
+        self.itemId = id
+        self.source = None
+        super().__init__(dim1, dim2)
+   
+    def getProfit(self):
+        return self.profit
+   
+    def createNew(self, item, profit, id):
+        return paretoPoint2(item[0], item[1], profit, id)
+
+    def __add__(self, item):              
+        newPoint = paretoPoint2(self.dim1 + item.getDimension(0), self.dim2 + item.getDimension(1), self.profit + item.profit)
+        newPoint.itemId = item.itemId
+        newPoint.source = self
+        return newPoint
+
+    def getItemIds(self):
+
+        if self.itemId is not None:
+            yield self.itemId
+
+        if self.source:
+            for id in self.source.getItemIds():
+                yield id
+
+    def isDimensionEquals(self, other):
+        if self.dimHash != other.dimHash:
+            return False
+       
+        return super().__eq__(other)
+
+    def __hash__(self):
+        return  397 ^ super().__hash__() ^ hash(self.profit)
+
+    def __eq__(self, other):
+        return super().__eq__(other) and self.profit == other.profit
+
+    def __repr__(self):
+        return f"paretoPoint2(dimensions={self.getDimensions()}, profit={self.profit}, items={list(self.getItemIds())})"
+   
+class paretoPoint0(wPoint1):
+    def __init__(self, dimensions, id=None):
+        self.itemId = id
+        self.source = None
+        super().__init__(dimensions)
+   
+    def getProfit(self):
+        return self.dimensions
+   
+    def createNew(self, dimensions, profit, id):
+        return paretoPoint0(dimensions, id)
+
+    def __add__(self, item):              
+        newPoint = paretoPoint0(self.dimensions + item.dimensions)
+        newPoint.itemId = item.itemId
+        newPoint.source = self
+        return newPoint
+
+    def getItemIds(self):
+
+        if self.itemId is not None:
+            yield self.itemId
+
+        if self.source:
+            for id in self.source.getItemIds():
+                yield id
+
+    def isDimensionEquals(self, other):
+        if self.dimHash != other.dimHash:
+            return False
+       
+        return super().__eq__(other)
+   
+    def __hash__(self):
+        return  397 ^ self.dimHash
+
+    def __eq__(self, other):
+        if self.dimHash != other.dimHash:
+            return False
+        return self.dimensions == other.dimensions
+
+    def __repr__(self):
+        return f"paretoPoint0(dimensions={self.dimensions}, items={list(self.getItemIds())})"
+
 class knapsackParetoSolver:
 
-    def __init__(self, dimensions, values, indexes, constraint, emptyDim, O):
+    def __init__(self, dimensions, values, indexes, constraint, emptyPoint, emptyDimension, O):
         self.dimensions = dimensions
         self.values = values
         self.indexes = indexes
         self.constraint = constraint
-        self.emptyDim = emptyDim
+        self.emptyPoint = emptyPoint
+        self.emptyDimension = emptyDimension
+        self.forceUseLimits = False
+        self.forceUsePareto = True
         self.O = O
+        self.totalPointCount = 0
         self.skippedPointsBySize = 0
         self.skippedPointsByMap = 0
         self.skippedPointsByPareto = 0
-        self.totalPointCount = 0
+        self.skippedPointsByLimits = 0
+        self.skippedPointsBySize = 0
         self.printInfo = False
+        self.printSuperIncreasingInfo = False
+        self.doSolveSuperInc = True
+        self.doUseLimits = True
+        self.canBackTraceWhenSizeReached = False  
+        self.useRatioSort = False    
+   
+    def createNewPoint(self, values, profit, id):
+        return self.emptyPoint.createNew(values.getDimensions(), profit, id)
 
-    def indexLargestLessThan(self,  items, item, lo, hi, O):   
+    def indexLargestLessThan(self,  items, item, lo, hi, O):  
 
         ans = -1
 
@@ -1252,10 +1770,10 @@ class knapsackParetoSolver:
             mid = (lo + hi) // 2
 
             val = items[mid]
-        
-            if val.profit > item:
-                hi = mid - 1 
-                ans = mid; 
+       
+            if val.getProfit() > item:
+                hi = mid - 1
+                ans = mid;
             else:
                 lo = mid + 1
 
@@ -1264,15 +1782,16 @@ class knapsackParetoSolver:
     def findLargerProfit(self, items, profitMax, O):
         index = self.indexLargestLessThan(items, profitMax, 0, len(items) - 1, O)
 
-        if index >= 0 and items[index].profit > profitMax:
+        if index >= 0 and items[index].getProfit() > profitMax:
             return index
         else:
             return None
-    
-    def mergeDiscardingDominated(self, oldList, newList, maxProfitPoint, O):
+   
+    def mergeDiscardingDominated(self, oldList, newList, O):
 
         result = []
         profitMax = -sys.maxsize
+
         while True:
 
             O[0] += 1
@@ -1286,10 +1805,6 @@ class knapsackParetoSolver:
 
                     for ind in range(newPointIndex, len(newList)):
                         newPoint = newList[ind]
-
-                        if maxProfitPoint.profit < newPoint.profit:
-                            maxProfitPoint = newPoint
-
                         result.append(newPoint)
 
                         O[0] += 1
@@ -1309,17 +1824,14 @@ class knapsackParetoSolver:
             oldPoint = oldList[oldPointIndex]
             newPoint = newList[newPointIndex]
 
-            if oldPoint < newPoint or (oldPoint == newPoint and oldPoint.profit > newPoint.profit):
+            if oldPoint < newPoint or (oldPoint == newPoint and oldPoint.getProfit() > newPoint.getProfit()):
                 result.append(oldPoint)
-                profitMax = oldPoint.profit               
+                profitMax = oldPoint.getProfit()              
             else:
                 result.append(newPoint)
-                profitMax = newPoint.profit
-
-                if maxProfitPoint.profit < profitMax:
-                    maxProfitPoint = newPoint
-
-        return result, maxProfitPoint
+                profitMax = newPoint.getProfit()
+               
+        return result
 
     def sortByRatio(self, w, v, t, O):
         if len(w) > 0:
@@ -1327,13 +1839,22 @@ class knapsackParetoSolver:
             tuples = zip(*sorted_pairs)
             O[0] += len(w) * math.log2(len(w))
             return [list(tuple) for tuple in  tuples]
-        
+       
+        return w, v, t
+
+    def sortByDims(self, w, v, t, O):
+        if len(w) > 0:
+            sorted_pairs = sorted(zip(w, v, t), key=lambda t: (t[0], t[0] / t[1]))
+            tuples = zip(*sorted_pairs)
+            O[0] += len(w) * math.log2(len(w))
+            return [list(tuple) for tuple in  tuples]
+       
         return w, v, t
 
     def backTraceItems(self, maxProfitPoint, count, O):
         if maxProfitPoint:
 
-            optSize = self.emptyDim
+            optSize = self.emptyDimension
             optItems, optValues, optIndexes  = [], [], []
 
             for id in maxProfitPoint.getItemIds():
@@ -1345,71 +1866,536 @@ class knapsackParetoSolver:
             O[0] += len(optItems)
 
             if self.printInfo:
-                print(f"Skipped points by MAP: {self.skippedPointsByMap}, by SIZE: {self.skippedPointsBySize}; by PARETO: {self.skippedPointsByPareto}; Total points: {self.totalPointCount}; N={count};")
+                print(f"Skipped points by MAP: {self.skippedPointsByMap}, by LIMITS: {self.skippedPointsByLimits}; by SIZE: {self.skippedPointsBySize}; by PARETO: {self.skippedPointsByPareto}; Total points: {self.totalPointCount}; N={count};")
 
-            return maxProfitPoint.profit, optSize, optItems, optValues, optIndexes
-        return 0, self.emptyDim, [], [], []
+            return maxProfitPoint.getProfit(), optSize, optItems, optValues, optIndexes
+        return 0, self.emptyPoint, [], [], []
 
-    def getNewPoints(self, item, oldPoints, constraint, prevDistinctPoints, newDistinctPoints, skipCount):
+    def preProcess(self, constraints, items, values, forceUseLimits, O):
+       
+        count = len(items)
+        itemSum1, itemSum2, lessCountSum = self.emptyDimension, self.emptyDimension, self.emptyDimension
+        valuesSum1, valuesSum2, lessCountValuesSum = 0, 0, 0
+
+        lessSizeItems, lessSizeValues, lessSizeItemsIndex = [], [], []
+
+        partialSums1, superIncreasingItems1 = [], [False]
+        partialSums2, superIncreasingItems2 = [], [False]
+
+        isSuperIncreasing1, isSuperIncreasing2 = True, True
+        isSuperIncreasingValues1, isSuperIncreasingValues2 = True, True
+        allValuesEqual, allValuesEqualToConstraints = True, True
+        allDesc, allAsc, allDescValues, allAscValues = True, True, True, True
+
+        canUsePartialSums = False
+
+        lessCount = 0
+
+        if count > 0 :
+           
+            prevItem1 = items[-1]
+            prevValue1 = values[-1]
+
+            for i in range(0, count):
+
+                item2 = items[i]
+                itemValue2 = values[i]
+
+                iBack = count - i - 1
+
+                item1 = items[iBack]              
+                itemValue1 = values[iBack]              
+
+                superIncreasingItem1, superIncreasingItem2 = False, False
+
+                if  item1 <= constraints:
+
+                    if item1 < itemSum1:
+                        isSuperIncreasing1 = False
+                    else:
+                        superIncreasingItem1 = True
+
+                    if itemValue1 < valuesSum1:
+                        isSuperIncreasingValues1 = False
+                        superIncreasingItem1 = False
+               
+                if  item2 <= constraints:
+
+                    if item2 < itemSum2:
+                        isSuperIncreasing2 = False
+                    else:
+                        superIncreasingItem2 = True
+
+                    if itemValue2 < valuesSum2:
+                        isSuperIncreasingValues2 = False
+                        superIncreasingItem2 = False
+               
+                if allValuesEqual and prevValue1 != itemValue2:
+                    allValuesEqual = False
+               
+                if allValuesEqualToConstraints and not item2.firstDimensionEqual(itemValue2):
+                    allValuesEqualToConstraints = False
+
+                itemSum1 += item1
+                itemSum2 += item2
+
+                valuesSum1 += itemValue1
+                valuesSum2 += itemValue2
+
+                partialSums1.append(itemSum2)  
+                partialSums2.append(itemSum1)  
+
+                if allDesc:
+                    if not prevItem1 <= item1:
+                        allDesc = False
+               
+                if allAsc:
+                    if prevItem1 < item1:
+                        allAsc = False
+
+                if allDescValues:
+                    if not prevValue1 <= itemValue1:
+                        allDescValues = False
+               
+                if allAscValues:
+                    if prevValue1 < itemValue1:
+                        allAscValues = False
+
+                if i > 0:
+                    superIncreasingItems1.append(superIncreasingItem1)
+                    superIncreasingItems2.append(superIncreasingItem2)
+
+                if  item2 <= constraints:
+                    lessSizeItems.append(item2)                
+                    lessSizeValues.append(itemValue2)  
+                    lessSizeItemsIndex.append(i)
+                    lessCountValuesSum += itemValue2
+                    lessCountSum += item2
+                    lessCount += 1  
+
+                prevItem1 = item1
+                prevValue1 = itemValue1
+           
+            partialSums = []
+            superIncreasingItems = []
+            isSuperIncreasing = False
+            itemSum = itemSum2
+
+            canUsePartialSums = allValuesEqual or allValuesEqualToConstraints or (isSuperIncreasingValues1 and allDescValues) or (isSuperIncreasingValues2 and allAscValues)
+
+            if allAsc and canUsePartialSums:
+                partialSums = partialSums2
+                superIncreasingItems = superIncreasingItems2
+                isSuperIncreasing = isSuperIncreasing2
+                itemSum = itemSum2    
+
+            elif  (allDesc and canUsePartialSums) or forceUseLimits:
+                partialSums = partialSums1
+                superIncreasingItems = superIncreasingItems1
+                isSuperIncreasing = isSuperIncreasing1
+                itemSum = itemSum1
+
+                partialSums.reverse()
+                superIncreasingItems.reverse()           
+            else:
+                if allAsc and allAscValues:
+                    itemSum = itemSum2  
+                    partialSums = partialSums2
+                    partialSums.reverse()
+                    superIncreasingItems = superIncreasingItems2
+                    superIncreasingItems.reverse()
+                    canUsePartialSums = True
+                elif allDesc and allDescValues:
+                    itemSum = itemSum1
+                    partialSums = partialSums1
+                    partialSums.reverse()
+                    superIncreasingItems = superIncreasingItems1
+                    superIncreasingItems.reverse()
+                    canUsePartialSums = True
+                else:
+                    superIncreasingItems = []
+                    if not canUsePartialSums:
+                        partialSums = []
+                        canUsePartialSums = False
+                    else:
+                        partialSums = partialSums2
+                        partialSums.reverse()
+        else:
+            partialSums = []
+            superIncreasingItems = []
+            isSuperIncreasing = False
+            itemSum = itemSum2
+
+        constraints = constraints.adjustMin(itemSum)
+       
+        O[0] += count
+        return constraints, lessCount,  lessSizeItems, lessSizeValues, lessSizeItemsIndex, itemSum, lessCountSum, lessCountValuesSum, partialSums, isSuperIncreasing, superIncreasingItems, allAsc, allDesc, canUsePartialSums
+
+    def checkCornerCases(self, constraints, lessSizeItems, lessSizeValues, lessSizeItemsIndex, lessCountSum, itemSum, lessCountValuesSum):        
+
+        if  lessCountSum == self.emptyDimension:
+            return 0, self.emptyDimension, [], [], []
+       
+        if  lessCountSum <= constraints:
+            return lessCountValuesSum, lessCountSum, lessSizeItems, lessSizeValues, lessSizeItemsIndex
+
+        if  itemSum <= constraints:
+            return lessCountValuesSum, itemSum, lessSizeItems, lessSizeValues, lessSizeItemsIndex
+
+        return None      
+
+    def solveSuperIncreasing(self, size, items, values, itemsIndex, count, allAsc, O):
+
+        def indexLargestLessThanAsc(items, item, lo, hi, O):  
+
+            if item == self.emptyDimension:
+                return None  
+
+            while lo <= hi:
+                O[0] += 1
+                mid = (lo + hi) // 2
+
+                val = items[mid]
+
+                if item == val:
+                    return mid
+
+                if val < item:
+                    lo = mid + 1
+                else:
+                    hi = mid - 1                
+
+            if hi >= 0 and item >= items[hi]:
+                return hi
+            else:
+                return None
+
+        def indexLargestLessThanDesc(items, item, lo, hi, O):  
+
+            if item == self.emptyDimension:
+                return None  
+
+            cnt = len(items)
+
+            while lo <= hi:
+                O[0] += 1
+                mid = (lo + hi) // 2
+
+                val = items[mid]
+
+                if item == val:
+                    return mid
+
+                if val > item:
+                    lo = mid + 1
+                else:
+                    hi = mid - 1                
+
+            if lo < cnt and item >= items[lo]:
+                return lo
+            else:
+                return None
+
+        binSearch = indexLargestLessThanAsc if allAsc else indexLargestLessThanDesc
+ 
+        starting = 1
+        resultItems = []
+        resultValues = []
+        resultIndex = []
+        resultSum = 0
+        resultItemSum = self.emptyDimension
+        index = binSearch(items, size, starting - 1, count - 1, O)
+
+        while index is not None:
+            item = items[index]
+            value = values[index]
+            resultItems.append(item)
+            resultValues.append(value)
+            resultIndex.append(itemsIndex[index])
+            resultItemSum += item
+            resultSum += value
+            if allAsc:
+                index = binSearch(items, size - resultItemSum, starting - 1, index - 1, O)
+            else:
+                index = binSearch(items, size - resultItemSum, index + 1, count - 1, O)
+
+            O[0] += 1
+
+        if self.printSuperIncreasingInfo:
+            print(f"Superincreasing pareto solver called for size {size} and count {count}.  ASC={allAsc}")
+       
+        return resultSum, resultItemSum, resultItems, resultValues, resultIndex
+
+    def getLimits(self, constraints, i, items, partialSums, superIncreasingItems, canUsePartialSums):
+
+        if not self.doUseLimits or not canUsePartialSums:
+            return None, None, None, 0
+
+        skipCount = 2 ** (len(items) - (i + 1)) if self.printInfo else 0
+
+        partSumForItem = partialSums[i]
+        superIncreasingItem = superIncreasingItems[i] if len(superIncreasingItems) > 0 else None
+     
+        newPointLimit = constraints - partSumForItem if partSumForItem else None
+        oldPointLimit = newPointLimit
+     
+        if self.doSolveSuperInc and newPointLimit and superIncreasingItem:
+            oldPointLimit = newPointLimit + items[i]
+
+        return partSumForItem, oldPointLimit, newPointLimit, skipCount
+   
+    def iterateOrPushBack(self, circularPointQueue, newPoint,  greaterQu, distinctPoints2):
+       
+        if len(circularPointQueue) > 0:
+            peek = circularPointQueue[0]
+
+            if newPoint <= peek:
+                circularPointQueue.append(newPoint)
+                distinctPoints2.add(newPoint)              
+            else:
+
+                greaterQuPeek = greaterQu[0] if len(greaterQu) > 0 else None
+               
+                if greaterQuPeek and newPoint <= greaterQuPeek:
+                    greaterQu.insert(0, newPoint)
+                else:
+                    greaterQu.append(newPoint)
+        else:
+            circularPointQueue.append(newPoint)
+            distinctPoints2.add(newPoint)
+
+    def iterateLessThanOldPoint(self, oldPoint, circularPointQueue, canUseLimits, greaterQu, oldPointLimit, skipCount, distinctPoints2):
+
+        while len(greaterQu) > 0 and greaterQu[0] < oldPoint:
+
+            quPoint = greaterQu.popleft()          
+            distinctPoints2.add(quPoint)
+            circularPointQueue.append(quPoint)
+
+        if not canUseLimits or not oldPointLimit or not oldPoint < oldPointLimit:
+            self.iterateOrPushBack(circularPointQueue, oldPoint, greaterQu, distinctPoints2)
+        else:
+            self.skippedPointsByLimits += skipCount
+
+        return True
+
+    def iterateGreaterPoints(self, greaterQu, circularPointQueue, distinctPoints2):
+        while len(greaterQu) > 0:
+            quPoint = greaterQu.popleft()
+            circularPointQueue.append(quPoint)
+            distinctPoints2.add(quPoint)
+ 
+    def getItemIndex(self, count, i, allAsc):
+        return count - i if allAsc else i - 1
+
+    def iteratePoints(self, i,  itemDimensions, itemProfit, itemId, constraintPoint, maxProfitPoint, circularPointQueue, prevCyclePointCount, halfConstraint, itemLimit, oldPointLimit, newPointLimit, distinctPoints1,  distinctPoints2, skipCount, canUseLimits, O):
+       
+        # merges ordered visited points with new points with keeping order in O(N) using single circular queue.
+        # each getPoints method call starts fetching visited points from qu start, pops visited point and pushes new point and visited to the end of qu in ASC order.
+        # we skip new point if it in list already
+        # skips points if they will not contribute to optimal solution (in case of desc flow and (equal values or values equal to first dimension))
+        # also skips the same weight but less profit points
+
+        greaterQu = deque()
+
+        skipLimitCheck = not canUseLimits
+
+        itemPoint = self.createNewPoint(itemDimensions, itemProfit, itemId)
+
+        #useItemItself = skipLimitCheck or itemLimit >= halfConstraint
+        useItemItself = True
+
+        if useItemItself:
+
+            if not itemPoint in distinctPoints1:
+                self.iterateOrPushBack(circularPointQueue, itemPoint, greaterQu, distinctPoints2)
+
+                if maxProfitPoint.getProfit() <= itemPoint.getProfit():
+                    maxProfitPoint = itemPoint  
+            else:            
+                self.skippedPointsByMap += skipCount
+        else:
+            self.skippedPointsByLimits += skipCount
+
+        for pi in range(prevCyclePointCount):
+
+            oldPoint = circularPointQueue.popleft()    
+
+            if not self.iterateLessThanOldPoint(oldPoint, circularPointQueue, canUseLimits, greaterQu, oldPointLimit, skipCount, distinctPoints2):
+                continue
+
+            newPoint = oldPoint + itemPoint
+
+            if skipLimitCheck and (newPointLimit and  newPoint < newPointLimit):
+                self.skippedPointsByLimits += skipCount
+                continue
+
+            if  newPoint <= constraintPoint:
+
+                if not newPoint in distinctPoints1:  
+
+                    self.iterateOrPushBack(circularPointQueue, newPoint, greaterQu, distinctPoints2)
+
+                    if maxProfitPoint.getProfit() <= newPoint.getProfit():
+
+                        if maxProfitPoint < newPoint:
+                            maxProfitPoint = newPoint
+                else:
+                    self.skippedPointsByMap += skipCount
+            else:
+                self.skippedPointsBySize += skipCount
+
+        self.iterateGreaterPoints(greaterQu, circularPointQueue, distinctPoints2)
+
+        newPointCount = len(circularPointQueue)
+
+        O[0] += newPointCount + 1      
+
+        if self.printInfo:
+            self.totalPointCount += newPointCount
+            print(f"| {i - 1} | {newPointCount} | {round(O[0])} |")
+
+        return newPointCount, maxProfitPoint
+
+    def solveUsingLimitsOnly(self, constraint, lessSizeItems, lessSizeValues, lessSizeItemsIndex, allAsc, partialSums, superIncreasingItems, canUsePartialSums):
+
+        sortedItems, sortedValues, sortedIndexes = lessSizeItems, lessSizeValues, lessSizeItemsIndex
+   
+        distinctPoints1 = set()
+
+        i, itemsCount = 1, len(sortedItems)
+
+        maxProfitPoint = self.emptyPoint
+
+        circularPointQueue = deque()
+
+        prevPointCount, newPointCount = 0, 0
+
+        halfConstraint = constraint.divideBy(2)
+
+        for i in range(1, itemsCount + 1):
+
+            itemIndex = self.getItemIndex(itemsCount, i, allAsc)
+
+            itemDimensions, itemProfit, itemId = sortedItems[itemIndex ], sortedValues[itemIndex], sortedIndexes[itemIndex]
+
+            itemLimit, oldPointLimit, newPointLimit, skipCount = self.getLimits(constraint, itemIndex, sortedItems, partialSums, superIncreasingItems, canUsePartialSums)
+
+            newPointCount, maxProfitPoint = self.iteratePoints(i, itemDimensions, itemProfit, itemId, constraint, maxProfitPoint, circularPointQueue, prevPointCount, halfConstraint, itemLimit,  oldPointLimit, newPointLimit, distinctPoints1,  distinctPoints1, skipCount, canUsePartialSums, self.O)
+         
+            if self.canBackTraceWhenSizeReached and maxProfitPoint.isDimensionEquals(constraint):
+                return self.backTraceItems(maxProfitPoint, itemsCount, self.O)
+
+            prevPointCount = newPointCount        
+
+        return self.backTraceItems(maxProfitPoint, itemsCount, self.O)
+
+    def getNewPoints(self, i, maxProfitPoint, itemDimensions, itemProfit, itemId, oldPoints, constraint, prevDistinctPoints, newDistinctPoints, skipCount, O):
 
         result = []
-        
+
+        itemPoint = self.createNewPoint(itemDimensions, itemProfit, itemId)
+       
         for oldPoint in oldPoints:
-            if constraint.canFit(item, oldPoint):
-                newPoint  = oldPoint + item
+
+            newPoint  = oldPoint + itemPoint
+
+            if newPoint <= constraint:
 
                 if newPoint not in prevDistinctPoints:
                     newDistinctPoints.add(newPoint)
                     result.append(newPoint)
                 else:
                     self.skippedPointsByMap += skipCount
+                
+                if self.useRatioSort :
+
+                    if maxProfitPoint.getProfit() <= newPoint.getProfit() and maxProfitPoint < newPoint:
+                        maxProfitPoint = newPoint
+                else:
+                    if maxProfitPoint.getProfit() <= newPoint.getProfit():
+                        maxProfitPoint = newPoint
+
             else:
                 self.skippedPointsBySize += skipCount
 
-        return result
+        newPointCount = len(oldPoints)
+
+        O[0] += len(oldPoints) + 1      
+
+        if self.printInfo:
+            self.totalPointCount += newPointCount
+            print(f"| {i - 1} | {newPointCount} | {round(O[0])} |")
+
+        return result, maxProfitPoint
+
+    def solvePareto(self, constraint, sortedItems, sortedValues, sortedIndexes, O):
+
+        maxProfitPoint, emptyPoint = self.emptyPoint, self.emptyPoint
+
+        distinctPoints = set()
+
+        oldPoints = [emptyPoint]
+        newPoints = []      
+
+        itemsCount = len(sortedItems)
+
+        for i in range(1, itemsCount + 1):
+
+            skipCount = 2 ** (itemsCount - i)  if self.printInfo else 0
+
+            itemDimensions, itemProfit, itemId = sortedItems[i - 1], sortedValues[i - 1], sortedIndexes[i - 1]
+
+            newPoints, maxProfitPoint = self.getNewPoints(i, maxProfitPoint, itemDimensions, itemProfit, itemId, oldPoints, constraint, distinctPoints, distinctPoints, skipCount, O)
+         
+            # Point A is dominated by point B if B achieves a larger profit with the same or less weight than A.
+            paretoOptimal  = self.mergeDiscardingDominated(oldPoints, newPoints, O)
+
+            if self.canBackTraceWhenSizeReached and maxProfitPoint.isDimensionEquals(constraint):
+                return self.backTraceItems(maxProfitPoint, itemsCount, O)
+
+            oldPoints = paretoOptimal
+
+        return self.backTraceItems(maxProfitPoint, itemsCount, O)
 
     def solve(self):
 
-        sortedItems, sortedValues, sortedIndexes = self.sortByRatio(self.dimensions, self.values, range(len(self.dimensions)), self.O)
+        canTrySolveUsingDp = not self.forceUsePareto and (self.doUseLimits or self.doSolveSuperInc or self.forceUseLimits or self.canBackTraceWhenSizeReached)
 
-        items = [paretoItem(sortedIndexes[i], sortedItems[i], sortedValues[i]) for i in range(len(sortedItems))]
+        canSolveUsingDp = False
 
-        emptyPoint = paretoPoint(self.emptyDim, 0)
-        maxProfitPoint = emptyPoint
+        if canTrySolveUsingDp:
 
-        oldPoints = [emptyPoint] 
-        newPoints = []      
+            constraint, count, lessSizeItems, lessSizeValues, lessSizeItemsIndex, itemSum, lessCountSum, lessCountValuesSum, partialSums, superIncreasing, superIncreasingItems, allAsc, allDesc, canUsePartialSums = self.preProcess(self.constraint, self.dimensions, self.values, self.forceUseLimits, self.O)
 
-        i, itemsCount = 1, len(items)
+            cornerCasesCheck = self.checkCornerCases(constraint, lessSizeItems, lessSizeValues, lessSizeItemsIndex, lessCountSum, itemSum, lessCountValuesSum)
+
+            if  cornerCasesCheck:
+                return cornerCasesCheck
+
+            if self.doSolveSuperInc and superIncreasing:
+                return self.solveSuperIncreasing(constraint, lessSizeItems, lessSizeValues, lessSizeItemsIndex, count, allAsc, self.O)
+
+            canSolveUsingDp = not self.forceUsePareto and (self.forceUseLimits or self.canBackTraceWhenSizeReached or canUsePartialSums)
+
+            if canSolveUsingDp:
+
+                if self.printInfo:
+                    print(f"KB pareto DP knapsack solver: N={count}; canUsePartialSums={canUsePartialSums}; forceUseLimits={self.forceUseLimits}")
+
+                return  self.solveUsingLimitsOnly(constraint, lessSizeItems, lessSizeValues, lessSizeItemsIndex, allAsc, partialSums, superIncreasingItems, canUsePartialSums)
+        else:
+            constraint, lessSizeItems, lessSizeValues, lessSizeItemsIndex = self.constraint, self.dimensions, self.values, self.indexes
 
         if self.printInfo:
-             print(f"pareto knapsack solver: N={len(items)}")
-        
-        prevDistinctPoints, newDistinctPoints = set(), set()
+            print(f"KB pareto knapsack solver: N={len(lessSizeItems)}; canTrySolveUsingDp={canTrySolveUsingDp}; canSolveUsingDp={canSolveUsingDp}")
 
-        for item in items:
+        sortingFunc = self.sortByRatio if self.useRatioSort else self.sortByDims
 
-            prevDistinctPoints, newDistinctPoints = newDistinctPoints, prevDistinctPoints
-            newDistinctPoints.clear()
+        sortedItems, sortedValues, sortedIndexes = sortingFunc(lessSizeItems, lessSizeValues, lessSizeItemsIndex, self.O)
 
-            skipCount = 2 ** (itemsCount - i) if self.printInfo else 0
-
-            newPoints = self.getNewPoints(item, oldPoints, self.constraint, prevDistinctPoints, newDistinctPoints, skipCount)
-
-            # Point A is dominated by point B if B achieves a larger profit with the same or less weight than A.
-            paretoOptimal, maxProfitPoint  = self.mergeDiscardingDominated(oldPoints, newPoints, maxProfitPoint, self.O)
-
-            if printPct:
-                self.totalPointCount += len(paretoOptimal)
-                self.skippedPointsByPareto += ((len(newPoints) + len(oldPoints)) - len(paretoOptimal)) * skipCount
-                print(f"| {len(paretoOptimal)} | {round(self.O[0])} |")
-
-            oldPoints = paretoOptimal
-            i += 1
-            self.O[0] += 1
-
-        return self.backTraceItems(maxProfitPoint, itemsCount, self.O)
-
+        return self.solvePareto(constraint, sortedItems, sortedValues, sortedIndexes, self.O)
+       
 class knapsackSolver:
 
     def __init__(self, size, weights, values, O, forceUseLimits = False):
@@ -1429,9 +2415,10 @@ class knapsackSolver:
         self.printSuperIncreasingInfo = False
         self.doSolveSuperInc = True
         self.doUseLimits = True
-    
+        self.canBackTraceWhenSizeReached = False
+   
     def preProcess(self, constraints, items, values, forceUseLimits, O):
-        
+       
         count = len(items)
         itemSum1, itemSum2, lessCountSum = 0, 0, 0
         valuesSum1, valuesSum2, lessCountValuesSum = 0, 0, 0
@@ -1439,7 +2426,7 @@ class knapsackSolver:
         lessSizeItems, lessSizeValues, lessSizeItemsIndex = [], [], []
 
         partialSums1, superIncreasingItems1 = [], [False]
-        partialSums2, superIncreasingItems2 = [], [False] 
+        partialSums2, superIncreasingItems2 = [], [False]
 
         isSuperIncreasing1, isSuperIncreasing2 = True, True
         isSuperIncreasingValues1, isSuperIncreasingValues2 = True, True
@@ -1451,7 +2438,7 @@ class knapsackSolver:
         lessCount = 0
 
         if count > 0 :
-            
+           
             prevItem1 = items[-1]
             prevValue1 = values[-1]
 
@@ -1462,8 +2449,8 @@ class knapsackSolver:
 
                 iBack = count - i - 1
 
-                item1 = items[iBack]               
-                itemValue1 = values[iBack]               
+                item1 = items[iBack]              
+                itemValue1 = values[iBack]              
 
                 superIncreasingItem1, superIncreasingItem2 = False, False
 
@@ -1477,7 +2464,7 @@ class knapsackSolver:
                     if itemValue1 < valuesSum1:
                         isSuperIncreasingValues1 = False
                         superIncreasingItem1 = False
-                
+               
                 if item2 <= constraints:
 
                     if item2 < itemSum2:
@@ -1488,10 +2475,10 @@ class knapsackSolver:
                     if itemValue2 < valuesSum2:
                         isSuperIncreasingValues2 = False
                         superIncreasingItem2 = False
-                
+               
                 if allValuesEqual and prevValue1 != itemValue2:
                     allValuesEqual = False
-                
+               
                 if allValuesEqualToConstraints and item2 != itemValue2:
                     allValuesEqualToConstraints = False
 
@@ -1502,12 +2489,12 @@ class knapsackSolver:
                 valuesSum2 += itemValue2
 
                 partialSums1.append(itemSum2)  
-                partialSums2.append(itemSum1)   
+                partialSums2.append(itemSum1)  
 
                 if allDesc:
                     if not prevItem1 <= item1:
                         allDesc = False
-                
+               
                 if allAsc:
                     if prevItem1 < item1:
                         allAsc = False
@@ -1515,14 +2502,14 @@ class knapsackSolver:
                 if allDescValues:
                     if not prevValue1 <= itemValue1:
                         allDescValues = False
-                
+               
                 if allAscValues:
                     if prevValue1 < itemValue1:
                         allAscValues = False
 
                 if i > 0:
-                    superIncreasingItems1.append(superIncreasingItem1)
-                    superIncreasingItems2.append(superIncreasingItem2)
+                    superIncreasingItems1.append(superIncreasingItem2)
+                    superIncreasingItems2.append(superIncreasingItem1)
 
                 if item2 <= constraints:
                     lessSizeItems.append(item2)                
@@ -1530,19 +2517,25 @@ class knapsackSolver:
                     lessSizeItemsIndex.append(i)
                     lessCountValuesSum += itemValue2
                     lessCountSum += item2
-                    lessCount += 1   
+                    lessCount += 1  
 
                 prevItem1 = item1
                 prevValue1 = itemValue1
-            
+           
             partialSums = []
             superIncreasingItems = []
             isSuperIncreasing = False
             itemSum = itemSum2
 
             canUsePartialSums = allValuesEqual or allValuesEqualToConstraints or (isSuperIncreasingValues1 and allDescValues) or (isSuperIncreasingValues2 and allAscValues)
-        
-            if (allDesc and canUsePartialSums) or forceUseLimits:
+           
+
+            if allAsc and canUsePartialSums or forceUseLimits:
+                partialSums = partialSums2
+                superIncreasingItems = superIncreasingItems2
+                isSuperIncreasing = isSuperIncreasing2
+                itemSum = itemSum2    
+            elif allDesc and canUsePartialSums:
                 partialSums = partialSums1
                 superIncreasingItems = superIncreasingItems1
                 isSuperIncreasing = isSuperIncreasing1
@@ -1550,30 +2543,19 @@ class knapsackSolver:
 
                 partialSums.reverse()
                 superIncreasingItems.reverse()
-
-            elif allAsc and canUsePartialSums:
-                partialSums = partialSums2
-                superIncreasingItems = superIncreasingItems2 
-                isSuperIncreasing = isSuperIncreasing2 
-                itemSum = itemSum2     
-                
-                partialSums.reverse()
-                superIncreasingItems.reverse()             
             else:
                 if allAsc and allAscValues:
-                    itemSum = itemSum2   
+                    itemSum = itemSum2  
                     partialSums = partialSums2
-                    partialSums.reverse()
                     superIncreasingItems = superIncreasingItems2
-                    superIncreasingItems.reverse()
                     canUsePartialSums = True
                 elif allDesc and allDescValues:
                     itemSum = itemSum1
                     partialSums = partialSums1
-                    partialSums.reverse()
-                    superIncreasingItems = superIncreasingItems1 
-                    superIncreasingItems.reverse()
+                    superIncreasingItems = superIncreasingItems1
                     canUsePartialSums = True
+                    partialSums.reverse()
+                    superIncreasingItems.reverse()
                 else:
                     superIncreasingItems = [False] * lessCount
                     partialSums = [sys.maxsize] * lessCount
@@ -1585,7 +2567,7 @@ class knapsackSolver:
             itemSum = itemSum2
 
         constraints = min(itemSum, constraints)
-        
+       
         O[0] += count
         return constraints, lessCount,  lessSizeItems, lessSizeValues, lessSizeItemsIndex, itemSum, lessCountSum, lessCountValuesSum, partialSums, isSuperIncreasing, superIncreasingItems, allAsc, allDesc, canUsePartialSums
 
@@ -1593,7 +2575,7 @@ class knapsackSolver:
 
         if  lessCountSum == 0:
             return 0, 0, [], [], []
-        
+       
         if  lessCountSum <= size:
             return lessCountValuesSum, lessCountSum, lessSizeItems, lessSizeValues, lessSizeItemsIndex
 
@@ -1602,25 +2584,28 @@ class knapsackSolver:
 
         return None      
      
-    def yieldOrPushBack(self, circularPointQuene, newPoint, greaterQu):
-        if len(circularPointQuene) > 0:
-                peek = circularPointQuene[0]
+    def yieldOrPushBack(self, circularPointQueue, newPoint, greaterQu, O):
+        if len(circularPointQueue) > 0:
+                peek = circularPointQueue[0]
 
-                if newPoint < peek:                   
+                if newPoint < peek:                  
                     yield newPoint
-                    circularPointQuene.append(newPoint)
+                    circularPointQueue.append(newPoint)
                 else:
+
+                    O[0] += 1
+
                     if len(greaterQu) > 0 and newPoint < greaterQu[0]:
                         greaterQu.insert(0, newPoint)
                     else:
                         greaterQu.append(newPoint)
         else:
             yield newPoint
-            circularPointQuene.append(newPoint)     
+            circularPointQueue.append(newPoint)    
 
-    def getPoints(self, itemWeight, size, circularPointQuene, itemLimit, oldPointLimit, newPointLimit, prevCyclePointCount, uniquePointSet, skipCount, canUseLimits):
-        
-        # merges ordered visited points with new points with keeping order in O(N) using single circular queue. 
+    def getPoints(self, itemWeight, size, circularPointQueue, itemLimit, oldPointLimit, newPointLimit, prevCyclePointCount, uniquePointSet, skipCount, canUseLimits, O):
+       
+        # merges ordered visited points with new points with keeping order in O(N) using single circular queue.
         # each getPoints method call starts fetching visited points from qu start, pops visited point and pushes new point and visited to the end of qu in ASC order.
         # we skip new point if it in list already
 
@@ -1630,8 +2615,8 @@ class knapsackSolver:
 
         greaterQu = deque()
 
-        if useItemItself and not itemWeight in uniquePointSet:         
-            for p in self.yieldOrPushBack(circularPointQuene, itemWeight, greaterQu):
+        if useItemItself and not itemWeight in uniquePointSet:        
+            for p in self.yieldOrPushBack(circularPointQueue, itemWeight, greaterQu, O):
                 yield p
         else:
             if useItemItself:
@@ -1641,20 +2626,20 @@ class knapsackSolver:
 
         for i in range(prevCyclePointCount):
 
-            oldPoint = circularPointQuene.popleft() 
+            oldPoint = circularPointQueue.popleft()
 
             while len(greaterQu) > 0 and greaterQu[0] < oldPoint:
 
                 quPoint = greaterQu.popleft()
                
-                yield quPoint 
-                circularPointQuene.append(quPoint)
+                yield quPoint
+                circularPointQueue.append(quPoint)
 
             if skipLimitCheck or oldPoint >= oldPointLimit:
 
-                for p in self.yieldOrPushBack(circularPointQuene, oldPoint, greaterQu):
+                for p in self.yieldOrPushBack(circularPointQueue, oldPoint, greaterQu, O):
                     yield p
-              
+             
             else:
                 self.skippedPointsByLimits += skipCount
 
@@ -1664,31 +2649,31 @@ class knapsackSolver:
                 self.skippedPointsByLimits += skipCount
                 continue
 
-            if newPoint <= size: 
+            if newPoint <= size:
 
                 if not newPoint in uniquePointSet:
-                    for p in self.yieldOrPushBack(circularPointQuene, newPoint, greaterQu):
+                    for p in self.yieldOrPushBack(circularPointQueue, newPoint, greaterQu, O):
                         yield p
                 else:
                     self.skippedPointsByMap += skipCount
             else:
                 self.skippedPointsBySize += skipCount
-        
+       
         while len(greaterQu) > 0:
 
             quPoint = greaterQu.popleft()
 
-            yield quPoint 
-            circularPointQuene.append(quPoint)
+            yield quPoint
+            circularPointQueue.append(quPoint)
 
     def getValue(self, p, prevDP):
 
         if p in prevDP:
             cur = prevDP[p]
             return cur[0], cur[1]
-      
+     
         return 0, 0
-      
+     
     def getPossibleValue(self, point, itemValue, itemWeight,  dp):
 
         if point in dp:
@@ -1697,30 +2682,32 @@ class knapsackSolver:
 
         if point < 0:
             return None, None
-        
+       
         return itemValue, itemWeight
 
     def setValue(self, curDP, p, curVal, curW,  O):
-        curDP[p] = (curVal, curW)               
+        curDP[p] = (curVal, curW)              
         O[0] += 1
 
-    def backTraceItems(self, DP, resultI, resultP, items, values, itemsIndex, O):
+    def backTraceItems(self, DP, resultI, resultP, items, values, itemsIndex, allAsc, O):
         opt = 0
         optSize = 0
         res = DP[resultI][resultP][0]
         optWeights, optValues, optIndex = [], [], []
         point = resultP
 
+        count = len(items)
+
         self.totalPointCount += len(DP[resultI])
 
         if self.printInfo:
             print(f"Skipped points by MAP: {self.skippedPointsByMap}, by LIMITS: {self.skippedPointsByLimits}; by SIZE: {self.skippedPointsBySize}; Max points: {(2 ** len(items)) if len(items) < 15 else -1}; Total points: {self.totalPointCount};")
 
-        for i in range(resultI, 0, -1): 
+        for i in range(resultI, 0, -1):
            
             O[0] += 1
 
-            if res <= 0: 
+            if res <= 0:
                 break      
 
             dpw = DP[i - 1]
@@ -1728,10 +2715,13 @@ class knapsackSolver:
             skip = False
 
             if point in dpw:
-                skip = res == dpw[point][0] 
+                skip = res == dpw[point][0]
 
-            if not skip:       
-                itemWeight, itemValue, itemIndex = items[i - 1], values[i - 1], itemsIndex[i - 1]   
+            if not skip:      
+
+                itemIndex = self.getItemIndex(count, i, allAsc)
+
+                itemWeight, itemValue, itemIndex = items[itemIndex], values[itemIndex], itemsIndex[itemIndex]  
 
                 optWeights.append(itemWeight)
                 optValues.append(itemValue)
@@ -1749,10 +2739,10 @@ class knapsackSolver:
         self.DP    = [None] * (count + 1)
         self.DP[0] = {}
         return self.DP
-  
+ 
     def solveSuperIncreasing(self, size, items, values, itemsIndex, count, allAsc, O):
 
-        def indexLargestLessThanAsc(items, item, lo, hi, O):   
+        def indexLargestLessThanAsc(items, item, lo, hi, O):  
 
             if item == 0:
                 return None  
@@ -1776,7 +2766,7 @@ class knapsackSolver:
             else:
                 return None
 
-        def indexLargestLessThanDesc(items, item, lo, hi, O):   
+        def indexLargestLessThanDesc(items, item, lo, hi, O):  
 
             if item == 0:
                 return None  
@@ -1827,49 +2817,50 @@ class knapsackSolver:
 
             O[0] += 1
 
-        if verbose:
+        if self.printSuperIncreasingInfo:
             print(f"Superincreasing 1-0 solver called for size {size} and count {count}.  ASC={allAsc}")
-        
+       
         return resultSum, resultItemSum, resultItems, resultValues, resultIndex
 
-    def getLimits(self, size, i, items, partialSums, superIncreasingItems, canUsePartialSums):
+    def getLimits(self, size, itemIndex, items, partialSums, superIncreasingItems, canUsePartialSums):
 
         if not self.doUseLimits or not canUsePartialSums:
             return sys.maxsize, -sys.maxsize, -sys.maxsize, 0
 
-        skipCount = 2 ** (len(items) - i) if self.printInfo else 0
+        skipCount = 2 ** (len(items) - itemIndex + 1) if self.printInfo else 0
 
-        partSumForItem = partialSums[i - 1]
-        superIncreasingItem = superIncreasingItems[i - 1]
+        partSumForItem = partialSums[itemIndex]
+        superIncreasingItem = superIncreasingItems[itemIndex]
 
         newPointLimit = size - partSumForItem
         oldPointLimit = newPointLimit
 
         if self.doSolveSuperInc and superIncreasingItem:
-            oldPointLimit = newPointLimit + items[i - 1] 
+            oldPointLimit = newPointLimit + items[itemIndex]
 
         return partSumForItem, oldPointLimit, newPointLimit, skipCount
 
-    def solveByPareto(self, lessSizeItems, lessSizeValues, lessSizeItemsIndex, size, emptyPoint, O):
+    def solveByPareto(self, lessSizeItems, lessSizeValues, lessSizeItemsIndex, size, O):
         if self.printInfo:
             print(f"1-0 knapsack pareto solver: N {len(lessSizeItems)}")
 
-        paretoSolver = knapsackParetoSolver(lessSizeItems, lessSizeValues, lessSizeItemsIndex, paretoKnapsackConstraint(size), emptyPoint, O)
+        paretoItems = [wPoint1(item) for item in lessSizeItems]
+        paretoSolver = knapsackParetoSolver(paretoItems, lessSizeValues, lessSizeItemsIndex, wPoint1(size), paretoPoint1(0, 0), wPoint1(0), O)
         paretoSolver.printInfo = self.printInfo
+        paretoSolver.canBackTraceWhenSizeReached = self.canBackTraceWhenSizeReached
+
         return paretoSolver.solve()
 
-    def solveByDynamicPrograming(self, size, count, lessSizeItems, lessSizeValues, lessSizeItemsIndex, partialSums, superIncreasingItems, allAsc, allDesc, canUsePartialSums, O):
-        
-        if allAsc:
-            lessSizeItems = list(reversed(lessSizeItems))
-            lessSizeValues = list(reversed(lessSizeValues))
-            O[0] += len(lessSizeItems) * 2
+    def getItemIndex(self, count, i, allAsc):
+        return count - i if allAsc else i - 1
 
+    def solveByDynamicPrograming(self, size, count, lessSizeItems, lessSizeValues, lessSizeItemsIndex, partialSums, superIncreasingItems, allAsc, allDesc, canUsePartialSums, O):
+       
         DP = self.createDP(count)
 
         resultI, resultP = 1, 1
 
-        circularPointQuene = deque()
+        circularPointQueue = deque()
 
         maxValue, prevPointCount, newPointCount = -sys.maxsize, 0, 0
 
@@ -1878,29 +2869,28 @@ class knapsackSolver:
 
         for i in range(1, count + 1):
 
+            itemIndex = self.getItemIndex(count, i, allAsc)
+
             DP[i] = {}
 
-            itemValue, itemWeight   = lessSizeValues[i - 1], lessSizeItems[i - 1]
-            prevDP,    curDP        = DP    [i - 1],      DP[i]       
+            itemValue, itemWeight   = lessSizeValues[itemIndex], lessSizeItems[itemIndex]
+            prevDP,    curDP        = DP    [i - 1],      DP[i]      
 
             prevPointCount, newPointCount = newPointCount, prevPointCount
             newPointCount = 0
 
             self.totalPointCount += prevPointCount
+       
+            itemLimit, oldPointLimit, newPointLimit, skipCount   = self.getLimits(size, itemIndex, lessSizeItems, partialSums, superIncreasingItems, canUsePartialSums)
 
-            if self.printInfo:
-                print(f"| {i - 1} | {prevPointCount} | {round(O[0])} |")
+            for p in self.getPoints(itemWeight, size, circularPointQueue, itemLimit, oldPointLimit, newPointLimit, prevPointCount, prevDP, skipCount, canUsePartialSums, O):          
 
-            itemLimit, oldPointLimit, newPointLimit, skipCount   = self.getLimits(size, i, lessSizeItems, partialSums, superIncreasingItems, canUsePartialSums)
-
-            for p in self.getPoints(itemWeight, size, circularPointQuene, itemLimit, oldPointLimit, newPointLimit, prevPointCount, prevDP, skipCount, canUsePartialSums):          
-
-                curValue,   curWeight   =  self.getValue(p, prevDP)                 
-                posblValue, posblWeight =  self.getPossibleValue(p - itemWeight, itemValue, itemWeight, prevDP) 
+                curValue,   curWeight   =  self.getValue(p, prevDP)                
+                posblValue, posblWeight =  self.getPossibleValue(p - itemWeight, itemValue, itemWeight, prevDP)
 
                 if posblValue and posblWeight <= size and curValue < posblValue:
                     curValue = posblValue
-                    curWeight = posblWeight 
+                    curWeight = posblWeight
                
                 self.setValue(curDP, p, curValue, curWeight, O)
                
@@ -1908,13 +2898,20 @@ class knapsackSolver:
                     resultP = p
                     resultI = i
                     maxValue = curValue
-                
+
+                if self.canBackTraceWhenSizeReached and curWeight == size:
+                    self.backTraceItems(DP, resultI, resultP, lessSizeItems, lessSizeValues, lessSizeItemsIndex, allAsc, O)
+               
                 newPointCount += 1
-          
-        return self.backTraceItems(DP, resultI, resultP, lessSizeItems, lessSizeValues, lessSizeItemsIndex, O) 
+
+            if self.printInfo:
+                print(f"| {i - 1} | {prevPointCount} | {round(O[0])} |")
+
+         
+        return self.backTraceItems(DP, resultI, resultP, lessSizeItems, lessSizeValues, lessSizeItemsIndex, allAsc, O)
 
     def solve(self):
-        
+       
         size, weights, values, forceUseLimits, O = self.size, self.weights, self.values, self.forceUseLimits, self.O
 
         size, count, lessSizeItems, lessSizeValues, lessSizeItemsIndex, itemSum, lessCountSum, lessCountValuesSum, partialSums, superIncreasing, superIncreasingItems, allAsc, allDesc, canUsePartialSums = self.preProcess(size, weights, values, forceUseLimits, O)
@@ -1929,225 +2926,8 @@ class knapsackSolver:
 
         if canUsePartialSums and (allAsc or allDesc) or self.forceUseDpSolver:
             return self.solveByDynamicPrograming(size, count, lessSizeItems, lessSizeValues, lessSizeItemsIndex, partialSums, superIncreasingItems, allAsc, allDesc, canUsePartialSums, O)
-        
-        return self.solveByPareto(lessSizeItems, lessSizeValues, lessSizeItemsIndex, size, 0, O)
-
-class wPoint:
-    def __init__(self, dimensions):
-        self.dimensions = tuple(dimensions)
-
-    def createNew(self, tuples):
-        return wPoint(tuples)
-    
-    def getDimension(self, index):
-        return self.dimensions[index]
-    
-    def getDimensions(self):
-        return self.dimensions 
-
-    def __str__(self):
-        return str(self.dimensions)
-    
-    def __repr__(self):
-        return str(self.dimensions)
-
-    def firstDimensionEqual(self, number):
-        return self.dimensions[0] == number
-    
-    def getSize(self):
-        return len(self.dimensions)
-
-    def divideBy(self, number):
-
-        l = len(self.dimensions)
-
-        newDim = [0] * l
-
-        for i in range(l):
-            newDim[i] = self.dimensions[i] / number
-
-        return wPoint(newDim) 
-    
-    def adjustMin(self, other):
-        l = len(self.dimensions)
-
-        newDim = [0] * l
-
-        for i in range(l):
-            newDim[i] = min(self.dimensions[i], other.dimensions[i])
-        
-        return wPoint(newDim) 
-    
-    def __truediv__(self, other):
-        l = len(self.dimensions)
-
-        newDim = [0] * l
-
-        for i in range(l):
-            newDim[i] = self.dimensions[i] / other
-
-        return wPoint(newDim)
-    
-    def __rtruediv__(self, other):
-
-        l = len(self.dimensions)
-
-        newDim = [0] * l
-
-        for i in range(l):
-            newDim[i] = other / self.dimensions[i]
-
-        return wPoint(newDim)
-    
-    def __add__(self, item): 
-
-        l = len(self.dimensions)
-
-        newDim = [0] * l
-
-        for i in range(l):
-            newDim[i] = self.dimensions[i] + item.dimensions[i]
-
-        return wPoint(newDim) 
-    
-    def __sub__(self, item): 
-
-        l = len(self.dimensions)
-        newDim = [0] * l
-
-        for i in range(l):
-            newDim[i] = self.dimensions[i] - item.dimensions[i]
-
-        return wPoint(newDim)  
-        
-    # <
-    def __lt__(self, other):
-        l = len(self.dimensions)
-
-        allLess = False
-        for i in range(l):
-
-            if self.dimensions[i] == other.dimensions[i]:
-                continue
-
-            if self.dimensions[i] < other.dimensions[i]:                 
-                allLess = True
-            else:
-                return False
-
-        return allLess  
-
-    # <=
-    def __le__(self, other):
-        l = len(self.dimensions)
-        for i in range(l):
-            
-            if self.dimensions[i] > other.dimensions[i]: 
-                return False
-
-        return True  
-    # >
-    def __gt__(self, other):
-        l = len(self.dimensions)
-
-        allGreater = False
-        for i in range(l):
-
-            if self.dimensions[i] == other.dimensions[i]:
-                continue
-
-            if other.dimensions[i] < self.dimensions[i]:                 
-                allGreater = True
-            else:
-                return False
-
-        return allGreater  
-    # >=
-    def __ge__(self, other):
-        l = len(self.dimensions)
-        for i in range(l):
-            
-            if self.dimensions[i] < other.dimensions[i]: 
-                return False
-
-        return True   
-    
-    def __eq__(self, other):
-        return self.dimensions == other.dimensions
-
-    def __hash__(self):
-        return hash(self.dimensions)
-
-class wPoint2:
-    def __init__(self, dim1, dim2):
-        self.dim1 = dim1
-        self.dim2 = dim2
-
-    def createNew(self, tuples):
-        return wPoint2(tuples[0], tuples[1])
-
-    def getDimension(self, index):
-        return self.dim1 if index == 0 else self.dim2
-    
-    def getDimensions(self):
-        return (self.dim1, self.dim2) 
-
-    def __str__(self):
-        return f"[{self.dim1},{self.dim2}]"
-    
-    def __repr__(self):
-         return f"[{self.dim1},{self.dim2}]"
-
-    def firstDimensionEqual(self, number):
-        return self.dim1 == number
-    
-    def getSize(self):
-        return 2
-
-    def divideBy(self, number):
-        return wPoint2(self.dim1/number, self.dim2/number) 
-    
-    def adjustMin(self, other):
-        return wPoint2(min(self.dim1, other.dim1), min(self.dim2, other.dim2)) 
-
-    def __truediv__(self, other):
-        return wPoint2( self.dim1 / other, self.dim2 / other)
-    
-    def __rtruediv__(self, other):
-        return wPoint2( other/self.dim1, other/self.dim2)
-    
-    def __add__(self, item): 
-        return wPoint2(self.dim1 + item.dim1, self.dim2 + item.dim2) 
-    
-    def __sub__(self, item): 
-        return wPoint2(self.dim1 - item.dim1, self.dim2 - item.dim2) 
-        
-    # <
-    def __lt__(self, other):
-
-        if self.dim1 <= other.dim1 and self.dim2 < other.dim2:
-            return True
-
-        if self.dim2 <= other.dim2 and self.dim1 < other.dim1:
-             return True
-
-        return False
-    # <=
-    def __le__(self, other):
-        return self.dim1 <= other.dim1 and self.dim2 <= other.dim2
-    # >
-    def __gt__(self, other):
-        return  self == other or (not self < other)
-    # >=
-    def __ge__(self, other):
-
-        return not self < other
-    
-    def __eq__(self, other):
-        return self.dim1 == other.dim1 and self.dim2 == other.dim2 
-
-    def __hash__(self):
-        return hash(self.dim1) ^ hash(self.dim2)
+       
+        return self.solveByPareto(lessSizeItems, lessSizeValues, lessSizeItemsIndex, size, O)
 
 class knapsackNSolver:
 
@@ -2163,8 +2943,8 @@ class knapsackNSolver:
         self.size = constraints.getSize()
         # NON exact pareto greedy works much faster than greedy optimizer but gives less optimal result
         self.useParetoGreedy = False
-        # If true uses parete greedy as N solver for merging different dimension optimization else uses DP solver which gives optmal but works much slowly.
-        self.useParetoAsNGreadySolver = True
+        # If true uses pareto greedy as N solver for merging different dimension optimization else uses DP solver which gives optmal but works much slowly.
+        self.useParetoAsNGreedySolver = True
         self.DP = None
         # inner stat for DP solver
         self.skippedPointsByMap = 0
@@ -2176,29 +2956,35 @@ class knapsackNSolver:
         self.printSuperIncreasingInfo = False
         self.doSolveSuperInc = True
         self.doUseLimits = True
-    
+        self.canBackTraceWhenSizeReached = False
+        self.useRatioSortForPareto = False
+   
     def createNewPoint(self, tuples):
         return self.emptyPoint.createNew(tuples)
-    
+   
     def preProcess(self, constraints, items, values, forceUseLimits, O):
-        
+       
         count = len(items)
+
         itemSum1, itemSum2, lessCountSum = self.emptyPoint, self.emptyPoint, self.emptyPoint
+        valuesSum1, valuesSum2, lessCountValuesSum = 0, 0, 0
 
         lessSizeItems, lessSizeValues = [], []
 
         partialSums1, superIncreasingItems1 = [], [False]
-        partialSums2, superIncreasingItems2 = [], [False] 
+        partialSums2, superIncreasingItems2 = [], [False]
 
-        isSuperIncreasing1, isSuperIncreasing2 = True, True   
-        allValuesEqual, allValuesEqualToConstraints = True, True   
-        allDesc, allAsc = True, True
+        isSuperIncreasing1, isSuperIncreasing2 = True, True  
+        isSuperIncreasingValues1, isSuperIncreasingValues2 = True, True
+        allValuesEqual, allValuesEqualToConstraints = True, True  
+        allDesc, allAsc, allDescValues, allAscValues = True, True, True, True
+
         canUsePartialSums = False
 
         lessCount = 0
 
-        if count > 0 :
-            
+        if count > 0:
+           
             prevItem1 = items[-1]
             prevValue1 = values[-1]
 
@@ -2208,11 +2994,9 @@ class knapsackNSolver:
                 itemValue2 = values[i]
 
                 iBack = count - i - 1
-
-                item1 = items[iBack]               
-
-                superIncreasingItem1 = False
-                superIncreasingItem2 = False
+                item1 = items[iBack]              
+                itemValue1 = values[iBack]              
+                superIncreasingItem1, superIncreasingItem2 = False, False
 
                 if item1 <= constraints:
 
@@ -2220,17 +3004,25 @@ class knapsackNSolver:
                         isSuperIncreasing1 = False
                     else:
                         superIncreasingItem1 = True
-                
+                       
+                    if itemValue1 < valuesSum1:
+                        isSuperIncreasingValues1 = False
+                        superIncreasingItem1 = False
+               
                 if item2 <= constraints:
 
                     if item2 < itemSum2:
                         isSuperIncreasing2 = False
                     else:
                         superIncreasingItem2 = True
-                
+                       
+                    if itemValue2 < valuesSum2:
+                        isSuperIncreasingValues2 = False
+                        superIncreasingItem2 = False
+               
                 if allValuesEqual and prevValue1 != itemValue2:
                     allValuesEqual = False
-                
+               
                 if allValuesEqualToConstraints and not item2.firstDimensionEqual(itemValue2):
                     allValuesEqualToConstraints = False
 
@@ -2238,15 +3030,23 @@ class knapsackNSolver:
                 itemSum2 += item2
 
                 partialSums1.append(itemSum2)  
-                partialSums2.append(itemSum1)   
+                partialSums2.append(itemSum1)  
 
                 if allDesc:
                     if not prevItem1 <= item1:
                         allDesc = False
-                
+               
                 if allAsc:
                     if prevItem1 < item1:
                         allAsc = False
+               
+                if allDescValues:
+                    if not prevValue1 <= itemValue1:
+                        allDescValues = False
+               
+                if allAscValues:
+                    if prevValue1 < itemValue1:
+                        allAscValues = False
 
                 if i > 0:
                     superIncreasingItems1.append(superIncreasingItem1)
@@ -2254,21 +3054,28 @@ class knapsackNSolver:
 
                 if item2 <= constraints:
                     lessSizeItems.append(item2)                
-                    lessSizeValues.append(itemValue2)  
+                    lessSizeValues.append(itemValue2)
+                    lessCountValuesSum += itemValue2
 
                     lessCountSum += item2
-                    lessCount += 1   
+                    lessCount += 1  
 
                 prevItem1 = item1
+                prevValue1 = itemValue1
 
-            canUsePartialSums = allValuesEqual or allValuesEqualToConstraints 
-            
+            canUsePartialSums = allValuesEqual or allValuesEqualToConstraints or (isSuperIncreasingValues1 and allDescValues) or (isSuperIncreasingValues2 and allAscValues)
+           
             partialSums = []
             superIncreasingItems = []
             isSuperIncreasing = False
             itemSum = itemSum2
-
-            if (allDesc and canUsePartialSums) or forceUseLimits:
+           
+            if allAsc and canUsePartialSums:
+                partialSums = partialSums2
+                superIncreasingItems = superIncreasingItems2
+                isSuperIncreasing = isSuperIncreasing2
+                itemSum = itemSum2    
+            elif allDesc and canUsePartialSums or forceUseLimits:
                 partialSums = partialSums1
                 superIncreasingItems = superIncreasingItems1
                 isSuperIncreasing = isSuperIncreasing1
@@ -2276,70 +3083,67 @@ class knapsackNSolver:
 
                 partialSums.reverse()
                 superIncreasingItems.reverse()
-
-            elif allAsc and canUsePartialSums:
-                partialSums = partialSums2
-                superIncreasingItems = superIncreasingItems2 
-                isSuperIncreasing = isSuperIncreasing2 
-                itemSum = itemSum2     
-
-                partialSums.reverse()
-                superIncreasingItems.reverse()  
             else:
-
-                if allAsc:
-                    superIncreasingItems = superIncreasingItems2
-                    superIncreasingItems.reverse() 
-                elif allDesc :
+                if allAsc and allAscValues:
+                    itemSum = itemSum2
+                    superIncreasingItems=superIncreasingItems2
+                    canUsePartialSums = True  
+                elif allDesc and allDescValues:
+                    itemSum = itemSum1
                     superIncreasingItems = superIncreasingItems1
-                    superIncreasingItems.reverse() 
+                    canUsePartialSums = True
+                    partialSums.reverse()
+                    superIncreasingItems.reverse()
                 else:
                     superIncreasingItems = [False] * lessCount
-
-                partialSums = [None] * lessCount
+                    partialSums = [None] * lessCount                
+                    canUsePartialSums = False
         else:
             partialSums = []
             superIncreasingItems = []
             isSuperIncreasing = False
             itemSum = self.emptyPoint
+            canUsePartialSums = False
 
-        updatedConstraint = constraints.adjustMin(itemSum)
-        
         O[0] += count * constraints.getSize()
+        updatedConstraint = constraints.adjustMin(itemSum)
         return updatedConstraint, lessCount,  lessSizeItems, lessSizeValues, itemSum, lessCountSum, partialSums, isSuperIncreasing, superIncreasingItems, allAsc, allDesc, canUsePartialSums
 
     def checkCornerCases(self, constraints, lessSizeItems, lessSizeValues, lessCountSum, itemSum):        
 
         if  lessCountSum == self.emptyPoint:
             return 0, self.emptyPoint, [],[]
-        
+       
         if  lessCountSum <= constraints:
             return sum(lessSizeValues), lessCountSum, lessSizeItems, lessSizeValues
 
         if  itemSum <= constraints:
-            return sum(lessSizeValues), itemSum, lessSizeItems, lessSizeValues 
+            return sum(lessSizeValues), itemSum, lessSizeItems, lessSizeValues
 
-        return None   
-    
-    def yieldOrPushBack(self, circularPointQuene, newPoint, greaterQu):
-        if len(circularPointQuene) > 0:
-                peek = circularPointQuene[0]
+        return None  
+   
+    def yieldOrPushBack(self, circularPointQueue, newPoint, greaterQu, O):
+        if len(circularPointQueue) > 0:
+                peek = circularPointQueue[0]
 
-                if newPoint < peek:                   
+                if newPoint < peek:                  
                     yield newPoint
-                    circularPointQuene.append(newPoint)
+                    circularPointQueue.append(newPoint)
                 else:
+
+                    O[0] += 1
+
                     if len(greaterQu) > 0 and newPoint < greaterQu[0]:
                         greaterQu.insert(0, newPoint)
                     else:
                         greaterQu.append(newPoint)
         else:
             yield newPoint
-            circularPointQuene.append(newPoint)    
-  
-    def getPoints(self, itemDimensions, constraintPoint, circularPointQuene, halfConstraint, itemLimit, oldPointLimit, newPointLimit, prevCyclePointCount, uniquePointSet, skipCount):
-        
-        # merges ordered visited points with new points with keeping order in O(N) using single circular queue. 
+            circularPointQueue.append(newPoint)    
+ 
+    def getPoints(self, itemDimensions, constraintPoint, circularPointQueue, halfConstraint, itemLimit, oldPointLimit, newPointLimit, prevCyclePointCount, uniquePointSet, skipCount, O):
+       
+        # merges ordered visited points with new points with keeping order in O(N) using single circular queue.
         # each getPoints method call starts fetching visited points from qu start, pops visited point and pushes new point and visited to the end of qu in ASC order.
         # we skip new point if it in list already
         # skips points if they will not contribute to optimal solution (in case of desc flow and (equal values or values equal to first dimension))
@@ -2348,7 +3152,7 @@ class knapsackNSolver:
 
         if not itemDimensions in uniquePointSet:
 
-            for p in self.yieldOrPushBack(circularPointQuene, itemDimensions, greaterQu):
+            for p in self.yieldOrPushBack(circularPointQueue, itemDimensions, greaterQu, O):
                 yield p
 
         else:            
@@ -2356,17 +3160,17 @@ class knapsackNSolver:
 
         for i in range(prevCyclePointCount):
 
-            oldPoint = circularPointQuene.popleft()             
+            oldPoint = circularPointQueue.popleft()            
 
             while len(greaterQu) > 0 and greaterQu[0] < oldPoint:
 
                 quPoint = greaterQu.popleft()
 
-                yield quPoint 
-                circularPointQuene.append(quPoint)
+                yield quPoint
+                circularPointQueue.append(quPoint)
 
-            if not oldPointLimit or not oldPoint < oldPointLimit:
-                for p in self.yieldOrPushBack(circularPointQuene, oldPoint, greaterQu):
+            if not oldPointLimit or not oldPoint <= oldPointLimit:
+                for p in self.yieldOrPushBack(circularPointQueue, oldPoint, greaterQu, O):
                     yield p
 
             else:
@@ -2378,24 +3182,24 @@ class knapsackNSolver:
                 self.skippedPointsByLimits += skipCount
                 continue
 
-            if newPoint <= constraintPoint: 
+            if newPoint <= constraintPoint:
 
-                if not newPoint in uniquePointSet:   
+                if not newPoint in uniquePointSet:  
 
-                    for p in self.yieldOrPushBack(circularPointQuene, newPoint, greaterQu):
+                    for p in self.yieldOrPushBack(circularPointQueue, newPoint, greaterQu, O):
                         yield p
 
                 else:
                     self.skippedPointsByMap += skipCount
             else:
                 self.skippedPointsBySize += skipCount
-        
+       
         while len(greaterQu) > 0:
 
             quPoint = greaterQu.popleft()
 
-            yield quPoint 
-            circularPointQuene.append(quPoint)
+            yield quPoint
+            circularPointQueue.append(quPoint)
 
     def getValue(self, p, prevDP):
 
@@ -2414,30 +3218,32 @@ class knapsackNSolver:
 
         if point < self.emptyPoint:
             return None, self.emptyPoint
-        
+       
         return itemValue, itemDims
 
     def setValue(self, curDP, p, curVal, curDimensions, O):
-        curDP[p] = (curVal, curDimensions)               
+        curDP[p] = (curVal, curDimensions)              
         O[0] += self.size
 
-    def backTraceItems(self, DP, resultI, resultP, items, values, O):
+    def backTraceItems(self, DP, resultI, resultP, items, values, allAsc, O):
         res = DP[resultI][resultP][0]
         optItems, optValues = [], []
         point = resultP
         optDims = self.emptyPoint
         opt = 0
 
+        count = len(items)
+
         self.totalPointCount += len(DP[resultI])
 
         if self.printDpInfo:
             print(f"Skipped points by MAP: {self.skippedPointsByMap}, by LIMITS: {self.skippedPointsByLimits}; by SIZE: {self.skippedPointsBySize};  Max points: {(2 ** len(items)) if len(items) < 15 else -1}; Total points: {self.totalPointCount};")
 
-        for i in range(resultI, 0, -1): 
+        for i in range(resultI, 0, -1):
            
             O[0] += 1
 
-            if res <= 0: 
+            if res <= 0:
                 break      
 
             dpw = DP[i - 1]
@@ -2447,8 +3253,9 @@ class knapsackNSolver:
             if point in dpw:
                 skip = res == dpw[point][0]
 
-            if not skip:       
-                item, itemValue = items[i - 1], values[i - 1]    
+            if not skip:      
+                itemIndex = self.getItemIndex(count, i, allAsc)
+                item, itemValue = items[itemIndex], values[itemIndex]    
 
                 optItems.append(item.getDimensions())
                 optValues.append(itemValue)
@@ -2467,7 +3274,7 @@ class knapsackNSolver:
        
     def solveSuperIncreasing(self, size, items, values, count, allAsc, O):
 
-        def indexLargestLessThanDesc(items, item, lo, hi, O):   
+        def indexLargestLessThanDesc(items, item, lo, hi, O):  
 
             if item == self.emptyPoint:
                 return None  
@@ -2493,7 +3300,7 @@ class knapsackNSolver:
             else:
                 return None
      
-        def indexLargestLessThanAsc(items, item, lo, hi, O):   
+        def indexLargestLessThanAsc(items, item, lo, hi, O):  
 
             if item == self.emptyPoint:
                 return None  
@@ -2543,26 +3350,29 @@ class knapsackNSolver:
 
         if self.printSuperIncreasingInfo:
             print(f"Superincreasing {size.getSize()}D solver called for size {size} and count {count}.  ASC={allAsc}")
-        
+       
         return resultSum, resultItemSum, resultItems, resultValues
    
-    def getLimits(self, constraints, i, items, partialSums, superIncreasingItems, canUsePartialSums):
+    def getLimits(self, constraints, itemIndex, items, partialSums, superIncreasingItems, canUsePartialSums):
 
         if not self.doUseLimits or not canUsePartialSums:
             return None, None, None, 0
 
-        skipCount = 2 ** (len(items) - i) if self.printDpInfo else 0
+        skipCount = 2 ** (len(items) - itemIndex + 1) if self.printDpInfo else 0
 
-        partSumForItem = partialSums[i - 1]
-        superIncreasingItem = superIncreasingItems[i - 1]
-      
+        partSumForItem = partialSums[itemIndex]
+        superIncreasingItem = superIncreasingItems[itemIndex]
+     
         newPointLimit = constraints - partSumForItem if partSumForItem else None
         oldPointLimit = newPointLimit
-      
+     
         if self.doSolveSuperInc and newPointLimit and superIncreasingItem:
-            oldPointLimit = newPointLimit + items[i - 1] 
+            oldPointLimit = newPointLimit + items[itemIndex]
 
         return partSumForItem, oldPointLimit, newPointLimit, skipCount
+
+    def getItemIndex(self, count, i, allAsc):
+        return count - i if allAsc else i - 1
 
     def solveByDynamicPrograming(self, constraints, count, lessSizeItems, lessSizeValues, partialSums, superIncreasingItems, allAsc, allDesc, forceUseLimits, canUsePartialSums, O):
 
@@ -2570,7 +3380,7 @@ class knapsackNSolver:
 
         resultI, resultP = 1, self.emptyPoint
 
-        circularPointQuene = deque()
+        circularPointQueue = deque()
 
         maxValue, prevPointCount, newPointCount = -sys.maxsize, 0, 0
 
@@ -2582,40 +3392,45 @@ class knapsackNSolver:
 
         for i in range(1, count + 1):
 
+            itemIndex = self.getItemIndex(count, i, allAsc)
+
             DP[i] = defaultdict()
 
-            itemValue, item   = lessSizeValues[i - 1], lessSizeItems[i - 1]
+            itemValue, item   = lessSizeValues[itemIndex], lessSizeItems[itemIndex]
             prevDP,    curDP  = DP[i - 1], DP[i]
 
             prevPointCount, newPointCount = newPointCount, prevPointCount
             newPointCount = 0
 
-            self.totalPointCount += prevPointCount
+            self.totalPointCount += prevPointCount          
+           
+            itemLimit, oldPointLimit, newPointLimit, skipCount  = self.getLimits(constraints, itemIndex, lessSizeItems, partialSums, superIncreasingItems, canUsePartialSums)
 
-            if self.printDpInfo:
-                print(f"| {i - 1} | {prevPointCount} | {round(O[0])} |")
-            
-            itemLimit, oldPointLimit, newPointLimit, skipCount  = self.getLimits(constraints, i, lessSizeItems, partialSums, superIncreasingItems, canUsePartialSums)
+            for p in self.getPoints(item, constraints, circularPointQueue, halfConstraint, itemLimit, oldPointLimit, newPointLimit, prevPointCount, prevDP, skipCount, O):          
 
-            for p in self.getPoints(item, constraints, circularPointQuene, halfConstraint, itemLimit, oldPointLimit, newPointLimit, prevPointCount, prevDP, skipCount):          
-
-                curValue,    curDim   =  self.getValue(p, prevDP) 
-                posblValue,  posblDim =  self.getPossibleValue(p - item, itemValue, item, prevDP, O) 
+                curValue,    curDim   =  self.getValue(p, prevDP)
+                posblValue,  posblDim =  self.getPossibleValue(p - item, itemValue, item, prevDP, O)
 
                 if  posblValue and curValue <= posblValue and posblDim <= constraints:
                     curValue = posblValue
                     curDim   = posblDim
-                
+               
                 self.setValue(curDP, p, curValue, curDim, O)
 
                 if  maxValue <= curValue:
                     resultP = p
                     resultI = i
                     maxValue = curValue
-                
+
+                if self.canBackTraceWhenSizeReached and curDim == constraints:
+                    return self.backTraceItems(DP, resultI, resultP, lessSizeItems, lessSizeValues, allAsc, O)
+               
                 newPointCount += 1
 
-        return self.backTraceItems(DP, resultI, resultP, lessSizeItems, lessSizeValues, O) 
+            if self.printDpInfo:
+                print(f"| {i - 1} | {prevPointCount} | {round(O[0])} |")
+
+        return self.backTraceItems(DP, resultI, resultP, lessSizeItems, lessSizeValues, allAsc, O)
 
     def solveByGreedyTopDown(self, constraints, points, values, doSolveSuperInc, forceUseLimits, O):
 
@@ -2624,15 +3439,15 @@ class knapsackNSolver:
             tuples = zip(*sorted_pairs)
             return [list(tuple) for tuple in  tuples]
 
-        def sortReverese3Both(w, v, x):
+        def sortReverse3Both(w, v, x):
             sorted_pairs = sorted( zip(w, v, x), reverse=True, key=lambda t: (t[0], t[1]))
             tuples = zip(*sorted_pairs)
             return [ list(tuple) for tuple in  tuples]
 
         def solveKnapsackNd(constraints, descNewDims, descNewVals, doSolveSuperInc, forceUseLimits, O):
-            
+           
             constraints, count, lessSizeItems, lessSizeValues, itemSum, lessCountSum, partialSums, superIncreasing, superIncreasingItems, allAsc, allDesc, canUsePartialSums = self.preProcess(constraints, descNewDims, descNewVals, forceUseLimits, O)
-            
+           
             cornerCasesCheck = self.checkCornerCases(constraints, lessSizeItems, lessSizeValues, lessCountSum, itemSum)
 
             if  cornerCasesCheck:
@@ -2646,8 +3461,8 @@ class knapsackNSolver:
                 lessSizeValues = list(reversed(lessSizeValues))
                 O[0] += len(lessSizeItems) * 2
 
-            if self.useParetoAsNGreadySolver:
-                return self.solveByPareto(constraints, lessSizeItems, lessSizeValues, self.emptyPoint, O)
+            if self.useParetoAsNGreedySolver:
+                return self.solveByPareto(constraints, lessSizeItems, lessSizeValues, O)
 
             return self.solveByDynamicPrograming(constraints, count, lessSizeItems, lessSizeValues, partialSums, superIncreasingItems, allAsc, allDesc, forceUseLimits, canUsePartialSums, O)
 
@@ -2674,18 +3489,18 @@ class knapsackNSolver:
 
             dim = [p.getDimension(dimOrderIndex) for p in points]
 
-            descDim, descValues, descIndex = sortReverese3Both(dim, values, list(range(len(values))))
+            descDim, descValues, descIndex = sortReverse3Both(dim, values, list(range(len(values))))
             O[0] += (len(descDim) * math.log2(len(descDim)))
 
             dimDescSortedItems[dimensionIndex] = (descDim, descValues, descIndex)
-            dimStairSteps[dimensionIndex] = descDim[-1] 
+            dimStairSteps[dimensionIndex] = descDim[-1]
             dimStairDownCursors[dimensionIndex] = constraints.getDimension(dimOrderIndex)
             dimStairDownCursorStartings[dimensionIndex] = constraints.getDimension(dimOrderIndex)
             optimizeCacheItems[dimensionIndex] = {}
 
             estimatedAttemptsCount += dimStairDownCursors[dimensionIndex] // dimStairSteps[dimensionIndex]
 
-        if self.printGreedyInfo: 
+        if self.printGreedyInfo:
             print(f"The NON exact {size}D greedyTopDown knapsack solver called for N = {len(points)}. Estimated attempts: {estimatedAttemptsCount}.")
 
         O[0] += size
@@ -2702,7 +3517,7 @@ class knapsackNSolver:
 
             t1 = time.perf_counter()
 
-            optimizedIndexes = set() 
+            optimizedIndexes = set()
 
             for dimensionIndex in range(size):
 
@@ -2726,14 +3541,14 @@ class knapsackNSolver:
 
                         dimCacheItems.append(itemIndex)
                         optimizedIndexes.add(itemIndex)
-                    
+                   
                     O[0] += len(optIndex)
-                    
+                   
                     optimizeCacheItems[dimensionIndex][currentDimLimit] = dimCacheItems
                 else:
                     optimizedIndexes.update(optimizeCacheItems[dimensionIndex][currentDimLimit])
                     O[0] += len(optimizeCacheItems[dimensionIndex])
-              
+             
             newData = []
             newValues = []
 
@@ -2742,12 +3557,12 @@ class knapsackNSolver:
             if optTuple not in prevOptimizedIndexes:
 
                 sumOfNewValues = 0
-            
+           
                 for itemIndex in optimizedIndexes:
 
                     nDims = [0] * size
 
-                    for dimensionIndex in range(size): 
+                    for dimensionIndex in range(size):
                         dimIndex = dimensionIndexes[dimensionIndex]
                         nDims[dimIndex] = points[itemIndex].getDimension(dimIndex)      
 
@@ -2760,7 +3575,7 @@ class knapsackNSolver:
 
                 if sumOfNewValues > maxN:
 
-                    descNewDims, descNewVals = sortBoth(newData, newValues, reverse=True)
+                    descNewDims, descNewVals = sortBoth(newData, newValues)
                     O[0] += (len(descNewDims) * math.log2(len(descNewDims)))
 
                     optN, optDimN, optItemsN, optValuesN = solveKnapsackNd(constraints, descNewDims, descNewVals, doSolveSuperInc, forceUseLimits, O)
@@ -2772,12 +3587,12 @@ class knapsackNSolver:
                         maxDimN = optDimN
                         maxNValues = optValuesN
                         maxNItems = optItemsN
-                    
+                   
                         if self.printGreedyInfo and optimizeIterIndex == 0:
                             estimatedMaxTime = estimatedAttemptsCount * Decimal(attemptTimeS)
                             print(f"The NON exact {size}D greedyTopDown knapsack solver: estimated max time {estimatedMaxTime}.")
 
-                        if self.printGreedyInfo: 
+                        if self.printGreedyInfo:
                             print(f"The NON exact {size}D greedyTopDown knapsack solver:  attempt {optimizeIterIndex}, some max value {maxN} has been found, time {attemptTimeS}, total time {round(time.perf_counter() - t0, 4)}, total iters {round(O[0])}.")  
 
                     elif self.printGreedyInfo and attemptTimeS > 2:
@@ -2789,7 +3604,7 @@ class knapsackNSolver:
                     break
             elif self.printGreedyInfo:
                 print(f"The NON exact {size}D greedyTopDown knapsack solver: attempt {optimizeIterIndex } was skipped.")
-            
+           
             decIndex = (optimizeIterIndex) % size
 
             if dimStairDownCursors[decIndex] >= dimStairSteps[decIndex]:
@@ -2801,15 +3616,20 @@ class knapsackNSolver:
                     break
 
             optimizeIterIndex += 1        
-        
+       
         return maxN, maxDimN, maxNItems, maxNValues
 
-    def solveByPareto(self, constraints, lessSizeItems, lessSizeValues, emptyPoint, O):
+    def solveByPareto(self, constraints, lessSizeItems, lessSizeValues, O):
        
         if self.printGreedyInfo:
             print(f"{constraints.getSize()}D  knapsack NON exact pareto solver: N {len(lessSizeItems)}")
 
-        paretoSolver = knapsackParetoSolver(lessSizeItems, lessSizeValues, lessSizeItems, paretoKnapsackConstraint(constraints), emptyPoint, O)
+        paretoSolver = knapsackParetoSolver(lessSizeItems, lessSizeValues, range(len(lessSizeValues)), constraints, paretoPoint(self.emptyPoint.getDimensions(), 0), self.emptyPoint, O)
+       
+        paretoSolver.printInfo = self.printDpInfo
+        paretoSolver.canBackTraceWhenSizeReached = self.canBackTraceWhenSizeReached
+        paretoSolver.useRatioSort = self.useRatioSortForPareto
+
         opt, optDims, optItems, optValues, optIndex = paretoSolver.solve()
         return opt, optDims, optItems, optValues
 
@@ -2828,16 +3648,10 @@ class knapsackNSolver:
             return self.solveSuperIncreasing(constraints, lessSizeItems, lessSizeValues, count, allAsc, O)
        
         if len(items) <= self.worstCaseExpLimit or ((allAsc or allDesc) and canUsePartialSums) or self.forceUseDpSolver or self.forceUseLimits:
-            
-            if allAsc:
-                lessSizeItems = list(reversed(lessSizeItems))
-                lessSizeValues = list(reversed(lessSizeValues))
-                O[0] += len(lessSizeItems) * 2   
-
             return self.solveByDynamicPrograming(constraints, count, lessSizeItems, lessSizeValues, partialSums, superIncreasingItems, allAsc, allDesc, forceUseLimits, canUsePartialSums, O)
 
         if self.useParetoGreedy:
-            return self.solveByPareto(constraints, lessSizeItems, lessSizeValues, self.emptyPoint, O)
+            return self.solveByPareto(constraints, lessSizeItems, lessSizeValues, O)
 
         return self.solveByGreedyTopDown(constraints, lessSizeItems, lessSizeValues, doSolveSuperInc, False, O)
 
@@ -2847,7 +3661,7 @@ if runTests:
 
     # region: Functions for testing.
 
-    def sortRevereseBoth(w, v, reverse=True):
+    def sortReverseBoth(w, v, reverse=True):
         sorted_pairs = sorted(zip(w, v), reverse=reverse, key=lambda t: (t[0], t[1]))
         tuples = zip(*sorted_pairs)
         return [list(tuple) for tuple in  tuples]
@@ -2858,7 +3672,7 @@ if runTests:
         tuples = zip(*list_pairs)
         return [list(tuple) for tuple in  tuples]
 
-    def sortReverese3Both(w, v, x):
+    def sortReverse3Both(w, v, x):
         sorted_pairs = sorted( zip(w, v, x), reverse=True, key=lambda t: (t[0], t[1], t[2]))
         tuples = zip(*sorted_pairs)
         return [ list(tuple) for tuple in  tuples]
@@ -2876,10 +3690,10 @@ if runTests:
             return l1 == l2
 
     def knapsack2d_dp(weightSize, volumeSize, weights, volumes, values, O):
-    
+   
             table = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
 
-            for i in range(len(weights)): 
+            for i in range(len(weights)):
 
                 thingValue = values[i]
                 thingConstraint1 = weights[i]
@@ -2890,7 +3704,7 @@ if runTests:
                     for c in range(volumeSize + 1):
                         table[i + 1][j][c] = table[i][j][c]
                         O[0] += 1
-                    
+                   
 
                 for j in range(thingConstraint1, weightSize + 1):
                     for k in range(thingConstraint2, volumeSize + 1):
@@ -2906,20 +3720,22 @@ if runTests:
     # end region: Functions for testing.
 
     dtNow = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-    random.seed(dtNow)
+    random.seed(hash(dtNow))
     randomTestCount = 2
 
     script_dir = os.path.dirname(__file__) # <-- absolute dir the script is in
 
     if printToFile:
         nt = datetime.datetime.now()
-        f = open(f'{__file__}.{nt.hour}-{nt.minute}.txt', 'w')
+        fileName = f'{__file__}.{nt.hour}-{nt.minute}.txt'
+        f = open(fileName, 'w')
+        print(f"Output fileName: {fileName}")
         sys.stdout = f # Change the standard output to the file we created.
 
     if verbose:
         print(f"Initial random seed is {dtNow}")
 
-    if False: # NP complete: Rational numbers tests for equal-subset-sum knapsack, 1-0 knapsack, and N dimension knapsacks, where N 2-4.
+    if True: # NP complete: Rational numbers tests for equal-subset-sum knapsack, 1-0 knapsack, and N dimension knapsacks, where N 2-4.
         if verbose:
             print("Rational numbers tests for equal-subset-sum knapsack, 1-0 knapsack, and N dimension knapsacks, where N 2-4.")
 
@@ -2947,19 +3763,22 @@ if runTests:
         opt, optDim, optWeights, optValuesP = paretoKnapsack(s, A, A, O)
         assert expectedValue == opt
 
-        opt, optValues1 = subsKnapsack(s, A, O)   
+        opt, optDim, optWeights, optValuesP = hybridParetoKnapsack(s, A, A, O)
         assert expectedValue == opt
 
-    if False: # Polynominal: Superincreasing integer tests for equal-subset-sum knapsack, 1-0 knapsack, and N dimension knapsacks, where N = 2.
+        opt, optValues1 = subsKnapsack(s, A, O)  
+        assert expectedValue == opt
+
+    if True: # Polynominal: Superincreasing integer tests for equal-subset-sum knapsack, 1-0 knapsack, and N dimension knapsacks, where N = 2.
         if verbose:
             print("Superincreasing integer numbers tests.")
 
         prevDoSolveSuperInc = doSolveSuperInc
 
-        for i in range(1, 3):
+        O = [0]
+        A = [1, 2, 5, 21, 69, 189, 376, 919]
 
-            O = [0]
-            A = [1, 2, 5, 21, 69, 189, 376, 919]
+        for i in range(1, 3):
 
             if i % 2 == 1:
                 A.reverse()
@@ -2970,23 +3789,23 @@ if runTests:
 
             for s in range(sum(A)):
 
-                doSolveSuperInc = False 
+                doSolveSuperInc = False
 
                 opt1, expected = subsKnapsack(s, A, O)  
 
                 doSolveSuperInc = True
 
                 O[0] = 0
-                opt2, optValues1 = subsKnapsack(s, A, O) 
+                opt2, optValues1 = subsKnapsack(s, A, O)
 
                 assert listValuesEqual(optValues1, expected)
                 assert O[0] <= C * len(A) + nLogN
-            
+           
                 O[0] = 0
                 opt, optDim, optItems, optValues2 = knapsack(s, A, A, O)  
                 assert  listValuesEqual(optValues2, expected)
-                assert O[0] <= C * len(A) + nLogN 
-                
+                assert O[0] <= C * len(A) + nLogN
+               
                 O[0] = 0
                 opt, optDim, optItems3, optValues3 = knapsackNd(wPoint((s, s)), [wPoint((a, a)) for a in A], A, O)  
                 assert  listValuesEqual(optValues3, expected)
@@ -2995,12 +3814,12 @@ if runTests:
                 O[0] = 0
                 opt, optDim, optItems, optValuesP = paretoKnapsack(s, A, A, O)  
                 assert  listValuesEqual(optValuesP, expected)
-                
+               
 
         doSolveSuperInc = prevDoSolveSuperInc
-        
+       
         if verbose:
-            print("Superincreasing rational numbers tests.")   
+            print("Superincreasing rational numbers tests.")  
 
         for s in range(sum(A)):
 
@@ -3012,14 +3831,15 @@ if runTests:
 
             decS = DecimalData(s)
 
-            doSolveSuperInc = False 
+            doSolveSuperInc = False
 
             opt, expected = subsKnapsack(decS, decA, O)  
 
             doSolveSuperInc = True
 
-            O[0] = 0
             opt, decOptValues1 = subsKnapsack(decS, decA, O)  
+
+            O[0] = 0
             assert  listValuesEqual(decOptValues1, expected)
             assert O[0] <=  10 * nLogN
 
@@ -3027,7 +3847,7 @@ if runTests:
             opt, optDim, decOptItems, decOptValues2 = knapsack(decS, decA, decA, O)  
             assert  listValuesEqual(decOptValues2, expected)
             assert O[0] <=  10 * len(A) + nLogN
-            
+           
             O[0] = 0
             opt, optDim, decOptItems3, optValues3 = knapsackNd(wPoint((decS, decS)), [wPoint((da, da)) for da in decA], decA, O)  
             assert  listValuesEqual(optValues3, expected)
@@ -3036,10 +3856,10 @@ if runTests:
             O[0] = 0
             opt, optDim, decOptItems, decOptValuesP = paretoKnapsack(decS, decA, decA, O)  
             assert  listValuesEqual(decOptValuesP, expected)
-        
-        doSolveSuperInc = prevDoSolveSuperInc   
-    
-    if False: # Polynominal: Partial superincreasing numbers tests.
+       
+        doSolveSuperInc = prevDoSolveSuperInc  
+   
+    if True: # Polynominal: Partial superincreasing numbers tests.
         if verbose:
             print("Partial superincreasing numbers tests.")
 
@@ -3066,7 +3886,7 @@ if runTests:
 
                 for s in range(3, sum(testCase)):
 
-                    doSolveSuperInc = False 
+                    doSolveSuperInc = False
 
                     optE, expected = subsKnapsack(s, testCase, O)  
 
@@ -3076,12 +3896,12 @@ if runTests:
                         print(f"Partial superincreasing test: s = {s},  reverse = {revers}, index {i}")
 
                     O[0] = 0
-                    opt1, optValues1 = subsKnapsack(s, testCase, O) 
+                    opt1, optValues1 = subsKnapsack(s, testCase, O)
                     assert listValuesEqual(optValues1, expected) or sum(expected) == opt1
-                    
+                   
                     O[0] = 0
                     opt2, optDim, optItems, optValues2 = knapsack(s, testCase, testCase, O)  
-                    assert  listValuesEqual(optValues2, expected) or opt2   
+                    assert  listValuesEqual(optValues2, expected) or opt2  
 
                     O[0] = 0
                     opt3, optDim, optItems3, optValues3 = knapsackNd(wPoint((s, s)), [wPoint((a, a)) for a in testCase], testCase, O)  
@@ -3090,8 +3910,8 @@ if runTests:
                     O[0] = 0
                     opt4, optDim, optItems, optValues4 = paretoKnapsack(s, testCase, testCase, O)  
                     assert  listValuesEqual(optValues4, expected) or sum(expected) == opt4
-                
-    if False: # Polynominal: Partial geometric progression numbers tests.
+               
+    if True: # Polynominal: Partial geometric progression numbers tests.
         if verbose:
             print("Partial geometric progression numbers tests.")
 
@@ -3116,7 +3936,7 @@ if runTests:
 
             for s in range(step, sum(testCase), step):
 
-                doSolveSuperInc = False 
+                doSolveSuperInc = False
 
                 optE, expected = subsKnapsack(s, testCase, O)  
 
@@ -3125,15 +3945,15 @@ if runTests:
                 t1 = time.perf_counter()
 
                 O[0] = 0
-                opt1, optValues1 = subsKnapsack(s, testCase, O) 
-                assert listValuesEqual(optValues1, expected)   
+                opt1, optValues1 = subsKnapsack(s, testCase, O)
+                assert listValuesEqual(optValues1, expected)  
 
                 t2 = time.perf_counter()  
-                
+               
                 O[0] = 0
                 opt2, optDim, optItems, optValues2 = knapsack(s, testCase, testCase, O)  
                 assert  listValuesEqual(optValues2, expected)
-                
+               
                 t3 = time.perf_counter()
 
                 O[0] = 0
@@ -3152,7 +3972,7 @@ if runTests:
 
         doSolveSuperInc = prevDoSolveSuperInc
 
-    if False: # NP complete: 2D knapsack matching with classic DP solution results. N=13
+    if True: # NP complete: 2D knapsack matching with classic DP solution results. N=13
 
         O = [0]
         O_dp = [0]
@@ -3164,8 +3984,8 @@ if runTests:
         if verbose:
             print(f"2D knapsack matching with classic DP solution results. N={len(testCaseW)}")  
 
-        s_weights, s_volumes, s_values = sortReverese3Both(testCaseW, testCaseV, testCaseVal)
-    
+        s_weights, s_volumes, s_values = sortReverse3Both(testCaseW, testCaseV, testCaseVal)
+   
         if True:
 
             for testKnapsackWeight in range(min(testCaseW), sum(testCaseW) - 1):
@@ -3181,7 +4001,7 @@ if runTests:
                     constraints = wPoint((testKnapsackWeight, testKnapsackVolume))
 
                     opt, optDim, optItems, optValues = knapsackNd(constraints, dims, s_values, O)
-                
+               
                     resW = optDim.getDimension(0)
                     resVol = optDim.getDimension(1)
 
@@ -3191,35 +4011,35 @@ if runTests:
                             print(f" k sum val : {sum(optValues)}, dp: {dpRes}  k sum vol : {resVol} k sum w : {resW}  all sum val: {sum(s_values)} all sum vol: {sum(s_volumes)} all sum w: {sum(s_weights)}")
                         assert False
 
-    if False: # NP hard: Integer and Decimal mixed multidimensional knapsack problem (MKP) test
-        
+    if True: # NP hard: Integer and Decimal mixed multidimensional knapsack problem (MKP) test
+       
         data = [(821, Decimal("0.8"), 118),
-                (1144, Decimal("1"), 322), 
-                (634, Decimal("0.7"), 166), 
+                (1144, Decimal("1"), 322),
+                (634, Decimal("0.7"), 166),
                 (701, Decimal("0.9"), 195),
-                (291, Decimal("0.9"), 100), 
-                (1702, Decimal("0.8"), 142), 
-                (1633, Decimal("0.7"), 100), 
+                (291, Decimal("0.9"), 100),
+                (1702, Decimal("0.8"), 142),
+                (1633, Decimal("0.7"), 100),
                 (1086, Decimal("0.6"), 145),
-                (124, Decimal("0.6"), 100), 
-                (718, Decimal("0.9"), 208), 
-                (976, Decimal("0.6"), 100), 
+                (124, Decimal("0.6"), 100),
+                (718, Decimal("0.9"), 208),
+                (976, Decimal("0.6"), 100),
                 (1438, Decimal("0.7"), 312),
-                (910, Decimal("1"), 198), 
-                (148, Decimal("0.7"), 171), 
-                (1636, Decimal("0.9"), 117), 
+                (910, Decimal("1"), 198),
+                (148, Decimal("0.7"), 171),
+                (1636, Decimal("0.9"), 117),
                 (237, Decimal("0.6"), 100),
-                (771, Decimal("0.9"), 329), 
-                (604, Decimal("0.6"), 391), 
+                (771, Decimal("0.9"), 329),
+                (604, Decimal("0.6"), 391),
                 (1078, Decimal("0.6"), 100),
                 (640, Decimal("0.8"), 120),
-                (1510, Decimal("1"), 188), 
-                (741, Decimal("0.6"), 271), 
-                (1358, Decimal("0.9"), 334), 
+                (1510, Decimal("1"), 188),
+                (741, Decimal("0.6"), 271),
+                (1358, Decimal("0.9"), 334),
                 (1682, Decimal("0.7"), 153),
-                (993, Decimal("0.7"), 130), 
-                (99, Decimal("0.7"), 100), 
-                (1068, Decimal("0.8"), 154), 
+                (993, Decimal("0.7"), 130),
+                (99, Decimal("0.7"), 100),
+                (1068, Decimal("0.8"), 154),
                 (1669, Decimal("1"), 289)]
 
         # expected result was generated by genetic algo below
@@ -3251,7 +4071,7 @@ if runTests:
         dims2d = [wPoint((p[0], p[1])) for p in data]
         values = [p[2] for p in data]
 
-        descDims2d, descValues = sortRevereseBoth(dims2d, values)
+        descDims2d, descValues = sortReverseBoth(dims2d, values)
         constr2d = wPoint((12210, Decimal(12)))
 
         if verbose:
@@ -3281,19 +4101,19 @@ if runTests:
 
         assert good
 
-    if False: # NP hard: Integer multidimensional knapsack problem (MKP) with same profit value limits tests
+    if True: # NP hard: Integer multidimensional knapsack problem (MKP) with same profit value limits tests
 
         mixDimData =[(821,  976,  1),
-                    (1144,  718,  1), 
-                    (634,   124,  1), 
+                    (1144,  718,  1),
+                    (634,   124,  1),
                     (701,   1086, 1),
-                    (291,   1633, 1), 
-                    (1702,  1702, 1), 
-                    (1633,  291,  1), 
+                    (291,   1633, 1),
+                    (1702,  1702, 1),
+                    (1633,  291,  1),
                     (1086,  701,  1),
-                    (124,   634,  1), 
-                    (718,   1144, 1), 
-                    (976,   821,  1), 
+                    (124,   634,  1),
+                    (718,   1144, 1),
+                    (976,   821,  1),
                     (1438,  124,  1),
                 ]
 
@@ -3302,7 +4122,7 @@ if runTests:
         dimsMix2d = [wPoint((p[0], p[1])) for i, p in enumerate(mixDimData)]
         mixValues2d = [p[2] for p in mixDimData]  
 
-        descDims2d, descValues2d = sortRevereseBoth(dimsMix2d, mixValues2d) 
+        descDims2d, descValues2d = sortReverseBoth(dimsMix2d, mixValues2d)
 
         sumOfAll = sum([p[0] for p in mixDimData])
         minItem = min([p[0] for p in mixDimData]) - 1
@@ -3331,7 +4151,7 @@ if runTests:
                     t1 = time.perf_counter()
 
                     constr2d = wPoint((constaint1, constaint2))          
-                    
+                   
                     doUseLimits = False
 
                     optValue2, optDims2, optItems2, optValues2 = knapsackNd(constr2d, testDescDims, testDescValues, O)
@@ -3339,7 +4159,7 @@ if runTests:
                     tFull = round(time.perf_counter() - t1, 4)
 
                     fullIterRez = O[0]
-                
+               
                     O = [0]
 
                     doUseLimits = True
@@ -3363,19 +4183,19 @@ if runTests:
 
         doUseLimits = prevDoUseLimits
 
-    if False: # NP hard: Integer multidimensional knapsack problem (MKP) T partition grouping opertator tests
+    if True: # NP hard: Integer multidimensional knapsack problem (MKP) T partition grouping operator tests
 
         mixDimData =[(821,  1,  821),
-                    (1144,  1,  1144), 
-                    (634,   1,  634), 
+                    (1144,  1,  1144),
+                    (634,   1,  634),
                     (701,   1, 701),
-                    (291,   1, 291), 
-                    (1702,  1, 1702), 
-                    (1633,  1,  1633), 
+                    (291,   1, 291),
+                    (1702,  1, 1702),
+                    (1633,  1,  1633),
                     (1086,  1,  1086),
-                    (124,   1,  124), 
-                    (718,   1, 718), 
-                    (976,   1,  976), 
+                    (124,   1,  124),
+                    (718,   1, 718),
+                    (976,   1,  976),
                     (1438,  1,  1438),
                 ]
 
@@ -3384,7 +4204,7 @@ if runTests:
         dimsMix2d = [wPoint((p[0], p[1])) for i, p in enumerate(mixDimData)]
         mixValues2d = [p[2] for p in mixDimData]  
 
-        descDims2d, descValues2d = sortRevereseBoth(dimsMix2d, mixValues2d) 
+        descDims2d, descValues2d = sortReverseBoth(dimsMix2d, mixValues2d)
 
         sumOfAll = sum([p[0] for p in mixDimData])
         minItem = min([p[0] for p in mixDimData]) - 1
@@ -3404,6 +4224,10 @@ if runTests:
 
                 for constaint2 in range(1, len(mixDimData)):
 
+                    ascOrder=True
+                    constaint1= 6711
+                    constaint2 = 6
+                   
                     testDescDims = list(descDims2d)
                     testDescValues = list(descValues2d)
 
@@ -3411,17 +4235,17 @@ if runTests:
                     testValues = list(reversed(testDescValues))  if ascOrder else list(testDescValues)
 
                     t1 = time.perf_counter()
-                    
+                   
                     constr2d = wPoint((constaint1, constaint2))          
-                    
+                   
                     doUseLimits = False
 
                     optValue2, optDim2, optItems2, optValues2 = knapsackNd(constr2d, testDescDims, testDescValues, O)
-
+                   
                     tFull = round(time.perf_counter() - t1, 4)
 
                     fullIterRez = O[0]
-                
+               
                     O = [0]
 
                     doUseLimits = True
@@ -3445,31 +4269,31 @@ if runTests:
 
         doUseLimits = prevDoUseLimits
 
-    if False: # NP complete: Integer 1-0 knapsack problem limits tests
+    if True: # NP complete: Integer 1-0 knapsack problem limits tests
 
         mixDimData =[(821,  100),
-                    (1144,  100), 
-                    (634,   100), 
+                    (1144,  100),
+                    (634,   100),
                     (701,  100),
-                    (291,  100), 
-                    (1702, 100), 
-                    (1633,  100), 
+                    (291,  100),
+                    (1702, 100),
+                    (1633,  100),
                     (1086,  100),
-                    (124,   100), 
-                    (718,  100), 
-                    (976,   100), 
-                    (1438,  100),               
+                    (124,   100),
+                    (718,  100),
+                    (976,   100),
+                    (1438,  100),              
                     (822,  100),
-                    (1143,  100), 
-                    (640,   100), 
+                    (1143,  100),
+                    (640,   100),
                     (702,  100),
-                    (291,  100), 
-                    (1702, 100), 
-                    (1633,  100), 
+                    (291,  100),
+                    (1702, 100),
+                    (1633,  100),
                     (2000,  100),
-                    (100,   100), 
-                    (701,  100), 
-                    (1976,   100), 
+                    (100,   100),
+                    (701,  100),
+                    (1976,   100),
                     (1638,  100),
                 ]
 
@@ -3478,7 +4302,7 @@ if runTests:
         dimsd = [p[0] for p in mixDimData]
         values = [p[1] for p in mixDimData]  
 
-        descDims, descValues = sortRevereseBoth(dimsd, values) 
+        descDims, descValues = sortReverseBoth(dimsd, values)
 
         sumOfAll = sum([p[0] for p in mixDimData])
         minItem = min([p[0] for p in mixDimData]) - 1
@@ -3488,7 +4312,6 @@ if runTests:
 
         prevDoUseLimits = doUseLimits
         prevPrintPct = printPct
-        printPct = False
 
         for i in range(1, 3):
 
@@ -3505,7 +4328,7 @@ if runTests:
                 testValues = list(reversed(testDescValues))  if ascOrder else list(testDescValues)
 
                 t1 = time.perf_counter()
-                
+               
                 doUseLimits = False
 
                 optValue2, optDims2, optItems2, optValues2 = knapsack(constraint, testDescDims, testDescValues, O)
@@ -3513,7 +4336,7 @@ if runTests:
                 tFull = round(time.perf_counter() - t1, 4)
 
                 fullIterRez = O[0]
-            
+           
                 O = [0]
 
                 doUseLimits = True
@@ -3524,13 +4347,22 @@ if runTests:
 
                 tLimitsOn = round(time.perf_counter() - t1, 4)
 
+                t1 = time.perf_counter()
+
+                optValueP, optDimsP, optItemsP, optValuesP = paretoKnapsack(constraint, testDims, testValues, O)
+
+                tLimitsOnP = round(time.perf_counter() - t1, 4)
+
                 t2 = time.perf_counter()
 
                 iterRez = round(O[0])
 
                 printPct = prevPrintPct
 
-                good = optValue3 == optValue2 and optDims3 <= constraint and optDims2 <= constraint
+                good = optValue3 == optValue2 and optValueP == optValue2  and optDims3 <= constraint and optDims2 <= constraint and optDimsP <= constraint
+
+                if good == False:
+                    print()
 
                 if verbose:
                     print(f"1-0 knapsack limits test:  ASC={ascOrder}, constraint: {constraint}, time: {round(t2 - t1, 4)}, optimized - expected: {optValue2 - optValue3}, dlen {len(optValues3)-len(optValues2)} , iter: {iterRez}, dIter: {fullIterRez - iterRez}, dt {tFull - tLimitsOn}")
@@ -3540,7 +4372,7 @@ if runTests:
         doUseLimits = prevDoUseLimits
         printPct = prevPrintPct
 
-    if False: # NP complete: N equal-subset-sum tests.
+    if True: # NP complete: N equal-subset-sum tests.
 
         if verbose:
             print("N equal-subset-sum integer tests.")
@@ -3601,17 +4433,14 @@ if runTests:
 
                 case += 1
 
-                if case != 10:
-                    continue
-
                 O[0] = 0
 
                 if verbose:        
-                    print("case " + str(case), end="")
+                    print(f"case {case}", end=" ")
 
                 t1 = time.perf_counter()
 
-                partResult, reminder, optCount = partitionN(list(A), NU, 0, O)
+                partResult, reminder, optCount = partitionN(A, NU, 0, O)
 
                 tt = round(time.perf_counter() - t1, 4)
 
@@ -3620,18 +4449,17 @@ if runTests:
                 if len(reminder) != 0 or len(partResult) != NU:
 
                     if verbose:        
-                        print("case " + str(case))
-                        print("A " + str(A))
-                        print("part result " + str(partResult))
-                        print("part reminder  " + str(reminder))
-                        print("optCount  " + str(optCount))
-                        print("len " + str(len(A)))
-                        print("sum " + str(sum(A)))
-                        print("sum // NU" + str(sum(A) // NU))
-                        print("iter " + str(O[0]))
+                        print(f"case {case}")
+                        print(f"items {A}")
+                        print(f"part result {partResult}")
+                        print(f"part reminder  {reminder}")
+                        print(f"optCount {optCount}")
+                        print(f"len {len(A)}")
+                        print(f"sum {sum(A)}")
+                        print(f"iter {O[0]}")
 
                     assert False
-        
+       
         random.seed(dtNow)
 
         if verbose:
@@ -3645,7 +4473,7 @@ if runTests:
 
             if verbose:
                 print(f"random seed is {newSeed}")
-    
+   
             case = 0
 
             for A, NU in tests:
@@ -3657,30 +4485,35 @@ if runTests:
                 O[0] = 0
 
                 if verbose:        
-                    print("case " + str(case))
+                    print(f"case {case}", end=" ")
 
                 decA = list(A)
 
                 DecimalArray(decA)
 
+                t1 = time.perf_counter()
+
                 partResult, reminder, optCount = partitionN(decA, NU, 0, O)
+
+                tt = round(time.perf_counter() - t1, 4)
+
+                print(f" time {tt}")
 
                 if len(reminder) != 0 or len(partResult) != NU:
 
                     if verbose:        
-                        print("case " + str(case))
-                        print("A " + str(decA))
-                        print("part result " + str(partResult))
-                        print("part reminder  " + str(reminder))
-                        print("optCount  " + str(optCount))
-                        print("len " + str(len(decA)))
-                        print("sum " + str(sum(decA)))
-                        print("sum / NU" + str(sum(decA) / NU))
-                        print("iter " + str(O[0]))
+                        print(f"case {case}")
+                        print(f"items {A}")
+                        print(f"part result {partResult}")
+                        print(f"part reminder  {reminder}")
+                        print(f"optCount {optCount}")
+                        print(f"len {len(A)}")
+                        print(f"sum {sum(A)}")
+                        print(f"iter {O[0]}")
 
                     assert False
 
-    if False : # NP complete: Multiple knapsack sizes integer tests.
+    if True : # NP complete: Multiple knapsack sizes integer tests.
 
         if verbose:
             print("Multiple knapsack sizes integer tests.")
@@ -3740,18 +4573,53 @@ if runTests:
             if verbose:
                 print(f"random seed is {newSeed}")
 
-            partResult, reminder, optCount = partitionN(list(singleTest), list(singleTestSizes), 0, O)
+            t1 = time.perf_counter()
+
+            partResult, reminder, optCount = partitionN(singleTest, singleTestSizes, 0, O)
+
+            tt = round(time.perf_counter() - t1, 4)
+
+            pIter = O[0]
+
+            O[0] = 0
 
             if len(reminder) != 0:
 
                 if verbose:        
-                    print("A " + str(singleTest))
-                    print("part result " + str(partResult))
-                    print("part reminder  " + str(reminder))
-                    print("optCount  " + str(optCount))
-                    print("len " + str(len(singleTest)))
-                    print("sum " + str(sum(singleTest)))
-                    print("iter " + str(O[0]))
+                    print(f"case {case}")
+                    print(f"items {A}")
+                    print(f"part result {partResult}")
+                    print(f"part reminder  {reminder}")
+                    print(f"optCount {optCount}")
+                    print(f"len {len(A)}")
+                    print(f"sum {sum(A)}")
+                    print(f"iter {pIter}")
+
+                assert False
+           
+            t1 = time.perf_counter()
+
+            partResultH, reminderH, optCountH = hybridPartitionN(singleTest, singleTestSizes, 0, O)
+
+            htt = round(time.perf_counter() - t1, 4)
+
+            hIter = O[0]
+
+            print(f" time {tt}, hybrid {htt}, pIter = {pIter} hIter = {hIter}")
+           
+            if len(reminderH) != 0:
+
+                if verbose:       
+                    print(f"case {case}")
+                    print(f"items {A}")
+                    print(f"part result {partResult}")
+                    print(f"part reminder  {reminder}")
+                    print(f"optCount {optCount}")
+                    print(f"len {len(A)}")
+                    print(f"sum {sum(A)}")
+                    print(f"iter {hIter}") 
+
+                assert False
 
         random.seed(dtNow)
 
@@ -3764,8 +4632,7 @@ if runTests:
                     rez.append(tn)
             rez.sort()
             return rez
-        
-    
+       
         if verbose:
             print("3-partition problem for integer numbers tests.")
 
@@ -3774,12 +4641,12 @@ if runTests:
         tests = []
         # https://en.wikipedia.org/wiki/3-partition_problem
         AT, NU =  [(20, 25, 45), (23, 27, 40), (49, 22, 19), (30, 30, 30)], 4
-        tests.append((unionTuples(AT), NU))   
-        AT, NU = [(1, 5, 9), (2, 6, 7)], 2   
+        tests.append((unionTuples(AT), NU))  
+        AT, NU = [(1, 5, 9), (2, 6, 7)], 2  
         tests.append((unionTuples(AT), NU))  
         # http://www.columbia.edu/~cs2035/courses/ieor4405.S17/npc-sched.pdf
-        A, NU = [26, 26, 27, 28, 29, 29, 31, 33, 39, 40, 45, 47], 4 
-        tests.append((A, NU))   
+        A, NU = [26, 26, 27, 28, 29, 29, 31, 33, 39, 40, 45, 47], 4
+        tests.append((A, NU))  
         AT, NU = [(1, 1, 1), (1, 1, 1), (1, 1, 1), (1, 1, 1), (1, 1, 1)], 5
         tests.append((unionTuples(AT), NU))  
         AT, NU = [(1, 1, 1), (1, 1, 1), (1, 1, 1), (1, 1, 1), (1, 1, 1), (1, 1, 1), (1, 1, 1), (1, 1, 1), (1, 1, 1), (1, 1, 1), (1, 1, 1), (1, 1, 1)], 12
@@ -3812,25 +4679,56 @@ if runTests:
                 O[0] = 0
 
                 if verbose:        
-                    print("case " + str(case))
+                    print(f"case {case}", end=" ")
 
-                partResult, reminder, optCount = partitionN(list(A), NU, 3, O)
+                t1 = time.perf_counter()
+
+                partResult, reminder, optCount = partitionN(A, NU, 3, O)
+
+                tt = round(time.perf_counter() - t1, 4)
+
+                pIter = O[0]
+
+                O[0] = 0
+
+                t1 = time.perf_counter()
+
+                partResultH, reminderH, optCountH = hybridPartitionN(A, NU, 3, O)
+
+                htt = round(time.perf_counter() - t1, 4)
+
+                hIter = O[0]
+
+                print(f" time {tt}, hybrid {htt}, pIter = {pIter} hIter = {hIter}")
 
                 if len(reminder) != 0 or len(partResult) != NU:
 
-                    if verbose:        
-                        print("case " + str(case))
-                        print("A " + str(A))
-                        print("part result " + str(partResult))
-                        print("part reminder  " + str(reminder))
-                        print("optCount  " + str(optCount))
-                        print("len " + str(len(A)))
-                        print("sum " + str(sum(A)))
-                        print("sum // NU" + str(sum(A) // NU))
-                        print("iter " + str(O[0]))
+                    if verbose:                                
+                        print(f"case {case}")
+                        print(f"items {A}")
+                        print(f"part result {partResult}")
+                        print(f"part reminder  {reminder}")
+                        print(f"optCount {optCount}")
+                        print(f"len {len(A)}")
+                        print(f"sum {sum(A)}")
+                        print(f"iter {pIter}")       
+                   
+                    assert False
+               
+                if len(reminderH) != 0 or len(partResultH) != NU:
+
+                    if verbose:
+                        print(f"case {case} hybrid")
+                        print(f"items {A}")
+                        print(f"part result {partResult}")
+                        print(f"part reminder  {reminder}")
+                        print(f"optCount {optCount}")
+                        print(f"len {len(A)}")
+                        print(f"sum {sum(A)}")
+                        print(f"iter {hIter}")      
 
                     assert False
-        
+       
         random.seed(dtNow)
 
         if verbose:
@@ -3844,7 +4742,7 @@ if runTests:
 
             if verbose:
                 print(f"random seed is {newSeed}")
-    
+   
             case = 0
             for A, NU in tests:
 
@@ -3852,34 +4750,65 @@ if runTests:
 
                 O[0] = 0
 
+                if verbose:        
+                   print(f"case {case}", end=" ")
+               
                 if NU % 6 != 0:
                     continue
 
-                if verbose:        
-                    print("case " + str(case))
+                t1 = time.perf_counter()
 
-                partResult, reminder, optCount = partitionN(list(A), NU // 2, 6, O)
+                partResult, reminder, optCount = partitionN(A, NU // 2, 6, O)
+
+                tt = round(time.perf_counter() - t1, 4)
+
+                pIter = O[0]
+
+                O[0] = 0
+
+                t1 = time.perf_counter()
+
+                partResultH, reminderH, optCountH = hybridPartitionN(A,  NU // 2, 6, O)
+               
+                htt = round(time.perf_counter() - t1, 4)
+
+                hIter = O[0]
+
+                print(f" time {tt}, hybrid {htt}, pIter = {pIter} hIter = {hIter}")
 
                 if len(reminder) != 0 or len(partResult) != NU // 2:
 
-                    if verbose:        
-                        print("case " + str(case))
-                        print("A " + str(A))
-                        print("part result " + str(partResult))
-                        print("part reminder  " + str(reminder))
-                        print("optCount  " + str(optCount))
-                        print("len " + str(len(A)))
-                        print("sum " + str(sum(A)))
-                        print("sum // NU " + str(sum(A) // NU))
-                        print("iter " + str(O[0]))
+                    if verbose:
+                        print(f"case {case}")
+                        print(f"items {A}")
+                        print(f"part result {partResult}")
+                        print(f"part reminder  {reminder}")
+                        print(f"optCount {optCount}")
+                        print(f"len {len(A)}")
+                        print(f"sum {sum(A)}")
+                        print(f"iter {pIter}")      
 
                     assert False
-        
+               
+                if len(reminderH) != 0 or len(partResultH) != NU // 2:
+
+                    if verbose:  
+                        print(f"case {case} hybrid")
+                        print(f"items {A}")
+                        print(f"part result {partResult}")
+                        print(f"part reminder  {reminder}")
+                        print(f"optCount {optCount}")
+                        print(f"len {len(A)}")
+                        print(f"sum {sum(A)}")
+                        print(f"iter {hIter}")      
+
+                    assert False
+       
         random.seed(dtNow)
 
         if verbose:
             print("3-partition problem for rational numbers tests.")  
-        
+       
         for i in range(randomTestCount):
 
             newSeed = dtNow + datetime.timedelta(0,i)
@@ -3887,7 +4816,7 @@ if runTests:
             random.seed(newSeed)
 
             if verbose:
-                print(f"random seed is {newSeed}")
+                print(f"random seed is {newSeed}", end="")
 
             case = 0
             for A, NU in tests:
@@ -3897,36 +4826,65 @@ if runTests:
                 O[0] = 0
 
                 if verbose:        
-                    print("case " + str(case))
+                    print(f"case {case}", end=" ")
 
                 decA = list(A)
                 DecimalArray(decA)
 
+                t1 = time.perf_counter()
+
                 partResult, reminder, optCount = partitionN(decA, NU, 3, O)
+
+                tt = round(time.perf_counter() - t1, 4)
+
+                pIter = O[0]
+
+                t1 = time.perf_counter()
+
+                partResultH, reminderH, optCountH = hybridPartitionN(A,  NU , 3, O)
+               
+                htt = round(time.perf_counter() - t1, 4)
+
+                hIter = O[0]
+
+                print(f" time {tt}, hybrid {htt}, pIter = {pIter} hIter = {hIter}")
 
                 if len(reminder) != 0 or len(partResult) != NU:
 
                     if verbose:        
-                        print("case " + str(case))
-                        print("A " + str(decA))
-                        print("part result " + str(partResult))
-                        print("part reminder  " + str(reminder))
-                        print("optCount  " + str(optCount))
-                        print("len " + str(len(decA)))
-                        print("sum " + str(sum(decA)))
-                        print("sum / NU" + str(sum(decA) / NU))
-                        print("iter " + str(O[0]))
+                        print(f"case {case}")
+                        print(f"items {A}")
+                        print(f"part result {partResult}")
+                        print(f"part reminder  {reminder}")
+                        print(f"optCount {optCount}")
+                        print(f"len {len(A)}")
+                        print(f"sum {sum(A)}")
+                        print(f"iter {pIter}")   
 
                     assert False
-        
-    if False: # NP complete: 1-0 knapsack for Silvano Martello and Paolo Toth 1990 tests.
+               
+                if len(reminderH) != 0 or len(partResultH) != NU:
+
+                    if verbose:        
+                        print(f"case {case} hybrid")
+                        print(f"items {A}")
+                        print(f"part result {partResult}")
+                        print(f"part reminder  {reminder}")
+                        print(f"optCount {optCount}")
+                        print(f"len {len(A)}")
+                        print(f"sum {sum(A)}")
+                        print(f"iter {hIter}")    
+
+                    assert False
+       
+    if True: # NP complete: 1-0 knapsack for Silvano Martello and Paolo Toth 1990 tests.
         if verbose:
             print("1-0 knapsack solver for Silvano Martello and Paolo Toth 1990 tests.")
 
         def testSilvano(W, V, R, c):
             O = [0]
 
-            ws, vs = sortRevereseBoth(W, V)
+            ws, vs = sortReverseBoth(W, V)
 
             expectedSV = 0
             expectedSW = 0
@@ -3938,15 +4896,17 @@ if runTests:
                     expectedSW += W[ind]
                 ind += 1
 
-            opt1, _, __, ___ = knapsack(c, ws, vs, O)
-            opt2, _, __, ___ = knapsackNd(wPoint((c, c)), [wPoint((a, a)) for a in ws], vs, O)
-            optP, _, __, ___ = paretoKnapsack(c, ws, vs, O)
+            opt1, _, __, ___  = knapsack(c, ws, vs, O)
+            opt2, _, __, ___  = knapsackNd(wPoint((c, c)), [wPoint((a, a)) for a in ws], vs, O)
+            optP, _, __, ___  = paretoKnapsack(c, ws, vs, O)
+            optPH, _, __, ___ = hybridParetoKnapsack(c, ws, vs, O)
 
             assert (expectedSV == opt1)
             assert (opt1 == opt2)  
             assert (optP == opt1)  
-        
-        # page 42. Example 2.3 
+            assert (optPH == opt1)  
+       
+        # page 42. Example 2.3
 
         V = [50, 50, 64, 46, 50, 5]
         W = [56 ,59, 80, 64, 75, 17]
@@ -3955,7 +4915,7 @@ if runTests:
 
         testSilvano(W, V, R, c)
 
-        # page 47. Example 2.7 
+        # page 47. Example 2.7
 
         V = [70, 20, 39, 37, 7, 5, 10]
         W = [31 ,10, 20, 19, 4, 3, 6]
@@ -3964,7 +4924,7 @@ if runTests:
 
         testSilvano(W, V, R, c)
 
-    if False: # NP weak: Equal-subset-sum knapsack for hardinstances_pisinger subset sum test dataset.
+    if True: # NP weak: Equal-subset-sum knapsack for hardinstances_pisinger subset sum test dataset.
 
         if verbose:
             print("Run equal-subset-sum knapsack for hardinstances_pisinger subset sum test dataset.")
@@ -3974,9 +4934,9 @@ if runTests:
         O = [0]
 
         with open(script_dir + '\hardInst.subset.sum.all.perf.csv', 'w', newline='') as csvfile:
-            
-            fieldnames = ['file', 'case', 'size', 'N', 'iter desc', 'iter non', 'max iter expected', 'desc time', 'non time', 'best iter', 'best time', 'good']
-            
+           
+            fieldnames = ['file', 'case', 'size', 'N', 'iter desc', 'iter non', 'iter h pareto desc', 'max iter expected', 'desc time', 'non time', 'desc h pareto time', 'best iter', 'best time', 'good']
+           
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
             writer.writeheader()
@@ -3986,7 +4946,7 @@ if runTests:
             testKnapsack = 0
             rowToSkip = 0
 
-            files = ["knapPI_16_20_1000"]
+            files = ["knapPI_16_20_1000", "knapPI_16_50_1000"]
             #files = ["knapPI_16_20_1000", "knapPI_16_50_1000", "knapPI_16_100_1000", "knapPI_16_200_1000", "knapPI_16_500_1000"]
 
             fi = 0
@@ -3994,12 +4954,12 @@ if runTests:
             allGood = True
 
             for f in files:
-                
+               
                 fi += 1
 
                 caseNumber = 1
 
-                with open(os.path.join(script_dir, "hardinstances_pisinger/" + str(f) + ".csv")) as csvfile:
+                with open(os.path.join(script_dir, f"hardinstances_pisinger/{f}.csv")) as csvfile:
                     spamreader = csv.reader(csvfile, delimiter=',', quotechar='|')
 
                     for row in spamreader:
@@ -4048,21 +5008,20 @@ if runTests:
 
                             O[0] = 0
 
-                            rezS = sum(optItemsDesc) 
                             expS = sum(testExpected)
 
                             good = True
 
-                            if  rezS < expS or optDesc > testKnapsack:
+                            if  optDesc < expS or optDesc > testKnapsack:
                                 good = False
                                 allGood = False
                                 if verbose:
-                                    print(f"ERROR: equal-subset-sum: DESC rez opt: {optDesc}, test opt: {testKnapsack}, rez values: {rezS}, test values: {expS}", end=" ")
+                                    print(f"ERROR: equal-subset-sum: DESC rez opt: {optDesc}, test opt: {testKnapsack}, test values: {expS}", end=" ")
 
                             if rezIterDesc > maxIter:
                                 if verbose:
                                     print(f" DESC max iter exceeded: {maxIter} rez iter: {rezIterDesc}", end=" ")
-                            
+                           
                             nonSortTestCase = list(testCase)
 
                             random.shuffle(nonSortTestCase)
@@ -4077,31 +5036,56 @@ if runTests:
 
                             nonTime = (round(t6 - t5, 4), "non")
 
-                            rezSNon = sum(optItemstNonSort) 
-
                             rezIterNon = O[0]
 
-                            if  rezSNon < expS or optNonSort > testKnapsack:
+                            if  optNonSort < expS or optNonSort > testKnapsack:
                                 good = False
                                 allGood = False
                                 if verbose:
-                                    print(f"ERROR: equal-subset-sum: NON sort rez opt: {optNonSort}, test opt: {testKnapsack}, rez values: {rezSNon}, test values: {expS}", end=" ")
-                            
+                                    print(f"ERROR: equal-subset-sum: NON sort rez opt: {optNonSort}, test opt: {testKnapsack}, test values: {expS}", end=" ")
+                           
                             if rezIterNon > 2 * maxIter:
                                 if verbose:
                                     print(f"WARN: equal-subset-sum: NON sort  max iter exceeded: {2 * maxIter} rez iter: {rezIterNon}", end=" ")
 
-                            bestTime = min([descTime, nonTime], key=lambda t : t[0])[1]
+                            O[0] = 0
+
+                            if len(testCase) <= 200:
+
+                                t5 = time.perf_counter()
+
+                                optDescSortH, optItemstDescSortH = subsParetoKnapsack(testKnapsack, testCase, O)
+
+                                t6 = time.perf_counter()
+
+                                descHIter = O[0]
+
+                                if  optDescSortH < expS or optDescSortH > testKnapsack:
+                                    good = False
+                                    allGood = False
+                                    if verbose:
+                                        print(f"ERROR: equal-subset-sum: DESC sort hybrid pareto  rez opt: {optDescSortH}, test opt: {testKnapsack}, test values: {expS}", end=" ")
+                            
+                                if descHIter >  maxIter:
+                                    if verbose:
+                                        print(f"WARN: equal-subset-sum: DESC sort hybrid pareto  max iter exceeded: {2 * maxIter} rez iter: {descHIter}", end=" ")
+
+                                descHTime = (round(t6 - t5, 4), "desc h pareto")
+                            else:
+                                descHTime = ((100000), "desc h pareto")
+
+                            bestTime = min([descTime, nonTime, descHTime], key=lambda t : t[0])[1]
 
                             descIterItem = (rezIterDesc, "desc")    
                             nonIterItem  = (rezIterNon, "non")
+                            descHIterItem  = (descHIter, "desc h pareto")
 
-                            bestIter = min([descIterItem, nonIterItem], key=lambda t : t[0])[1]
+                            bestIter = min([descIterItem, nonIterItem, descHIterItem], key=lambda t : t[0])[1]
 
                             if verbose:
-                                print(f" DESC {descTime[0]} NON {nonTime[0]} DESC FULL {descTimeFull[0]}")
-            
-                            writer.writerow({'file': str(f), 'case': str(caseNumber), 'size': str(testKnapsack), 'iter desc':  str(rezIterDesc), 'iter non':  str(rezIterNon), 'max iter expected': str(maxIter), 'N': str(len(testCase)), 'desc time': str(descTime[0]),  'non time': str(nonTime[0]), 'best iter': bestIter, 'best time': bestTime, 'good': str(good)})
+                                print(f" DESC {descTime[0]} NON {nonTime[0]} DESC FULL {descTimeFull[0]} DESC H PARETO {descHTime[0]}")
+           
+                            writer.writerow({'file': str(f), 'case': str(caseNumber), 'size': str(testKnapsack), 'iter desc':  str(rezIterDesc), 'iter non':  str(rezIterNon), 'iter h pareto desc':  str(descHIter), 'max iter expected': str(maxIter), 'N': str(len(testCase)), 'desc time': str(descTime[0]),  'non time': str(nonTime[0]), 'desc h pareto time': str(descHTime[0]), 'best iter': bestIter, 'best time': bestTime, 'good': str(good)})
 
                             testCase.clear()
                             testExpected.clear()
@@ -4129,13 +5113,13 @@ if runTests:
                                 testExpected.append(int(row[1]))
                 assert allGood
 
-    if False: # NP complete: 1-0 knapsack for hardinstances_pisinger test dataset in case of integer and rational numbers.  
+    if True: # NP complete: 1-0 knapsack for hardinstances_pisinger test dataset in case of integer and rational numbers.  
 
         if verbose:
             print("Run 1-0 knapsack for hardinstances_pisinger test dataset in case of integer and rational numbers.")
 
         with open(script_dir + '\\hardInst.2d.perf.decimal.csv', 'w', newline='') as csvfile:
-            
+           
             fieldnames = ['file', 'case', 'size', 'iter desc', 'iter non', 'iter pareto', 'max iter expected', 'N', 'desc time', 'non time', 'pareto time', 'best iter', 'best time', 'good']
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
@@ -4147,7 +5131,7 @@ if runTests:
             testKnapsack = 0
             rowToSkip = 0
 
-            files = ["knapPI_11_20_1000"]
+            files = ["knapPI_11_20_1000", "knapPI_11_50_1000"]
             #files = ["knapPI_11_20_1000", "knapPI_11_50_1000", "knapPI_11_100_1000", "knapPI_11_200_1000"]
 
             allGood = True
@@ -4156,7 +5140,7 @@ if runTests:
 
                 caseNumber = 1
 
-                with open(os.path.join(script_dir, "hardinstances_pisinger/" + str(f) + ".csv")) as csvfile:
+                with open(os.path.join(script_dir, f"hardinstances_pisinger/{f}.csv")) as csvfile:
                     spamreader = csv.reader(csvfile, delimiter=',', quotechar='|')
 
                     for row in spamreader:
@@ -4169,7 +5153,7 @@ if runTests:
                             if verbose:
                                 print(f"{f} case {caseNumber}", end=" ")
 
-                            w, v = sortRevereseBoth(testCaseW, testCaseV)
+                            w, v = sortReverseBoth(testCaseW, testCaseV)
 
                             maxIter = 10 * (len(w) ** 3)
 
@@ -4212,7 +5196,7 @@ if runTests:
                             if rezIterDesc > maxIter:
                                 if verbose:
                                     print(f"WARN: 1-0: {caseNumber} max iter exceeded: {maxIter}  rez iter: {rezIterDesc}", end=" ")
-                        
+                       
                             O = [0]
 
                             t1 = time.perf_counter()
@@ -4235,7 +5219,7 @@ if runTests:
 
                             O = [0]
 
-                            if len(v) <= 500: 
+                            if len(v) <= 20:
 
                                 nonW, nonV = shuffleBoth(w, v)
                                 t1 = time.perf_counter()
@@ -4269,7 +5253,7 @@ if runTests:
                             t8 = time.perf_counter()
 
                             nonTime = (round(t8 - t7, 4), "non")
-                        
+                       
                             rezIterNon = O[0]
 
                             if optVal1Non < expS or opt1Non > testKnapsack:
@@ -4305,7 +5289,7 @@ if runTests:
                             nonIterItem  = (rezIterNon, "non")
                             paretoIterItem  = (rezIterPareto, "pareto")
 
-                            bestIter = min([descIterItem, nonIterItem, paretoIterItem], key=lambda t : t[0])[1] 
+                            bestIter = min([descIterItem, nonIterItem, paretoIterItem], key=lambda t : t[0])[1]
 
                             decimalW = list(w)
 
@@ -4327,7 +5311,7 @@ if runTests:
                             if optValDec != optValDesc1 or optDec > testKnapsackDecimal:
 
                                 good = False
-                                
+                               
                                 if verbose:
                                     print(f"{caseNumber}  decimal values: {optValDec}, sum decimal w: {optDec}, test size: {testKnapsack}, test decimal size: {testKnapsackDecimal}, test values: {expS}", end=" ")
 
@@ -4361,7 +5345,7 @@ if runTests:
 
             assert allGood
 
-    if False: # NP weak: N equal-subset-sum using integer partiton generator.
+    if True: # NP weak: N equal-subset-sum using integer partiton generator.
 
         def generate_partition(number, limitCount):
             answer = set()
@@ -4377,7 +5361,7 @@ if runTests:
             print("N equal-subset-sum using integer partiton generator.")
 
         with open(script_dir + '\\partition.perf.over.intpart.csv', 'w', newline='') as csvfile:
-            
+           
             fieldnames = ['item', 'case', 'limit', 'partition', 'N', 'optimizations', 'iter', 'max iter', 'good']
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
@@ -4447,7 +5431,7 @@ if runTests:
                                 rezSum += sum(sub.Items)
 
                             good = True
-                        
+                       
                             if resultPart < partition or rezSum != expectedSum or len(resultReminder) > 0:
 
                                 allGood = False
@@ -4470,7 +5454,7 @@ if runTests:
 
             assert allGood
 
-    if False: # NP hard: integer partition optimization tests. randomTestCount * 200
+    if True: # NP hard: integer partition optimization tests. randomTestCount * 200
 
         if verbose:
             print("NP hard partition optimization integer tests.")
@@ -4528,7 +5512,7 @@ if runTests:
 
                 for i in range(NU):
                     singleTestSizes.append(size)
-                
+               
                 lenT = len(testCase)
 
                 reminderItemCnt = random.randint(1, len(A))
@@ -4541,38 +5525,60 @@ if runTests:
 
                 t1 = time.perf_counter()
 
-                partResult, reminder, optCount = partitionN(list(testCase), singleTestSizes, 0, O, 1000)     
+                partResult, reminder, optCount = partitionN(testCase, singleTestSizes, 0, O, 1000)    
 
-                t2 = time.perf_counter()
+                tt = round(time.perf_counter() - t1, 4)
+
+                pIter = O[0]
+
+                O[0]=0
+
+                t1 = time.perf_counter()
+
+                partResultH, reminderH, optCountH = hybridPartitionN(testCase, singleTestSizes, 0, O, 1000)    
+
+                htt = round(time.perf_counter() - t1, 4)
+
+                hIter = O[0]
 
                 if verbose:  
-                    print(f" time {round(t2 - t1, 2)}, opt count {optCount}")
-
-                iterNum = O[0]
+                    print(f" time {tt}, hybrid time {htt}, opt count {optCount}, hybrid opt count {optCountH}, pIter={pIter}, hIter = {hIter}")
 
                 optD = NU - len(partResult)
 
                 if len(reminder) == 0 or optD > 0:
 
                     if verbose:        
-                        print("case " + str(case))
-                        print("A " + str(A))
-                        print("testCase " + str(testCase))
-                        print("part result " + str(partResult))
-                        print("part reminder  " + str(reminder))
-                        print("reminderItems  " + str(reminderItems))
-                        print("optCount  " + str(optCount))
-                        print("len " + str(len(testCase)))
-                        print("sum " + str(sum(testCase)))
-                        print("sum // NU" + str(sum(testCase) // NU))
-                        print("iter " + str(iterNum))
+                        print(f"case {case}")
+                        print(f"items {A}")
+                        print(f"part result {partResult}")
+                        print(f"part reminder  {reminder}")
+                        print(f"optCount {optCount}")
+                        print(f"len {len(A)}")
+                        print(f"sum {sum(A)}")
+                        print(f"iter {pIter}")      
 
                     assert False
 
-    if False: # NP hard: multidimensional  N=100
+                optDH = NU - len(partResultH)
+
+                if len(reminderH) == 0 or optDH > 0:
+
+                    if verbose:        
+                        print(f"case {case} hybrid")
+                        print(f"items {A}")
+                        print(f"part result {partResult}")
+                        print(f"part reminder  {reminder}")
+                        print(f"optCount {optCount}")
+                        print(f"len {len(A)}")
+                        print(f"sum {sum(A)}")
+                        print(f"iter {hIter}")   
+                    assert False
+
+    if True: # NP hard: multidimensional  N=100
         lConstraint = 20789
         wConstraint = 23681
-        greedyOptimumValue  = 121105212 
+        greedyOptimumValue  = 121105212
         actualOptima        = 121147356
         dimensionMultiplier = 10000
 
@@ -4602,7 +5608,7 @@ if runTests:
                     [566,894,506004    ], [564,1022,576408   ], [1254,2014,2525556 ], [2012,1254,2523048 ],
                     [1256,1298,1630288 ], [2350,2366,5560100 ], [2502,2502,6260004 ], [1296,2366,3066336 ]]
 
-    
+   
         values = [p[2] for p in lwData100]
         items = [wPoint((p[0] * dimensionMultiplier, p[1] * dimensionMultiplier)) for p in lwData100]
         constraints =  wPoint((lConstraint * dimensionMultiplier, wConstraint * dimensionMultiplier))
@@ -4614,36 +5620,40 @@ if runTests:
 
         t1 = time.perf_counter()
 
-        opt, optDims, optItems, optValues = hybridKnapsackNd(constraints, items, values, O)
+        solver = knapsackNSolver(constraints, items, values, O, wPoint([0] * constraints.getSize()), forceUseLimits=False)
+   
+        solver.forceUseDpSolver = False
+        solver.useParetoAsNGreedySolver = True
+        solver.printInfo = printPct
+        solver.printGreedyInfo = True
+        solver.printSuperIncreasingInfo = verbose
+        solver.doSolveSuperInc = doSolveSuperInc
+        solver.doUseLimits = doUseLimits
+        solver.useRatioSortForPareto = True
+
+        bestValue, bestSize, bestItems, bestValues = solver.solve()
+
+        opt, optDims, optItems, optValues = bestValue, bestSize, bestItems, bestValues
 
         if verbose:
             print(f"hybridKnapsackNd: total val: {opt} opt: {optDims}, testOpt: {greedyOptimumValue} iter: {round(O[0])}, time: {time.perf_counter() - t1}, items: {optItems}")
 
         assert opt >= greedyOptimumValue and optDims <= constraints
-
-        t1 = time.perf_counter()
-
-        opt, optDims, optItems, optValues = knapsackNd(constraints, items, values, O)
-
-        if verbose:
-            print(f"knapsackNd: total val: {opt} opt: {optDims}, testOpt: {greedyOptimumValue} iter: {round(O[0])}, time: {time.perf_counter() - t1}, items: {optItems}")
-
-        assert opt >= greedyOptimumValue and optDims <= constraints
-        
+       
     printPct = True
 
-    if False: # KB knapsacks and pareto reports for [1] * 50
-        
+    if True: # KB knapsacks and pareto reports for [1] * 50
+       
         if verbose:
             print("KB knapsacks and pareto reports for [1] * 50")
-        
+       
         numbers = [1] * 50
 
         if verbose:
             print(f"len {len(numbers)} sum {sum(numbers)}")
 
         if True:
-                
+               
             O = [0]
 
             prevO = 0
@@ -4672,7 +5682,7 @@ if runTests:
                 knapTime = time.perf_counter() - t1
 
                 o2 = round(O[0])
-                
+               
                 O[0] = 0
 
                 t1 = time.perf_counter()
@@ -4681,26 +5691,36 @@ if runTests:
 
                 paretoTime = time.perf_counter() - t1
 
-                o3 = round(O[0])
+                oP = round(O[0])
 
-                if opt1 != opt2 or opt2 != opt3:
-                    print(f"ERROR: {opt1} - {opt2} - {opt3}, size {s}")
+                O[0] = 0
+
+                t1 = time.perf_counter()
+
+                opt4, optDim4, optItems4, optVal4 = hybridParetoKnapsack(s, numbers, numbers, O)
+
+                paretoHTime = time.perf_counter() - t1
+
+                oH = round(O[0])
+
+                if opt1 != opt2 or opt2 != opt3 or opt1 != opt4:
+                    print(f"ERROR: {opt1} - {opt2} - {opt3} - {opt4}, size {s}")
                     assert False
 
                 prevO = o1
                 prevPareto = o2
 
-    if False: # KB knapsacks and pareto reports for ([1] * 25) + ([2] * 25)
+    if True: # KB knapsacks and pareto reports for ([1] * 25) + ([2] * 25)
         if verbose:
             print("KB knapsacks and pareto reports for ([1] * 25) + ([2] * 25)")
-        
+       
         numbers = ([1] * 25) + ([2] * 25)
 
         if verbose:
             print(f"len {len(numbers)} sum {sum(numbers)}")
 
         if True:
-                
+               
             O = [0]
 
             prevO = 0
@@ -4725,32 +5745,42 @@ if runTests:
                 knapTime = time.perf_counter() - t1
 
                 o2 = round(O[0])
-                
+               
                 O[0] = 0
 
                 opt3, optDim3, optItems3, optVal3 = paretoKnapsack(s, numbers, numbers, O)
 
                 o2 = round(O[0])
 
-                if opt != opt2 or opt != opt3:
-                    print(f"ERROR: {opt} - {opt2} - {opt3}, size {s}")
+                O[0] = 0
+
+                t1 = time.perf_counter()
+
+                opt4, optDim4, optItems4, optVal4 = hybridParetoKnapsack(s, numbers, numbers, O)
+
+                paretoHTime = time.perf_counter() - t1
+
+                oH = round(O[0])
+
+                if opt != opt2 or opt != opt3 or opt4 != opt:
+                    print(f"ERROR: {opt} - {opt2} - {opt3} - {opt4}, size {s}")
                     assert False
 
                 prevO = o1
                 prevPareto = o2
 
-    if False: # KB knapsacks and pareto reports for list(range(1, 51))
-    
+    if True: # KB knapsacks and pareto reports for list(range(1, 51))
+   
         if verbose:
             print("KB knapsacks and pareto reports for list(range(1, 51))")
-        
+       
         numbers = list(range(1, 51))
 
         if verbose:
             print(f"len {len(numbers)} sum {sum(numbers)}")
 
         if True:
-                
+               
             O = [0]
 
             prevO = 0
@@ -4777,27 +5807,37 @@ if runTests:
                 knapTime = time.perf_counter() - t1
 
                 o2 = round(O[0])
-                
+               
                 O[0] = 0
 
                 opt3, optDim3, optItems3, optVal3 = paretoKnapsack(s, numbers, numbers, O)
 
                 o3 = round(O[0])
 
-                if opt != opt2 or opt != opt3:
-                    print(f"ERROR: {opt} - {opt2} - {opt3}, size {s}")
+                O[0] = 0
+
+                t1 = time.perf_counter()
+
+                opt4, optDim4, optItems4, optVal4 = hybridParetoKnapsack(s, numbers, numbers, O)
+
+                paretoHTime = time.perf_counter() - t1
+
+                oH = round(O[0])
+
+                if opt != opt2 or opt != opt3 or opt4 != opt:
+                    print(f"ERROR: {opt} - {opt2} - {opt3} - {opt4}, size {s}")
                     assert False
 
                 prevO = o1
                 prevPareto = o2
 
-    if False: # KB knapsacks and pareto reports for random.sample(range(1, 1000), 50)
-        
+    if True: # KB knapsacks and pareto reports for random.sample(range(1, 1000), 50)
+       
         if verbose:
             print("KB knapsacks and pareto reports for random.sample(range(1, 1000), 50)")
 
         numbers = random.sample(range(1, 1000), 50)
-        numbers.sort(reverse=True)
+        numbers.sort(reverse=False)
 
         if verbose:
             print(f"len {len(numbers)} sum {sum(numbers)}")
@@ -4829,35 +5869,45 @@ if runTests:
                 knapTime = time.perf_counter() - t1
 
                 o2 = round(O[0])
-                
+               
                 O[0] = 0
 
                 opt3, optDim3, optItems3, optVal3 = paretoKnapsack(s, numbers, numbers, O)
 
                 o3 = round(O[0])
 
-                if opt != opt2 or (opt != opt3):
-                    print(f"ERROR: {opt} - {opt2} size {s}")
+                O[0] = 0
+
+                t1 = time.perf_counter()
+
+                opt4, optDim4, optItems4, optVal4 = hybridParetoKnapsack(s, numbers, numbers, O)
+
+                paretoHTime = time.perf_counter() - t1
+
+                oH = round(O[0])
+
+                if opt != opt2 or (opt != opt3) or opt4 != opt:
+                    print(f"ERROR: {opt} - {opt2} - {opt3} - {opt4}size {s}")
                     assert False
 
                 prevO = o1
                 prevPareto = o2
 
-    if False: # KB knapsacks and pareto reports for random.sample(range(1, 10000000000000000), 15)
-        
+    if True: # KB knapsacks and pareto reports for random.sample(range(1, 10000000000000000), 10)
+       
         if verbose:
-            print("KB knapsacks and pareto reports for random.sample(range(1, 10000000000000000), 15)")
-        
-        numbers = random.sample(range(1, 10000000000000000), 15)
-        numbers.sort(reverse=False)
-    
+            print("KB knapsacks and pareto reports for random.sample(range(1, 10000000000000000), 10)")
+       
+        numbers = random.sample(range(1, 10000000000000000), 10)
+        numbers.sort()
+   
         if verbose:
             print(f"len {len(numbers)} sum {sum(numbers)}")
 
         for i in range(10):
 
             newSeed = dtNow + datetime.timedelta(seconds=i)
-                
+               
             O = [0]
 
             prevO = 0
@@ -4884,34 +5934,44 @@ if runTests:
                 knapTime = time.perf_counter() - t1
 
                 o2 = round(O[0])
-                
+               
                 O[0] = 0
 
                 opt3, optDim3, optItems3, optVal3 = paretoKnapsack(s, numbers, numbers, O)
 
                 o3 = round(O[0])
 
-                if opt != opt2 or (opt != opt3):
-                    print(f"ERROR: {opt} - {opt2} - {opt3}, size {s}, numbers: {numbers}")
+                O[0] = 0
+
+                t1 = time.perf_counter()
+
+                opt4, optDim4, optItems4, optVal4 = hybridParetoKnapsack(s, numbers, numbers, O)
+
+                paretoHTime = time.perf_counter() - t1
+
+                oH = round(O[0])
+
+                if opt != opt2 or (opt != opt3) or opt4 != opt:
+                    print(f"ERROR: {opt} - {opt2} - {opt3} - {opt4}, size {s}, numbers: {numbers}")
                     assert False
 
                 prevO = o1
                 prevPareto = o2
 
-    if False: # KB knapsacks and pareto reports for geometric progression numbers = [10000] * 15; numbers[i] *= (int(numbers[i - 1] * 2) - 1)
-        
+    if True: # KB knapsacks and pareto reports for geometric progression numbers = [10000] * 10; numbers[i] *= (int(numbers[i - 1] * 2) - 1)
+       
         if verbose:
-            print("KB knapsacks and pareto reports for geometric progression numbers = [10000] * 15; numbers[i] *= (int(numbers[i - 1] * 2) - 1)")
+            print("KB knapsacks and pareto reports for geometric progression numbers = [10000] * 10; numbers[i] *= (int(numbers[i - 1] * 2) - 1)")
 
-        numbers = [10000] * 15
+        numbers = [10000] * 10
 
-        for i in range(1, 15):
+        for i in range(1, 10):
             numbers[i] = (int(numbers[i - 1] * 2) - 1)
 
         numbers.append(numbers[len(numbers) // 2])
 
-        numbers.sort(reverse=False)
-    
+        numbers.sort()
+   
         if verbose:
             print("len " + str(len(numbers)))
             print("sum " + str(sum(numbers)))        
@@ -4943,44 +6003,52 @@ if runTests:
                 knapTime = time.perf_counter() - t1
 
                 o2 = round(O[0])
-                
+               
                 O[0] = 0
 
                 opt3, optDim3, optItems3, optVal3 = paretoKnapsack(s, numbers, numbers, O)
 
                 o3 = round(O[0])
 
-                if opt1 != opt2 or opt1 != opt3:
-                    print(f"ERROR: {opt1} - {opt2} - {opt3}, size {s}")
+                O[0] = 0
+
+                t1 = time.perf_counter()
+
+                opt4, optDim4, optItems4, optVal4 = hybridParetoKnapsack(s, numbers, numbers, O)
+
+                paretoHTime = time.perf_counter() - t1
+
+                oH = round(O[0])
+
+                if opt1 != opt2 or opt1 != opt3 or opt4 != opt1:
+                    print(f"ERROR: {opt1} - {opt2} - {opt3} - {opt4}, size {s}")
                     assert False
 
                 prevO = o1
                 prevPareto = o2
 
-    if False: # KB knapsacks and pareto reports for geometric progression numbers = [1] * 15; numbers[i] *= (int(numbers[i - 1] * 2) - 1); values are random in [1..1000]
-        
+    if True: # KB knapsacks and pareto reports for geometric progression numbers = [1] * 10; numbers[i] *= (int(numbers[i - 1] * 2) - 1); values are random in [1..1000]
+       
         if verbose:
-            print("reports for geometric progression numbers = [1] * 15; numbers[i] *= (int(numbers[i - 1] * 2) - 1); values are random in [1..1000]")
+            print("reports for geometric progression numbers = [1] * 10; numbers[i] *= (int(numbers[i - 1] * 2) - 1); values are random in [1..1000]")
 
-        numbers = [1000] * 20
-        values = [1] * 20
+        numbers = [1000] * 10
+        values = [1] * 10
 
-        for i in range(1, 20):
+        for i in range(1, 10):
             numbers[i] = (int(numbers[i - 1] * 2) - 1)
             values[i] = random.randint(1, 1000)
-
-        numbers.reverse()
-    
+   
         if verbose:
-            print("len " + str(len(numbers)))
-            print("sum " + str(sum(numbers)))        
+            print(f"len {len(numbers)}")
+            print(f"sum {sum(numbers)}")        
 
         if True:
-                
+               
             O = [0]
 
             if True:
-                
+               
                 sumCases = [(sum(numbers) // 2) - 1, ((sum(numbers)//4) * 3 - 1), sum(numbers) - 1,]
 
                 for s in sumCases:
@@ -5005,39 +6073,46 @@ if runTests:
 
                     O[0] = 0
 
-                    if opt2 != opt3:
-                        print(f"ERROR: {opt2} - {opt3}, size {s}, numbers: {numbers}, values = {values}")
+                    t1 = time.perf_counter()
+
+                    opt4, optDim4, optItems4, optVal4 = hybridParetoKnapsack(s, numbers, values, O)
+
+                    paretoHTime = time.perf_counter() - t1
+
+                    oH = round(O[0])
+
+                    if opt2 != opt3 or opt4 != opt2:
+                        print(f"ERROR: {opt2} - {opt3} - {opt4}, size {s}, numbers: {numbers}, values = {values}")
                         assert False
 
-    if False: # Exponental: reports KB NU for geometric progression numbers and values, non equals case
+    if True: # Exponential: reports KB NU for geometric progression numbers and values, non equals case
 
         if verbose:
             print("reports KB NU for geometric progression numbers and values, non equals case")
 
-        numbers = [1000] * 15
-        values = [1000] * 15
+        numbers = [1000] * 10
+        values = [1000] * 10
 
-        for i in range(1, 15):
+        for i in range(1, 10):
             numbers[i] = (int(numbers[i - 1] * 2) - 1)
             values[i] = (int(numbers[i - 1] * 2) - 2)
 
         numbers.append(numbers[len(numbers) // 2])
         values.append(values[len(values) // 2])
 
-        numbers, values = sortRevereseBoth(numbers, values)
-    
+        numbers, values = sortReverseBoth(numbers, values, reverse=False)
+   
         if verbose:
-            print("len " + str(len(numbers)))
-            print("sum " + str(sum(numbers)))        
+            print(f"len {len(numbers)}")
+            print(f"sum {sum(numbers)}")        
 
         if True:
-                
+               
             O = [0]
 
             if True:
-                
+               
                 sumCases = [(sum(numbers) // 2) - 1, ((sum(numbers)//4) * 3 - 1), sum(numbers) - 1,]
-                #sumCases = [sum(numbers) - 1]
 
                 for s in sumCases:
 
@@ -5061,11 +6136,19 @@ if runTests:
 
                     O[0] = 0
 
-                    if opt2 != opt3:
+                    t1 = time.perf_counter()
+
+                    opt4, optDim4, optItems4, optVal4 = hybridParetoKnapsack(s, numbers, values, O)
+
+                    paretoHTime = time.perf_counter() - t1
+
+                    oH = round(O[0])
+
+                    if opt2 != opt3 or opt4 != opt2:
                         print(f"ERROR: {opt2} - {opt3}, size {s}, numbers: {numbers}, values = {values}")
                         assert False
 
-    if False: # KB knapsacks and pareto reports for 25 random numbers in range(9500, 10000), values are random in [1..1000]
+    if True: # KB knapsacks and pareto reports for 25 random numbers in range(9500, 10000), values are random in [1..1000]
    
         if verbose:
             print("KB knapsacks and pareto reports for 25 random numbers in range(9500, 10000), values are random in [1..1000]")
@@ -5075,8 +6158,8 @@ if runTests:
         values = random.sample(range(1, 100000), 25)
     
         if verbose:
-            print("len " + str(len(numbers)))
-            print("sum " + str(sum(numbers)))        
+            print(f"len {len(numbers)}")
+            print(f"sum {sum(numbers)}")        
 
         if True:
                 
@@ -5108,6 +6191,16 @@ if runTests:
 
                     o3 = round(O[0])
 
-                    if opt3 != opt2:
-                        print(f"ERROR: {opt3} - {opt2}, size {s}, numbers: {numbers}, values = {values}")
+                    O[0] = 0
+
+                    t1 = time.perf_counter()
+
+                    opt4, optDim4, optItems4, optVal4 = hybridParetoKnapsack(s, numbers, values, O)
+
+                    paretoHTime = time.perf_counter() - t1
+
+                    oH = round(O[0])
+
+                    if opt2 != opt3 or opt4 != opt2:
+                        print(f"ERROR: {opt2} - {opt3}, size {s}, numbers: {numbers}, values = {values}")
                         assert False
