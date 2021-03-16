@@ -1,0 +1,683 @@
+"""
+Copyright Feb 2021 Konstantin Briukhnov (kooltew at gmail.com) (@CostaBru). San-Francisco Bay Area.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
+to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
+and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+"""
+
+import math
+import sys
+from collections import deque
+
+
+class knapsackParetoSolver:
+
+    def __init__(self, dimensions, values, indexes, constraint, emptyPoint, emptyDimension, O):
+        self.dimensions = dimensions
+        self.values = values
+        self.indexes = indexes
+        self.constraint = constraint
+        self.emptyPoint = emptyPoint
+        self.emptyDimension = emptyDimension
+        self.forceUseLimits = False
+        self.forceUsePareto = True
+        self.O = O
+        self.totalPointCount = 0
+        self.skippedPointsBySize = 0
+        self.skippedPointsByMap = 0
+        self.skippedPointsByPareto = 0
+        self.skippedPointsByLimits = 0
+        self.skippedPointsBySize = 0
+        self.printInfo = False
+        self.printSuperIncreasingInfo = False
+        self.doSolveSuperInc = True
+        self.doUseLimits = True
+        self.canBackTraceWhenSizeReached = False  
+        self.useRatioSort = False    
+   
+    def createNewPoint(self, values, profit, id):
+        return self.emptyPoint.createNew(values.getDimensions(), profit, id)
+
+    def indexLargestLessThan(self,  items, item, lo, hi, O):  
+
+        ans = -1
+
+        while lo <= hi:
+            O[0] += 1
+            mid = (lo + hi) // 2
+
+            val = items[mid]
+       
+            if val.getProfit() > item:
+                hi = mid - 1
+                ans = mid;
+            else:
+                lo = mid + 1
+
+        return ans
+
+    def findLargerProfit(self, items, profitMax, O):
+        index = self.indexLargestLessThan(items, profitMax, 0, len(items) - 1, O)
+
+        if index >= 0 and items[index].getProfit() > profitMax:
+            return index
+        else:
+            return None
+   
+    def mergeDiscardingDominated(self, oldList, newList, O):
+
+        result = []
+        profitMax = -sys.maxsize
+
+        while True:
+
+            O[0] += 1
+
+            oldPointIndex = self.findLargerProfit(oldList, profitMax, O)
+            newPointIndex = self.findLargerProfit(newList, profitMax, O)
+
+            if oldPointIndex is None:
+
+                if newPointIndex is not None:
+
+                    for ind in range(newPointIndex, len(newList)):
+                        newPoint = newList[ind]
+                        result.append(newPoint)
+
+                        O[0] += 1
+
+                break
+
+            if newPointIndex is None:
+
+                if oldPointIndex is not None:
+
+                    for ind in range(oldPointIndex, len(oldList)):
+                        result.append(oldList[ind])
+                        O[0] += 1
+
+                break
+
+            oldPoint = oldList[oldPointIndex]
+            newPoint = newList[newPointIndex]
+
+            if oldPoint < newPoint or (oldPoint == newPoint and oldPoint.getProfit() > newPoint.getProfit()):
+                result.append(oldPoint)
+                profitMax = oldPoint.getProfit()              
+            else:
+                result.append(newPoint)
+                profitMax = newPoint.getProfit()
+               
+        return result
+
+    def sortByRatio(self, w, v, t, O):
+        if len(w) > 0:
+            sorted_pairs = sorted(zip(w, v, t), key=lambda t: (t[1] / t[0], t[1], t[0]))
+            tuples = zip(*sorted_pairs)
+            O[0] += len(w) * math.log2(len(w))
+            return [list(tuple) for tuple in  tuples]
+       
+        return w, v, t
+
+    def sortByDims(self, w, v, t, O):
+        if len(w) > 0:
+            sorted_pairs = sorted(zip(w, v, t), key=lambda t: (t[0], t[0] / t[1]))
+            tuples = zip(*sorted_pairs)
+            O[0] += len(w) * math.log2(len(w))
+            return [list(tuple) for tuple in  tuples]
+       
+        return w, v, t
+
+    def backTraceItems(self, maxProfitPoint, count, O):
+        if maxProfitPoint:
+
+            optSize = self.emptyDimension
+            optItems, optValues, optIndexes  = [], [], []
+
+            for id in maxProfitPoint.getItemIds():
+                optItems.append(self.dimensions[id])
+                optValues.append(self.values[id])
+                optIndexes.append(self.indexes[id])
+                optSize += self.dimensions[id]
+
+            O[0] += len(optItems)
+
+            if self.printInfo:
+                print(f"Skipped points by MAP: {self.skippedPointsByMap}, by LIMITS: {self.skippedPointsByLimits}; by SIZE: {self.skippedPointsBySize}; by PARETO: {self.skippedPointsByPareto}; Total points: {self.totalPointCount}; N={count};")
+
+            return maxProfitPoint.getProfit(), optSize, optItems, optValues, optIndexes
+        return 0, self.emptyPoint, [], [], []
+
+    def preProcess(self, constraints, items, values, forceUseLimits, O):
+       
+        count = len(items)
+        itemSum1, itemSum2, lessCountSum = self.emptyDimension, self.emptyDimension, self.emptyDimension
+        valuesSum1, valuesSum2, lessCountValuesSum = 0, 0, 0
+
+        lessSizeItems, lessSizeValues, lessSizeItemsIndex = [], [], []
+
+        partialSums1, superIncreasingItems1 = [], [False]
+        partialSums2, superIncreasingItems2 = [], [False]
+
+        isSuperIncreasing1, isSuperIncreasing2 = True, True
+        isSuperIncreasingValues1, isSuperIncreasingValues2 = True, True
+        allValuesEqual, allValuesEqualToConstraints = True, True
+        allDesc, allAsc, allDescValues, allAscValues = True, True, True, True
+
+        canUsePartialSums = False
+
+        lessCount = 0
+
+        if count > 0 :
+           
+            prevItem1 = items[-1]
+            prevValue1 = values[-1]
+
+            for i in range(0, count):
+
+                item2 = items[i]
+                itemValue2 = values[i]
+
+                iBack = count - i - 1
+
+                item1 = items[iBack]              
+                itemValue1 = values[iBack]              
+
+                superIncreasingItem1, superIncreasingItem2 = False, False
+
+                if  item1 <= constraints:
+
+                    if item1 < itemSum1:
+                        isSuperIncreasing1 = False
+                    else:
+                        superIncreasingItem1 = True
+
+                    if itemValue1 < valuesSum1:
+                        isSuperIncreasingValues1 = False
+                        superIncreasingItem1 = False
+               
+                if  item2 <= constraints:
+
+                    if item2 < itemSum2:
+                        isSuperIncreasing2 = False
+                    else:
+                        superIncreasingItem2 = True
+
+                    if itemValue2 < valuesSum2:
+                        isSuperIncreasingValues2 = False
+                        superIncreasingItem2 = False
+               
+                if allValuesEqual and prevValue1 != itemValue2:
+                    allValuesEqual = False
+               
+                if allValuesEqualToConstraints and not item2.firstDimensionEqual(itemValue2):
+                    allValuesEqualToConstraints = False
+
+                itemSum1 += item1
+                itemSum2 += item2
+
+                valuesSum1 += itemValue1
+                valuesSum2 += itemValue2
+
+                partialSums1.append(itemSum2)  
+                partialSums2.append(itemSum1)  
+
+                if allDesc:
+                    if not prevItem1 <= item1:
+                        allDesc = False
+               
+                if allAsc:
+                    if prevItem1 < item1:
+                        allAsc = False
+
+                if allDescValues:
+                    if not prevValue1 <= itemValue1:
+                        allDescValues = False
+               
+                if allAscValues:
+                    if prevValue1 < itemValue1:
+                        allAscValues = False
+
+                if i > 0:
+                    superIncreasingItems1.append(superIncreasingItem1)
+                    superIncreasingItems2.append(superIncreasingItem2)
+
+                if  item2 <= constraints:
+                    lessSizeItems.append(item2)                
+                    lessSizeValues.append(itemValue2)  
+                    lessSizeItemsIndex.append(i)
+                    lessCountValuesSum += itemValue2
+                    lessCountSum += item2
+                    lessCount += 1  
+
+                prevItem1 = item1
+                prevValue1 = itemValue1
+           
+            partialSums = []
+            superIncreasingItems = []
+            isSuperIncreasing = False
+            itemSum = itemSum2
+
+            canUsePartialSums = allValuesEqual or allValuesEqualToConstraints or (isSuperIncreasingValues1 and allDescValues) or (isSuperIncreasingValues2 and allAscValues)
+
+            if allAsc and canUsePartialSums:
+                partialSums = partialSums2
+                superIncreasingItems = superIncreasingItems2
+                isSuperIncreasing = isSuperIncreasing2
+                itemSum = itemSum2    
+
+            elif  (allDesc and canUsePartialSums) or forceUseLimits:
+                partialSums = partialSums1
+                superIncreasingItems = superIncreasingItems1
+                isSuperIncreasing = isSuperIncreasing1
+                itemSum = itemSum1
+
+                partialSums.reverse()
+                superIncreasingItems.reverse()           
+            else:
+                if allAsc and allAscValues:
+                    itemSum = itemSum2  
+                    partialSums = partialSums2
+                    partialSums.reverse()
+                    superIncreasingItems = superIncreasingItems2
+                    superIncreasingItems.reverse()
+                    canUsePartialSums = True
+                elif allDesc and allDescValues:
+                    itemSum = itemSum1
+                    partialSums = partialSums1
+                    partialSums.reverse()
+                    superIncreasingItems = superIncreasingItems1
+                    superIncreasingItems.reverse()
+                    canUsePartialSums = True
+                else:
+                    superIncreasingItems = []
+                    if not canUsePartialSums:
+                        partialSums = []
+                        canUsePartialSums = False
+                    else:
+                        partialSums = partialSums2
+                        partialSums.reverse()
+        else:
+            partialSums = []
+            superIncreasingItems = []
+            isSuperIncreasing = False
+            itemSum = itemSum2
+
+        constraints = constraints.adjustMin(itemSum)
+       
+        O[0] += count
+        return constraints, lessCount,  lessSizeItems, lessSizeValues, lessSizeItemsIndex, itemSum, lessCountSum, lessCountValuesSum, partialSums, isSuperIncreasing, superIncreasingItems, allAsc, allDesc, canUsePartialSums
+
+    def checkCornerCases(self, constraints, lessSizeItems, lessSizeValues, lessSizeItemsIndex, lessCountSum, itemSum, lessCountValuesSum):        
+
+        if  lessCountSum == self.emptyDimension:
+            return 0, self.emptyDimension, [], [], []
+       
+        if  lessCountSum <= constraints:
+            return lessCountValuesSum, lessCountSum, lessSizeItems, lessSizeValues, lessSizeItemsIndex
+
+        if  itemSum <= constraints:
+            return lessCountValuesSum, itemSum, lessSizeItems, lessSizeValues, lessSizeItemsIndex
+
+        return None      
+
+    def solveSuperIncreasing(self, size, items, values, itemsIndex, count, allAsc, O):
+
+        def indexLargestLessThanAsc(items, item, lo, hi, O):  
+
+            if item == self.emptyDimension:
+                return None  
+
+            while lo <= hi:
+                O[0] += 1
+                mid = (lo + hi) // 2
+
+                val = items[mid]
+
+                if item == val:
+                    return mid
+
+                if val < item:
+                    lo = mid + 1
+                else:
+                    hi = mid - 1                
+
+            if hi >= 0 and item >= items[hi]:
+                return hi
+            else:
+                return None
+
+        def indexLargestLessThanDesc(items, item, lo, hi, O):  
+
+            if item == self.emptyDimension:
+                return None  
+
+            cnt = len(items)
+
+            while lo <= hi:
+                O[0] += 1
+                mid = (lo + hi) // 2
+
+                val = items[mid]
+
+                if item == val:
+                    return mid
+
+                if val > item:
+                    lo = mid + 1
+                else:
+                    hi = mid - 1                
+
+            if lo < cnt and item >= items[lo]:
+                return lo
+            else:
+                return None
+
+        binSearch = indexLargestLessThanAsc if allAsc else indexLargestLessThanDesc
+ 
+        starting = 1
+        resultItems = []
+        resultValues = []
+        resultIndex = []
+        resultSum = 0
+        resultItemSum = self.emptyDimension
+        index = binSearch(items, size, starting - 1, count - 1, O)
+
+        while index is not None:
+            item = items[index]
+            value = values[index]
+            resultItems.append(item)
+            resultValues.append(value)
+            resultIndex.append(itemsIndex[index])
+            resultItemSum += item
+            resultSum += value
+            if allAsc:
+                index = binSearch(items, size - resultItemSum, starting - 1, index - 1, O)
+            else:
+                index = binSearch(items, size - resultItemSum, index + 1, count - 1, O)
+
+            O[0] += 1
+
+        if self.printSuperIncreasingInfo:
+            print(f"Superincreasing pareto solver called for size {size} and count {count}.  ASC={allAsc}")
+       
+        return resultSum, resultItemSum, resultItems, resultValues, resultIndex
+
+    def getLimits(self, constraints, i, items, partialSums, superIncreasingItems, canUsePartialSums):
+
+        if not self.doUseLimits or not canUsePartialSums:
+            return None, None, None, 0
+
+        skipCount = 2 ** (len(items) - (i + 1)) if self.printInfo else 0
+
+        partSumForItem = partialSums[i]
+        superIncreasingItem = superIncreasingItems[i] if len(superIncreasingItems) > 0 else None
+     
+        newPointLimit = constraints - partSumForItem if partSumForItem else None
+        oldPointLimit = newPointLimit
+     
+        if self.doSolveSuperInc and newPointLimit and superIncreasingItem:
+            oldPointLimit = newPointLimit + items[i]
+
+        return partSumForItem, oldPointLimit, newPointLimit, skipCount
+   
+    def iterateOrPushBack(self, circularPointQueue, newPoint,  greaterQu, distinctPoints2):
+       
+        if len(circularPointQueue) > 0:
+            peek = circularPointQueue[0]
+
+            if newPoint <= peek:
+                circularPointQueue.append(newPoint)
+                distinctPoints2.add(newPoint)              
+            else:
+
+                greaterQuPeek = greaterQu[0] if len(greaterQu) > 0 else None
+               
+                if greaterQuPeek and newPoint <= greaterQuPeek:
+                    greaterQu.insert(0, newPoint)
+                else:
+                    greaterQu.append(newPoint)
+        else:
+            circularPointQueue.append(newPoint)
+            distinctPoints2.add(newPoint)
+
+    def iterateLessThanOldPoint(self, oldPoint, circularPointQueue, canUseLimits, greaterQu, oldPointLimit, skipCount, distinctPoints2):
+
+        while len(greaterQu) > 0 and greaterQu[0] < oldPoint:
+
+            quPoint = greaterQu.popleft()          
+            distinctPoints2.add(quPoint)
+            circularPointQueue.append(quPoint)
+
+        if not canUseLimits or not oldPointLimit or not oldPoint < oldPointLimit:
+            self.iterateOrPushBack(circularPointQueue, oldPoint, greaterQu, distinctPoints2)
+        else:
+            self.skippedPointsByLimits += skipCount
+
+        return True
+
+    def iterateGreaterPoints(self, greaterQu, circularPointQueue, distinctPoints2):
+        while len(greaterQu) > 0:
+            quPoint = greaterQu.popleft()
+            circularPointQueue.append(quPoint)
+            distinctPoints2.add(quPoint)
+ 
+    def getItemIndex(self, count, i, allAsc):
+        return count - i if allAsc else i - 1
+
+    def iteratePoints(self, i,  itemDimensions, itemProfit, itemId, constraintPoint, maxProfitPoint, circularPointQueue, prevCyclePointCount, halfConstraint, itemLimit, oldPointLimit, newPointLimit, distinctPoints1,  distinctPoints2, skipCount, canUseLimits, O):
+       
+        # merges ordered visited points with new points with keeping order in O(N) using single circular queue.
+        # each getPoints method call starts fetching visited points from qu start, pops visited point and pushes new point and visited to the end of qu in ASC order.
+        # we skip new point if it in list already
+        # skips points if they will not contribute to optimal solution (in case of desc flow and (equal values or values equal to first dimension))
+        # also skips the same weight but less profit points
+
+        greaterQu = deque()
+
+        skipLimitCheck = not canUseLimits
+
+        itemPoint = self.createNewPoint(itemDimensions, itemProfit, itemId)
+
+        #useItemItself = skipLimitCheck or itemLimit >= halfConstraint
+        useItemItself = True
+
+        if useItemItself:
+
+            if not itemPoint in distinctPoints1:
+                self.iterateOrPushBack(circularPointQueue, itemPoint, greaterQu, distinctPoints2)
+
+                if maxProfitPoint.getProfit() <= itemPoint.getProfit():
+                    maxProfitPoint = itemPoint  
+            else:            
+                self.skippedPointsByMap += skipCount
+        else:
+            self.skippedPointsByLimits += skipCount
+
+        for pi in range(prevCyclePointCount):
+
+            oldPoint = circularPointQueue.popleft()    
+
+            if not self.iterateLessThanOldPoint(oldPoint, circularPointQueue, canUseLimits, greaterQu, oldPointLimit, skipCount, distinctPoints2):
+                continue
+
+            newPoint = oldPoint + itemPoint
+
+            if skipLimitCheck and (newPointLimit and  newPoint < newPointLimit):
+                self.skippedPointsByLimits += skipCount
+                continue
+
+            if  newPoint <= constraintPoint:
+
+                if not newPoint in distinctPoints1:  
+
+                    self.iterateOrPushBack(circularPointQueue, newPoint, greaterQu, distinctPoints2)
+
+                    if maxProfitPoint.getProfit() <= newPoint.getProfit():
+
+                        if maxProfitPoint < newPoint:
+                            maxProfitPoint = newPoint
+                else:
+                    self.skippedPointsByMap += skipCount
+            else:
+                self.skippedPointsBySize += skipCount
+
+        self.iterateGreaterPoints(greaterQu, circularPointQueue, distinctPoints2)
+
+        newPointCount = len(circularPointQueue)
+
+        O[0] += newPointCount + 1      
+
+        if self.printInfo:
+            self.totalPointCount += newPointCount
+            print(f"| {i - 1} | {newPointCount} | {round(O[0])} |")
+
+        return newPointCount, maxProfitPoint
+
+    def solveUsingLimitsOnly(self, constraint, lessSizeItems, lessSizeValues, lessSizeItemsIndex, allAsc, partialSums, superIncreasingItems, canUsePartialSums):
+
+        sortedItems, sortedValues, sortedIndexes = lessSizeItems, lessSizeValues, lessSizeItemsIndex
+   
+        distinctPoints1 = set()
+
+        i, itemsCount = 1, len(sortedItems)
+
+        maxProfitPoint = self.emptyPoint
+
+        circularPointQueue = deque()
+
+        prevPointCount, newPointCount = 0, 0
+
+        halfConstraint = constraint.divideBy(2)
+
+        for i in range(1, itemsCount + 1):
+
+            itemIndex = self.getItemIndex(itemsCount, i, allAsc)
+
+            itemDimensions, itemProfit, itemId = sortedItems[itemIndex ], sortedValues[itemIndex], sortedIndexes[itemIndex]
+
+            itemLimit, oldPointLimit, newPointLimit, skipCount = self.getLimits(constraint, itemIndex, sortedItems, partialSums, superIncreasingItems, canUsePartialSums)
+
+            newPointCount, maxProfitPoint = self.iteratePoints(i, itemDimensions, itemProfit, itemId, constraint, maxProfitPoint, circularPointQueue, prevPointCount, halfConstraint, itemLimit,  oldPointLimit, newPointLimit, distinctPoints1,  distinctPoints1, skipCount, canUsePartialSums, self.O)
+         
+            if self.canBackTraceWhenSizeReached and maxProfitPoint.isDimensionEquals(constraint):
+                return self.backTraceItems(maxProfitPoint, itemsCount, self.O)
+
+            prevPointCount = newPointCount        
+
+        return self.backTraceItems(maxProfitPoint, itemsCount, self.O)
+
+    def getNewPoints(self, i, maxProfitPoint, itemDimensions, itemProfit, itemId, oldPoints, constraint, prevDistinctPoints, newDistinctPoints, skipCount, O):
+
+        result = []
+
+        itemPoint = self.createNewPoint(itemDimensions, itemProfit, itemId)
+       
+        for oldPoint in oldPoints:
+
+            newPoint  = oldPoint + itemPoint
+
+            if newPoint <= constraint:
+
+                if newPoint not in prevDistinctPoints:
+                    newDistinctPoints.add(newPoint)
+                    result.append(newPoint)
+                else:
+                    self.skippedPointsByMap += skipCount
+                
+                if self.useRatioSort :
+
+                    if maxProfitPoint.getProfit() <= newPoint.getProfit() and maxProfitPoint < newPoint:
+                        maxProfitPoint = newPoint
+                else:
+                    if maxProfitPoint.getProfit() <= newPoint.getProfit():
+                        maxProfitPoint = newPoint
+
+            else:
+                self.skippedPointsBySize += skipCount
+
+        newPointCount = len(oldPoints)
+
+        O[0] += len(oldPoints) + 1      
+
+        if self.printInfo:
+            self.totalPointCount += newPointCount
+            print(f"| {i - 1} | {newPointCount} | {round(O[0])} |")
+
+        return result, maxProfitPoint
+
+    def solvePareto(self, constraint, sortedItems, sortedValues, sortedIndexes, O):
+
+        maxProfitPoint, emptyPoint = self.emptyPoint, self.emptyPoint
+
+        distinctPoints = set()
+
+        oldPoints = [emptyPoint]
+        newPoints = []      
+
+        itemsCount = len(sortedItems)
+
+        for i in range(1, itemsCount + 1):
+
+            skipCount = 2 ** (itemsCount - i)  if self.printInfo else 0
+
+            itemDimensions, itemProfit, itemId = sortedItems[i - 1], sortedValues[i - 1], sortedIndexes[i - 1]
+
+            newPoints, maxProfitPoint = self.getNewPoints(i, maxProfitPoint, itemDimensions, itemProfit, itemId, oldPoints, constraint, distinctPoints, distinctPoints, skipCount, O)
+         
+            # Point A is dominated by point B if B achieves a larger profit with the same or less weight than A.
+            paretoOptimal  = self.mergeDiscardingDominated(oldPoints, newPoints, O)
+
+            if self.canBackTraceWhenSizeReached and maxProfitPoint.isDimensionEquals(constraint):
+                return self.backTraceItems(maxProfitPoint, itemsCount, O)
+
+            oldPoints = paretoOptimal
+
+        return self.backTraceItems(maxProfitPoint, itemsCount, O)
+
+    def solve(self):
+
+        canTrySolveUsingDp = not self.forceUsePareto and (self.doUseLimits or self.doSolveSuperInc or self.forceUseLimits or self.canBackTraceWhenSizeReached)
+
+        canSolveUsingDp = False
+
+        if canTrySolveUsingDp:
+
+            constraint, count, lessSizeItems, lessSizeValues, lessSizeItemsIndex, itemSum, lessCountSum, lessCountValuesSum, partialSums, superIncreasing, superIncreasingItems, allAsc, allDesc, canUsePartialSums = self.preProcess(self.constraint, self.dimensions, self.values, self.forceUseLimits, self.O)
+
+            cornerCasesCheck = self.checkCornerCases(constraint, lessSizeItems, lessSizeValues, lessSizeItemsIndex, lessCountSum, itemSum, lessCountValuesSum)
+
+            if  cornerCasesCheck:
+                return cornerCasesCheck
+
+            if self.doSolveSuperInc and superIncreasing:
+                return self.solveSuperIncreasing(constraint, lessSizeItems, lessSizeValues, lessSizeItemsIndex, count, allAsc, self.O)
+
+            canSolveUsingDp = not self.forceUsePareto and (self.forceUseLimits or self.canBackTraceWhenSizeReached or canUsePartialSums)
+
+            if canSolveUsingDp:
+
+                if self.printInfo:
+                    print(f"KB pareto DP knapsack solver: N={count}; canUsePartialSums={canUsePartialSums}; forceUseLimits={self.forceUseLimits}")
+
+                return  self.solveUsingLimitsOnly(constraint, lessSizeItems, lessSizeValues, lessSizeItemsIndex, allAsc, partialSums, superIncreasingItems, canUsePartialSums)
+        else:
+            constraint, lessSizeItems, lessSizeValues, lessSizeItemsIndex = self.constraint, self.dimensions, self.values, self.indexes
+
+        if self.printInfo:
+            print(f"KB pareto knapsack solver: N={len(lessSizeItems)}; canTrySolveUsingDp={canTrySolveUsingDp}; canSolveUsingDp={canSolveUsingDp}")
+
+        sortingFunc = self.sortByRatio if self.useRatioSort else self.sortByDims
+
+        sortedItems, sortedValues, sortedIndexes = sortingFunc(lessSizeItems, lessSizeValues, lessSizeItemsIndex, self.O)
+
+        return self.solvePareto(constraint, sortedItems, sortedValues, sortedIndexes, self.O)
+       
