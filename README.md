@@ -32,9 +32,9 @@ The ``API/main.py`` file has API for described algorithms.
 
 The ``tests`` directory has tests, and performance report generators.  
 
-The ``Out`` folder is considered as output for tests an reports if ``flags/flags.py`` printToFile set to true.
+The ``Out`` folder is considered as output for tests and reports if ``flags/flags.py`` printToFile set to true.
 
-There are 7 python methods to use:
+There are 8 python methods to use:
 
 - ``partitionN``, which gets number set to partition, partitions number or list of particular sizes of each partition, strict partition group size.
 
