@@ -28,13 +28,20 @@ This work contains the source code of algorithms, performance analysis and repor
 
 # Implementations and usage
 
-The single ``knapsack.py`` script has all described algorithms, tests, and performance report generators. It is copy\paste friendly without 3d party dependencies. To run all knapsack tests, please, download test cases from [9], and copy those files to /hardinstances_pisinger directory. 
+The ``API/main.py`` file has API for described algorithms. 
+
+The ``tests`` directory has tests, and performance report generators.  
+
+The ``Out`` folder is considered as output for tests an reports if ``flags/flags.py`` printToFile set to true.
 
 There are 7 python methods to use:
 
 - ``partitionN``, which gets number set to partition, partitions number or list of particular sizes of each partition, strict partition group size.
 
-	The result is tuple of quotients, reminder, optimizationCount.
+- ``hybridPartitionN``, which gets number set to partition, partitions number or list of particular sizes of each partition, strict partition group size.
+
+	The result is tuple of quotients, reminder, optimizationCount. Hybrid partition uses KB-NU algorithm as grouping operator.
+  
 - ``subsKnapsack``, which used in partitionN as set grouping operator. It requires the following parameters: size of knapsack, items, iterator counter array.
 
 	The result is tuple of bestValue, bestItems.
@@ -44,7 +51,7 @@ There are 7 python methods to use:
 - ``knapsackNd``, expects the single tuple as size constrains of knapsack, items as tuples of dimensions, values, iterator counter array. It is used in partitionN method in the strict group size case.
 
 	The result is tuple of bestValue, bestSize, bestItems, bestValues.
-- ``paretoKnapsack`` is implementation of Nemhauser-Ullman algorithm. Gets size of knapsack, items, values, iterator counter array. It used in hybrid knapsack, and as greedy solver in knapsackNd.
+- ``paretoKnapsack`` is implementation of KB-Nemhauser-Ullman algorithm. Gets size of knapsack, items, values, iterator counter array. It used in hybrid knapsack, and as greedy solver in knapsackNd.
 
 	The result is tuple of bestValue, bestSize, bestItems, bestValues.	
 - ``hybridKnapsack`` is hybrid of KB and NU.
@@ -59,11 +66,11 @@ There are 7 python methods to use:
   
 	```python
 	
-	O = [0]
+	IC = [0]
 	
-	partN, A  = 3, list(reversed(list(range(1, (81 * 9) + 1))))
+	partN, A  = 3, list(range(1, (81 * 9) + 1))
 	 
-	quotients, reminder, optCount = partitionN(items = A, sizesOrPartitions = partN, groupSize = 0, O=O, optimizationLimit = -1)
+	quotients, reminder, optCount = partitionN(items = A, sizesOrPartitions = partN, groupSize = 0, iterCounter=IC, optimizationLimit = -1)
 
     assert len(reminder) == 0 and len(quotients) == partN
 
@@ -71,16 +78,16 @@ There are 7 python methods to use:
 
     expectedValue = Decimal("10.20000109")    
 
-    bestProfitD2, optDimD2, optItemsD2, optValuesD2 = knapsackNd(constraints = wPoint((s, s)), items = [wPoint((a, a)) for a in A], values = A, O=O)
+    bestProfitD2, optDimD2, optItemsD2, optValuesD2 = knapsackNd(constraints = wPoint((s, s)), items = [wPoint((a, a)) for a in A], values = A, iterCounter=IC)
     assert expectedValue == bestProfitD2
 
-    bestProfit10, optDim10, optItems10, optValues10 = knapsack(size = s, items = A, values = A, O=O)
+    bestProfit10, optDim10, optItems10, optValues10 = knapsack(size = s, items = A, values = A, iterCounter=IC)
     assert expectedValue == bestProfit10
 
-    bestProfitP, optDimP, optItemsP, optValuesP = paretoKnapsack(size = s, items = A, values = A, O=O)
+    bestProfitP, optDimP, optItemsP, optValuesP = paretoKnapsack(size = s, items = A, values = A, iterCounter=IC)
     assert expectedValue == bestProfitP
 
-    bestProfitS, optItemsS = subsKnapsack(size = s, items = A, O=O)   
+    bestProfitS, optItemsS = subsKnapsack(size = s, items = A, iterCounter=IC)   
     assert expectedValue == bestProfitS
 	
 	```
