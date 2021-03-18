@@ -46,60 +46,60 @@ class ReportsTests(unittest.TestCase):
 
         if True:
 
-            O = [0]
+            iterCounter = [0]
 
-            prevO = 0
+            prevIters = 0
             prevPareto = 0
 
             if True:
 
                 s = sum(numbers) - 1
 
-                O[0] = 0
+                iterCounter[0] = 0
 
                 t1 = time.perf_counter()
 
-                opt1, optItems1 = subsKnapsack(s, numbers, O, printPct=True)
+                opt1, optItems1 = subsKnapsack(s, numbers, iterCounter, printPct=True)
 
                 subsTime = time.perf_counter() - t1
 
-                o1 = round(O[0])
+                o1 = round(iterCounter[0])
 
-                O[0] = 0
+                iterCounter[0] = 0
 
                 t1 = time.perf_counter()
 
-                opt2, optDim2, optItems2, optVal2 = knapsack(s, numbers, numbers, O, printPct=True)
+                opt2, optDim2, optItems2, optVal2 = knapsack(s, numbers, numbers, iterCounter, printPct=True)
 
                 knapTime = time.perf_counter() - t1
 
-                o2 = round(O[0])
+                o2 = round(iterCounter[0])
 
-                O[0] = 0
+                iterCounter[0] = 0
 
                 t1 = time.perf_counter()
 
-                opt3, optDim3, optItems3, optVal3 = paretoKnapsack(s, numbers, numbers, O, printPct=True)
+                opt3, optDim3, optItems3, optVal3 = paretoKnapsack(s, numbers, numbers, iterCounter, printPct=True)
 
                 paretoTime = time.perf_counter() - t1
 
-                oP = round(O[0])
+                oP = round(iterCounter[0])
 
-                O[0] = 0
+                iterCounter[0] = 0
 
                 t1 = time.perf_counter()
 
-                opt4, optDim4, optItems4, optVal4 = hybridParetoKnapsack(s, numbers, numbers, O, printPct=True)
+                opt4, optDim4, optItems4, optVal4 = hybridParetoKnapsack(s, numbers, numbers, iterCounter, printPct=True)
 
                 paretoHTime = time.perf_counter() - t1
 
-                oH = round(O[0])
+                oH = round(iterCounter[0])
 
                 if opt1 != opt2 or opt2 != opt3 or opt1 != opt4:
                     print(f"ERROR: {opt1} - {opt2} - {opt3} - {opt4}, size {s}")
                     self.assertTrue(False)
 
-                prevO = o1
+                prevIters = o1
                 prevPareto = o2
 
     # KB knapsacks and pareto reports for ([1] * 25) + ([2] * 25)
@@ -115,52 +115,52 @@ class ReportsTests(unittest.TestCase):
 
         if True:
 
-            O = [0]
+            iterCounter = [0]
 
-            prevO = 0
+            prevIters = 0
             prevPareto = 0
 
             if True:
 
                 s = sum(numbers) - 1
 
-                O[0] = 0
+                iterCounter[0] = 0
 
-                opt, optItems1 = subsKnapsack(s, numbers, O, printPct=True)
+                opt, optItems1 = subsKnapsack(s, numbers, iterCounter, printPct=True)
 
-                o1 = round(O[0])
+                o1 = round(iterCounter[0])
 
-                O[0] = 0
+                iterCounter[0] = 0
 
                 t1 = time.perf_counter()
 
-                opt2, optDim2, optItems2, optVal3 = knapsack(s, numbers, numbers, O, printPct=True)
+                opt2, optDim2, optItems2, optVal3 = knapsack(s, numbers, numbers, iterCounter, printPct=True)
 
                 knapTime = time.perf_counter() - t1
 
-                o2 = round(O[0])
+                o2 = round(iterCounter[0])
 
-                O[0] = 0
+                iterCounter[0] = 0
 
-                opt3, optDim3, optItems3, optVal3 = paretoKnapsack(s, numbers, numbers, O, printPct=True)
+                opt3, optDim3, optItems3, optVal3 = paretoKnapsack(s, numbers, numbers, iterCounter, printPct=True)
 
-                o2 = round(O[0])
+                o2 = round(iterCounter[0])
 
-                O[0] = 0
+                iterCounter[0] = 0
 
                 t1 = time.perf_counter()
 
-                opt4, optDim4, optItems4, optVal4 = hybridParetoKnapsack(s, numbers, numbers, O, printPct=True)
+                opt4, optDim4, optItems4, optVal4 = hybridParetoKnapsack(s, numbers, numbers, iterCounter, printPct=True)
 
                 paretoHTime = time.perf_counter() - t1
 
-                oH = round(O[0])
+                oH = round(iterCounter[0])
 
                 if opt != opt2 or opt != opt3 or opt4 != opt:
                     print(f"ERROR: {opt} - {opt2} - {opt3} - {opt4}, size {s}")
                     self.assertTrue(False)
 
-                prevO = o1
+                prevIters = o1
                 prevPareto = o2
 
     # KB knapsacks and pareto reports for list(range(1, 51))
@@ -177,54 +177,54 @@ class ReportsTests(unittest.TestCase):
 
         if True:
 
-            O = [0]
+            iterCounter = [0]
 
-            prevO = 0
+            prevIters = 0
             prevPareto = 0
 
             if True:
 
                 s = sum(numbers) - 1
 
-                O[0] = 0
+                iterCounter[0] = 0
 
-                opt, optItems1 = subsKnapsack(s, numbers, O, printPct=True)
+                opt, optItems1 = subsKnapsack(s, numbers, iterCounter, printPct=True)
 
                 print(s)
 
-                o1 = round(O[0])
+                o1 = round(iterCounter[0])
 
-                O[0] = 0
+                iterCounter[0] = 0
 
                 t1 = time.perf_counter()
 
-                opt2, optDim2, optItems2, optVal3 = knapsack(s, numbers, numbers, O, printPct=True)
+                opt2, optDim2, optItems2, optVal3 = knapsack(s, numbers, numbers, iterCounter, printPct=True)
 
                 knapTime = time.perf_counter() - t1
 
-                o2 = round(O[0])
+                o2 = round(iterCounter[0])
 
-                O[0] = 0
+                iterCounter[0] = 0
 
-                opt3, optDim3, optItems3, optVal3 = paretoKnapsack(s, numbers, numbers, O, printPct=True)
+                opt3, optDim3, optItems3, optVal3 = paretoKnapsack(s, numbers, numbers, iterCounter, printPct=True)
 
-                o3 = round(O[0])
+                o3 = round(iterCounter[0])
 
-                O[0] = 0
+                iterCounter[0] = 0
 
                 t1 = time.perf_counter()
 
-                opt4, optDim4, optItems4, optVal4 = hybridParetoKnapsack(s, numbers, numbers, O, printPct=True)
+                opt4, optDim4, optItems4, optVal4 = hybridParetoKnapsack(s, numbers, numbers, iterCounter, printPct=True)
 
                 paretoHTime = time.perf_counter() - t1
 
-                oH = round(O[0])
+                oH = round(iterCounter[0])
 
                 if opt != opt2 or opt != opt3 or opt4 != opt:
                     print(f"ERROR: {opt} - {opt2} - {opt3} - {opt4}, size {s}")
                     self.assertTrue(False)
 
-                prevO = o1
+                prevIters = o1
                 prevPareto = o2
 
     # KB knapsacks and pareto reports for random.sample(range(1, 1000), 50)
@@ -241,54 +241,54 @@ class ReportsTests(unittest.TestCase):
             print(f"len {len(numbers)} sum {sum(numbers)}")
 
         if True:
-            O = [0]
+            iterCounter = [0]
 
-            prevO = 0
+            prevIters = 0
             prevPareto = 0
 
             if True:
 
                 s = sum(numbers) - 1
 
-                O[0] = 0
+                iterCounter[0] = 0
 
-                opt, optItems1 = subsKnapsack(s, numbers, O, printPct=True)
+                opt, optItems1 = subsKnapsack(s, numbers, iterCounter, printPct=True)
 
                 print(s)
 
-                o1 = round(O[0])
+                o1 = round(iterCounter[0])
 
-                O[0] = 0
+                iterCounter[0] = 0
 
                 t1 = time.perf_counter()
 
-                opt2, optDim2, optItems2, optVal3 = knapsack(s, numbers, numbers, O, printPct=True)
+                opt2, optDim2, optItems2, optVal3 = knapsack(s, numbers, numbers, iterCounter, printPct=True)
 
                 knapTime = time.perf_counter() - t1
 
-                o2 = round(O[0])
+                o2 = round(iterCounter[0])
 
-                O[0] = 0
+                iterCounter[0] = 0
 
-                opt3, optDim3, optItems3, optVal3 = paretoKnapsack(s, numbers, numbers, O, printPct=True)
+                opt3, optDim3, optItems3, optVal3 = paretoKnapsack(s, numbers, numbers, iterCounter, printPct=True)
 
-                o3 = round(O[0])
+                o3 = round(iterCounter[0])
 
-                O[0] = 0
+                iterCounter[0] = 0
 
                 t1 = time.perf_counter()
 
-                opt4, optDim4, optItems4, optVal4 = hybridParetoKnapsack(s, numbers, numbers, O, printPct=True)
+                opt4, optDim4, optItems4, optVal4 = hybridParetoKnapsack(s, numbers, numbers, iterCounter, printPct=True)
 
                 paretoHTime = time.perf_counter() - t1
 
-                oH = round(O[0])
+                oH = round(iterCounter[0])
 
                 if opt != opt2 or (opt != opt3) or opt4 != opt:
                     print(f"ERROR: {opt} - {opt2} - {opt3} - {opt4}size {s}")
                     self.assertTrue(False)
 
-                prevO = o1
+                prevIters = o1
                 prevPareto = o2
 
     # KB knapsacks and pareto reports for random.sample(range(1, 10000000000000000), 10)
@@ -308,54 +308,54 @@ class ReportsTests(unittest.TestCase):
 
             newSeed = dtNow + timedelta(seconds=i)
 
-            O = [0]
+            iterCounter = [0]
 
-            prevO = 0
+            prevIters = 0
             prevPareto = 0
 
             if True:
 
                 s = sum(numbers) - 1
 
-                O[0] = 0
+                iterCounter[0] = 0
 
-                opt, optItems1 = subsKnapsack(s, numbers, O, printPct=True)
+                opt, optItems1 = subsKnapsack(s, numbers, iterCounter, printPct=True)
 
                 print(s)
 
-                o1 = round(O[0])
+                o1 = round(iterCounter[0])
 
-                O[0] = 0
+                iterCounter[0] = 0
 
                 t1 = time.perf_counter()
 
-                opt2, optDim2, optItems2, optVal3 = knapsack(s, numbers, numbers, O, printPct=True)
+                opt2, optDim2, optItems2, optVal3 = knapsack(s, numbers, numbers, iterCounter, printPct=True)
 
                 knapTime = time.perf_counter() - t1
 
-                o2 = round(O[0])
+                o2 = round(iterCounter[0])
 
-                O[0] = 0
+                iterCounter[0] = 0
 
-                opt3, optDim3, optItems3, optVal3 = paretoKnapsack(s, numbers, numbers, O, printPct=True)
+                opt3, optDim3, optItems3, optVal3 = paretoKnapsack(s, numbers, numbers, iterCounter, printPct=True)
 
-                o3 = round(O[0])
+                o3 = round(iterCounter[0])
 
-                O[0] = 0
+                iterCounter[0] = 0
 
                 t1 = time.perf_counter()
 
-                opt4, optDim4, optItems4, optVal4 = hybridParetoKnapsack(s, numbers, numbers, O, printPct=True)
+                opt4, optDim4, optItems4, optVal4 = hybridParetoKnapsack(s, numbers, numbers, iterCounter, printPct=True)
 
                 paretoHTime = time.perf_counter() - t1
 
-                oH = round(O[0])
+                oH = round(iterCounter[0])
 
                 if opt != opt2 or (opt != opt3) or opt4 != opt:
                     print(f"ERROR: {opt} - {opt2} - {opt3} - {opt4}, size {s}, numbers: {numbers}")
                     self.assertTrue(False)
 
-                prevO = o1
+                prevIters = o1
                 prevPareto = o2
 
     # KB knapsacks and pareto reports for geometric progression numbers = [10000] * 10; numbers[i] *= (int(numbers[i - 1] * 2) - 1)
@@ -381,53 +381,53 @@ class ReportsTests(unittest.TestCase):
 
         if True:
 
-            O = [0]
+            iterCounter = [0]
 
-            prevO = 0
+            prevIters = 0
             prevPareto = 0
 
             if True:
                 s = sum(numbers) - 1
 
-                O[0] = 0
+                iterCounter[0] = 0
 
-                opt1, optItems1 = subsKnapsack(s, numbers, O, printPct=True)
+                opt1, optItems1 = subsKnapsack(s, numbers, iterCounter, printPct=True)
 
-                o1 = round(O[0])
+                o1 = round(iterCounter[0])
 
                 print(o1)
 
-                O[0] = 0
+                iterCounter[0] = 0
 
                 t1 = time.perf_counter()
 
-                opt2, optDim2, optItems2, optVal3 = knapsack(s, numbers, numbers, O, printPct=True)
+                opt2, optDim2, optItems2, optVal3 = knapsack(s, numbers, numbers, iterCounter, printPct=True)
 
                 knapTime = time.perf_counter() - t1
 
-                o2 = round(O[0])
+                o2 = round(iterCounter[0])
 
-                O[0] = 0
+                iterCounter[0] = 0
 
-                opt3, optDim3, optItems3, optVal3 = paretoKnapsack(s, numbers, numbers, O, printPct=True)
+                opt3, optDim3, optItems3, optVal3 = paretoKnapsack(s, numbers, numbers, iterCounter, printPct=True)
 
-                o3 = round(O[0])
+                o3 = round(iterCounter[0])
 
-                O[0] = 0
+                iterCounter[0] = 0
 
                 t1 = time.perf_counter()
 
-                opt4, optDim4, optItems4, optVal4 = hybridParetoKnapsack(s, numbers, numbers, O, printPct=True)
+                opt4, optDim4, optItems4, optVal4 = hybridParetoKnapsack(s, numbers, numbers, iterCounter, printPct=True)
 
                 paretoHTime = time.perf_counter() - t1
 
-                oH = round(O[0])
+                oH = round(iterCounter[0])
 
                 if opt1 != opt2 or opt1 != opt3 or opt4 != opt1:
                     print(f"ERROR: {opt1} - {opt2} - {opt3} - {opt4}, size {s}")
                     self.assertTrue(False)
 
-                prevO = o1
+                prevIters = o1
                 prevPareto = o2
 
     # KB knapsacks and pareto reports for geometric progression numbers = [1] * 10; numbers[i] *= (int(numbers[i - 1] * 2) - 1); values are random in [1..1000]
@@ -450,7 +450,7 @@ class ReportsTests(unittest.TestCase):
 
         if True:
 
-            O = [0]
+            iterCounter = [0]
 
             if True:
 
@@ -460,31 +460,31 @@ class ReportsTests(unittest.TestCase):
 
                     print(f"case size {s}")
 
-                    O[0] = 0
+                    iterCounter[0] = 0
 
-                    opt3, optDim3, optItems3, optVal3 = paretoKnapsack(s, numbers, values, O, printPct=True)
+                    opt3, optDim3, optItems3, optVal3 = paretoKnapsack(s, numbers, values, iterCounter, printPct=True)
 
-                    o3 = round(O[0])
+                    o3 = round(iterCounter[0])
 
-                    O[0] = 0
+                    iterCounter[0] = 0
 
                     t1 = time.perf_counter()
 
-                    opt2, optDim2, optItems2, optVal2 = knapsack(s, numbers, values, O, printPct=True)
+                    opt2, optDim2, optItems2, optVal2 = knapsack(s, numbers, values, iterCounter, printPct=True)
 
                     knapTime = time.perf_counter() - t1
 
-                    o2 = round(O[0])
+                    o2 = round(iterCounter[0])
 
-                    O[0] = 0
+                    iterCounter[0] = 0
 
                     t1 = time.perf_counter()
 
-                    opt4, optDim4, optItems4, optVal4 = hybridParetoKnapsack(s, numbers, values, O, printPct=True)
+                    opt4, optDim4, optItems4, optVal4 = hybridParetoKnapsack(s, numbers, values, iterCounter, printPct=True)
 
                     paretoHTime = time.perf_counter() - t1
 
-                    oH = round(O[0])
+                    oH = round(iterCounter[0])
 
                     if opt2 != opt3 or opt4 != opt2:
                         print(f"ERROR: {opt2} - {opt3} - {opt4}, size {s}, numbers: {numbers}, values = {values}")
@@ -515,7 +515,7 @@ class ReportsTests(unittest.TestCase):
 
         if True:
 
-            O = [0]
+            iterCounter = [0]
 
             if True:
 
@@ -525,31 +525,31 @@ class ReportsTests(unittest.TestCase):
 
                     print(f"case size {s}")
 
-                    O[0] = 0
+                    iterCounter[0] = 0
 
-                    opt3, optDim3, optItems3, optVal3 = paretoKnapsack(s, numbers, values, O, printPct=True)
+                    opt3, optDim3, optItems3, optVal3 = paretoKnapsack(s, numbers, values, iterCounter, printPct=True)
 
-                    o3 = round(O[0])
+                    o3 = round(iterCounter[0])
 
-                    O[0] = 0
+                    iterCounter[0] = 0
 
                     t1 = time.perf_counter()
 
-                    opt2, optDim2, optItems2, optVal2 = knapsack(s, numbers, values, O, printPct=True)
+                    opt2, optDim2, optItems2, optVal2 = knapsack(s, numbers, values, iterCounter, printPct=True)
 
                     knapTime = time.perf_counter() - t1
 
-                    o2 = round(O[0])
+                    o2 = round(iterCounter[0])
 
-                    O[0] = 0
+                    iterCounter[0] = 0
 
                     t1 = time.perf_counter()
 
-                    opt4, optDim4, optItems4, optVal4 = hybridParetoKnapsack(s, numbers, values, O, printPct=True)
+                    opt4, optDim4, optItems4, optVal4 = hybridParetoKnapsack(s, numbers, values, iterCounter, printPct=True)
 
                     paretoHTime = time.perf_counter() - t1
 
-                    oH = round(O[0])
+                    oH = round(iterCounter[0])
 
                     if opt2 != opt3 or opt4 != opt2:
                         print(f"ERROR: {opt2} - {opt3}, size {s}, numbers: {numbers}, values = {values}")
@@ -572,7 +572,7 @@ class ReportsTests(unittest.TestCase):
 
         if True:
 
-            O = [0]
+            iterCounter = [0]
 
             if True:
 
@@ -582,33 +582,33 @@ class ReportsTests(unittest.TestCase):
 
                     print(f"case size {s}")
 
-                    O[0] = 0
+                    iterCounter[0] = 0
 
                     t1 = time.perf_counter()
 
-                    opt2, optDim2, optItems2, optVal2 = knapsack(s, numbers, values, O, printPct=True)
+                    opt2, optDim2, optItems2, optVal2 = knapsack(s, numbers, values, iterCounter, printPct=True)
 
                     knapTime = time.perf_counter() - t1
 
-                    o2 = round(O[0])
+                    o2 = round(iterCounter[0])
 
                     optValSum2 = sum(optVal2)
 
-                    O[0] = 0
+                    iterCounter[0] = 0
 
-                    opt3, optDim3, optItems3, optVal3 = paretoKnapsack(s, numbers, values, O, printPct=True)
+                    opt3, optDim3, optItems3, optVal3 = paretoKnapsack(s, numbers, values, iterCounter, printPct=True)
 
-                    o3 = round(O[0])
+                    o3 = round(iterCounter[0])
 
-                    O[0] = 0
+                    iterCounter[0] = 0
 
                     t1 = time.perf_counter()
 
-                    opt4, optDim4, optItems4, optVal4 = hybridParetoKnapsack(s, numbers, values, O, printPct=True)
+                    opt4, optDim4, optItems4, optVal4 = hybridParetoKnapsack(s, numbers, values, iterCounter, printPct=True)
 
                     paretoHTime = time.perf_counter() - t1
 
-                    oH = round(O[0])
+                    oH = round(iterCounter[0])
 
                     if opt2 != opt3 or opt4 != opt2:
                         print(f"ERROR: {opt2} - {opt3}, size {s}, numbers: {numbers}, values = {values}")

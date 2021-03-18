@@ -49,7 +49,7 @@ class KnapsackTests(unittest.TestCase):
             print(
                 "Rational numbers tests for equal-subset-sum knapsack, 1-0 knapsack, and N dimension knapsacks, where N 2-4.")
 
-        O = [0]
+        iterCounter = [0]
 
         A = [Decimal("0.2"), Decimal("1.200001"), Decimal("2.9000001"), Decimal("3.30000009"), Decimal("4.3"),
              Decimal("5.5"), Decimal("6.6"), Decimal("7.7"), Decimal("8.8"), Decimal("9.8")]
@@ -59,29 +59,29 @@ class KnapsackTests(unittest.TestCase):
 
         expectedValue = Decimal("10.20000109")
 
-        opt, optDim, optItems, optValuesN4 = knapsackNd(wPoint((s, s, s, s)), [wPoint((a, a, a, a)) for a in A], A, O)
+        opt, optDim, optItems, optValuesN4 = knapsackNd(wPoint((s, s, s, s)), [wPoint((a, a, a, a)) for a in A], A, iterCounter)
         self.assertEqual(expectedValue, opt)
 
-        opt, optDim, optItems, optValuesN3 = knapsackNd(wPoint((s, s, s)), [wPoint((a, a, a)) for a in A], A, O)
+        opt, optDim, optItems, optValuesN3 = knapsackNd(wPoint((s, s, s)), [wPoint((a, a, a)) for a in A], A, iterCounter)
         self.assertEqual(expectedValue, opt)
 
-        opt, optDim, optItems, optValuesN2 = knapsackNd(wPoint((s, s)), [wPoint((a, a)) for a in A], A, O)
+        opt, optDim, optItems, optValuesN2 = knapsackNd(wPoint((s, s)), [wPoint((a, a)) for a in A], A, iterCounter)
         self.assertEqual(expectedValue, opt)
 
-        opt, optDim, optWeights, optValues2 = knapsack(s, A, A, O)
+        opt, optDim, optWeights, optValues2 = knapsack(s, A, A, iterCounter)
         self.assertEqual(expectedValue, opt)
 
-        opt, optDim, optWeights, optValuesP = paretoKnapsack(s, A, A, O)
+        opt, optDim, optWeights, optValuesP = paretoKnapsack(s, A, A, iterCounter)
         self.assertEqual(expectedValue, opt)
 
-        opt, optDim, optWeights, optValuesP = hybridParetoKnapsack(s, A, A, O)
+        opt, optDim, optWeights, optValuesP = hybridParetoKnapsack(s, A, A, iterCounter)
         self.assertEqual(expectedValue, opt)
 
-        opt, optValues1 = subsKnapsack(s, A, O)
+        opt, optValues1 = subsKnapsack(s, A, iterCounter)
         self.assertEqual(expectedValue, opt)
 
     # Polynominal: Superincreasing tests for equal-subset-sum knapsack, 1-0 knapsack, and N dimension knapsacks, where N = 2.
-     @unittest.skip("temp")
+    # @unittest.skip("temp")
     def test_2_superincreasing(self):
 
         from flags.flags import doSolveSuperInc
@@ -91,7 +91,7 @@ class KnapsackTests(unittest.TestCase):
 
         prevDoSolveSuperInc = doSolveSuperInc
 
-        O = [0]
+        iterCounter = [0]
         A = [1, 2, 5, 21, 69, 189, 376, 919]
 
         for i in range(1, 3):
@@ -106,28 +106,28 @@ class KnapsackTests(unittest.TestCase):
             for s in range(sum(A)):
                 doSolveSuperInc = False
 
-                opt1, expected = subsKnapsack(s, A, O)
+                opt1, expected = subsKnapsack(s, A, iterCounter)
 
                 doSolveSuperInc = True
 
-                O[0] = 0
-                opt2, optValues1 = subsKnapsack(s, A, O)
+                iterCounter[0] = 0
+                opt2, optValues1 = subsKnapsack(s, A, iterCounter)
 
                 self.assertTrue(listValuesEqual(optValues1, expected))
-                self.assertTrue(O[0] <= C * len(A) + nLogN)
+                self.assertTrue(iterCounter[0] <= C * len(A) + nLogN)
 
-                O[0] = 0
-                opt, optDim, optItems, optValues2 = knapsack(s, A, A, O)
+                iterCounter[0] = 0
+                opt, optDim, optItems, optValues2 = knapsack(s, A, A, iterCounter)
                 self.assertTrue(listValuesEqual(optValues2, expected))
-                self.assertTrue(O[0] <= C * len(A) + nLogN)
+                self.assertTrue(iterCounter[0] <= C * len(A) + nLogN)
 
-                O[0] = 0
-                opt, optDim, optItems3, optValues3 = knapsackNd(wPoint((s, s)), [wPoint((a, a)) for a in A], A, O)
+                iterCounter[0] = 0
+                opt, optDim, optItems3, optValues3 = knapsackNd(wPoint((s, s)), [wPoint((a, a)) for a in A], A, iterCounter)
                 self.assertTrue(listValuesEqual(optValues3, expected))
-                self.assertTrue(O[0] <= 100 * nLogN)
+                self.assertTrue(iterCounter[0] <= 100 * nLogN)
 
-                O[0] = 0
-                opt, optDim, optItems, optValuesP = paretoKnapsack(s, A, A, O)
+                iterCounter[0] = 0
+                opt, optDim, optItems, optValuesP = paretoKnapsack(s, A, A, iterCounter)
                 self.assertTrue(listValuesEqual(optValuesP, expected))
 
         doSolveSuperInc = prevDoSolveSuperInc
@@ -146,29 +146,29 @@ class KnapsackTests(unittest.TestCase):
 
             doSolveSuperInc = False
 
-            opt, expected = subsKnapsack(decS, decA, O)
+            opt, expected = subsKnapsack(decS, decA, iterCounter)
 
             doSolveSuperInc = True
 
-            opt, decOptValues1 = subsKnapsack(decS, decA, O)
+            opt, decOptValues1 = subsKnapsack(decS, decA, iterCounter)
 
-            O[0] = 0
+            iterCounter[0] = 0
             self.assertTrue(listValuesEqual(decOptValues1, expected))
-            self.assertTrue(O[0] <= 10 * nLogN)
+            self.assertTrue(iterCounter[0] <= 10 * nLogN)
 
-            O[0] = 0
-            opt, optDim, decOptItems, decOptValues2 = knapsack(decS, decA, decA, O)
+            iterCounter[0] = 0
+            opt, optDim, decOptItems, decOptValues2 = knapsack(decS, decA, decA, iterCounter)
             self.assertTrue(listValuesEqual(decOptValues2, expected))
-            self.assertTrue(O[0] <= 10 * len(A) + nLogN)
+            self.assertTrue(iterCounter[0] <= 10 * len(A) + nLogN)
 
-            O[0] = 0
+            iterCounter[0] = 0
             opt, optDim, decOptItems3, optValues3 = knapsackNd(wPoint((decS, decS)), [wPoint((da, da)) for da in decA],
-                                                               decA, O)
+                                                               decA, iterCounter)
             self.assertTrue(listValuesEqual(optValues3, expected))
-            self.assertTrue(O[0] <= 100 * nLogN)
+            self.assertTrue(iterCounter[0] <= 100 * nLogN)
 
-            O[0] = 0
-            opt, optDim, decOptItems, decOptValuesP = paretoKnapsack(decS, decA, decA, O)
+            iterCounter[0] = 0
+            opt, optDim, decOptItems, decOptValuesP = paretoKnapsack(decS, decA, decA, iterCounter)
             self.assertTrue(listValuesEqual(decOptValuesP, expected))
 
         doSolveSuperInc = prevDoSolveSuperInc
@@ -179,7 +179,7 @@ class KnapsackTests(unittest.TestCase):
         if verbose:
             print("Partial superincreasing numbers tests.")
 
-        O = [0]
+        iterCounter = [0]
         A = [1, 2, 5, 21, 69, 189, 376, 919, 5000]
 
         for attempt in range(1, 3):
@@ -204,28 +204,28 @@ class KnapsackTests(unittest.TestCase):
 
                     doSolveSuperInc = False
 
-                    optE, expected = subsKnapsack(s, testCase, O)
+                    optE, expected = subsKnapsack(s, testCase, iterCounter)
 
                     doSolveSuperInc = True
 
                     if verbose:
                         print(f"Partial superincreasing test: s = {s},  reverse = {revers}, index {i}")
 
-                    O[0] = 0
-                    opt1, optValues1 = subsKnapsack(s, testCase, O)
+                    iterCounter[0] = 0
+                    opt1, optValues1 = subsKnapsack(s, testCase, iterCounter)
                     self.assertTrue(listValuesEqual(optValues1, expected) or sum(expected) == opt1)
 
-                    O[0] = 0
-                    opt2, optDim, optItems, optValues2 = knapsack(s, testCase, testCase, O)
+                    iterCounter[0] = 0
+                    opt2, optDim, optItems, optValues2 = knapsack(s, testCase, testCase, iterCounter)
                     self.assertTrue(listValuesEqual(optValues2, expected) or sum(expected) == opt2)
 
-                    O[0] = 0
+                    iterCounter[0] = 0
                     opt3, optDim, optItems3, optValues3 = knapsackNd(wPoint((s, s)), [wPoint((a, a)) for a in testCase],
-                                                                     testCase, O)
+                                                                     testCase, iterCounter)
                     self.assertTrue(listValuesEqual(optValues3, expected) or sum(expected) == opt3)
 
-                    O[0] = 0
-                    opt4, optDim, optItems, optValues4 = paretoKnapsack(s, testCase, testCase, O)
+                    iterCounter[0] = 0
+                    opt4, optDim, optItems, optValues4 = paretoKnapsack(s, testCase, testCase, iterCounter)
                     self.assertTrue(listValuesEqual(optValues4, expected) or sum(expected) == opt4)
 
     # Polynominal: Partial geometric progression numbers tests.
@@ -237,7 +237,7 @@ class KnapsackTests(unittest.TestCase):
         if verbose:
             print("Partial geometric progression numbers tests.")
 
-        O = [0]
+        iterCounter = [0]
 
         prevDoSolveSuperInc = doSolveSuperInc
 
@@ -259,33 +259,33 @@ class KnapsackTests(unittest.TestCase):
             for s in range(step, sum(testCase), step):
                 doSolveSuperInc = False
 
-                optE, expected = subsKnapsack(s, testCase, O)
+                optE, expected = subsKnapsack(s, testCase, iterCounter)
 
                 doSolveSuperInc = True
 
                 t1 = time.perf_counter()
 
-                O[0] = 0
-                opt1, optValues1 = subsKnapsack(s, testCase, O)
+                iterCounter[0] = 0
+                opt1, optValues1 = subsKnapsack(s, testCase, iterCounter)
                 self.assertTrue(listValuesEqual(optValues1, expected))
 
                 t2 = time.perf_counter()
 
-                O[0] = 0
-                opt2, optDim, optItems, optValues2 = knapsack(s, testCase, testCase, O)
+                iterCounter[0] = 0
+                opt2, optDim, optItems, optValues2 = knapsack(s, testCase, testCase, iterCounter)
                 self.assertTrue(listValuesEqual(optValues2, expected))
 
                 t3 = time.perf_counter()
 
-                O[0] = 0
+                iterCounter[0] = 0
                 opt3, optDim, optItems3, optValues3 = knapsackNd(wPoint((s, s)), [wPoint((a, a)) for a in testCase],
-                                                                 testCase, O)
+                                                                 testCase, iterCounter)
                 self.assertTrue(listValuesEqual(optValues3, expected))
 
                 t4 = time.perf_counter()
 
-                O[0] = 0
-                opt2, optDim, optItems, optValuesP = paretoKnapsack(s, testCase, testCase, O)
+                iterCounter[0] = 0
+                opt2, optDim, optItems, optValuesP = paretoKnapsack(s, testCase, testCase, iterCounter)
                 self.assertTrue(listValuesEqual(optValuesP, expected))
 
                 t5 = time.perf_counter()
@@ -299,7 +299,7 @@ class KnapsackTests(unittest.TestCase):
     # @unittest.skip("temp")
     def test_5_knapsack_matching_with_dp2(self):
 
-        O = [0]
+        iterCounter = [0]
         O_dp = [0]
 
         testCaseW = [5, 3, 2, 5, 3, 4, 5, 6, 2, 5, 1, 3, 6, 8]
@@ -326,7 +326,7 @@ class KnapsackTests(unittest.TestCase):
 
                     constraints = wPoint((testKnapsackWeight, testKnapsackVolume))
 
-                    opt, optDim, optItems, optValues = knapsackNd(constraints, dims, s_values, O)
+                    opt, optDim, optItems, optValues = knapsackNd(constraints, dims, s_values, iterCounter)
 
                     resW = optDim.getDimension(0)
                     resVol = optDim.getDimension(1)
@@ -407,11 +407,11 @@ class KnapsackTests(unittest.TestCase):
         if verbose:
             print(f"Integer and Decimal mixed multidimensional knapsack problem (MKP) test. N {len(data)}")
 
-        O = [0]
+        iterCounter = [0]
 
         t1 = time.perf_counter()
 
-        optValue, optDim, optItems, optValues = knapsackNd(constr2d, descDims2d, descValues, O)
+        optValue, optDim, optItems, optValues = knapsackNd(constr2d, descDims2d, descValues, iterCounter)
 
         t2 = time.perf_counter()
 
@@ -420,7 +420,7 @@ class KnapsackTests(unittest.TestCase):
         good = optRez >= genExpectedValue and optDim <= constr2d
 
         iterMax = 2 ** (len(data))
-        iterRez = round(O[0])
+        iterRez = round(iterCounter[0])
 
         if verbose:
             print(
@@ -465,7 +465,7 @@ class KnapsackTests(unittest.TestCase):
 
         for i in range(1, 3):
 
-            O = [0]
+            iterCounter = [0]
 
             ascOrder = i % 2 == 1
 
@@ -483,24 +483,24 @@ class KnapsackTests(unittest.TestCase):
 
                     constr2d = wPoint((constaint1, constaint2))
 
-                    optValue2, optDims2, optItems2, optValues2 = knapsackNd(constr2d, testDescDims, testDescValues, O,
+                    optValue2, optDims2, optItems2, optValues2 = knapsackNd(constr2d, testDescDims, testDescValues, iterCounter,
                                                                             doUseLimits=False)
 
                     tFull = round(time.perf_counter() - t1, 4)
 
-                    fullIterRez = O[0]
+                    fullIterRez = iterCounter[0]
 
-                    O = [0]
+                    iterCounter = [0]
 
                     t1 = time.perf_counter()
 
-                    optValue3, optDims3, optItems3, optValues3 = knapsackNd(constr2d, testDims, testValues, O)
+                    optValue3, optDims3, optItems3, optValues3 = knapsackNd(constr2d, testDims, testValues, iterCounter)
 
                     tLimitsOn = round(time.perf_counter() - t1, 4)
 
                     t2 = time.perf_counter()
 
-                    iterRez = round(O[0])
+                    iterRez = round(iterCounter[0])
 
                     good = optValue3 == optValue2 and optDims3 <= constr2d and optDims2 <= constr2d
 
@@ -549,7 +549,7 @@ class KnapsackTests(unittest.TestCase):
 
         for i in range(1, 3):
 
-            O = [0]
+            iterCounter = [0]
 
             ascOrder = i % 2 == 0
 
@@ -573,25 +573,25 @@ class KnapsackTests(unittest.TestCase):
 
                     doUseLimits = False
 
-                    optValue2, optDim2, optItems2, optValues2 = knapsackNd(constr2d, testDescDims, testDescValues, O)
+                    optValue2, optDim2, optItems2, optValues2 = knapsackNd(constr2d, testDescDims, testDescValues, iterCounter)
 
                     tFull = round(time.perf_counter() - t1, 4)
 
-                    fullIterRez = O[0]
+                    fullIterRez = iterCounter[0]
 
-                    O = [0]
+                    iterCounter = [0]
 
                     doUseLimits = True
 
                     t1 = time.perf_counter()
 
-                    optValue3, optDim3, optItems3, optValues3 = knapsackNd(constr2d, testDims, testValues, O)
+                    optValue3, optDim3, optItems3, optValues3 = knapsackNd(constr2d, testDims, testValues, iterCounter)
 
                     tLimitsOn = round(time.perf_counter() - t1, 4)
 
                     t2 = time.perf_counter()
 
-                    iterRez = round(O[0])
+                    iterRez = round(iterCounter[0])
 
                     good = optValue2 == optValue3 and optDim3 <= constr2d
 
@@ -653,7 +653,7 @@ class KnapsackTests(unittest.TestCase):
 
         for i in range(1, 3):
 
-            O = [0]
+            iterCounter = [0]
 
             ascOrder = i % 2 == 1
 
@@ -669,31 +669,31 @@ class KnapsackTests(unittest.TestCase):
 
                 doUseLimits = False
 
-                optValue2, optDims2, optItems2, optValues2 = knapsack(constraint, testDescDims, testDescValues, O)
+                optValue2, optDims2, optItems2, optValues2 = knapsack(constraint, testDescDims, testDescValues, iterCounter)
 
                 tFull = round(time.perf_counter() - t1, 4)
 
-                fullIterRez = O[0]
+                fullIterRez = iterCounter[0]
 
-                O = [0]
+                iterCounter = [0]
 
                 doUseLimits = True
 
                 t1 = time.perf_counter()
 
-                optValue3, optDims3, optItems3, optValues3 = knapsack(constraint, testDims, testValues, O)
+                optValue3, optDims3, optItems3, optValues3 = knapsack(constraint, testDims, testValues, iterCounter)
 
                 tLimitsOn = round(time.perf_counter() - t1, 4)
 
                 t1 = time.perf_counter()
 
-                optValueP, optDimsP, optItemsP, optValuesP = paretoKnapsack(constraint, testDims, testValues, O)
+                optValueP, optDimsP, optItemsP, optValuesP = paretoKnapsack(constraint, testDims, testValues, iterCounter)
 
                 tLimitsOnP = round(time.perf_counter() - t1, 4)
 
                 t2 = time.perf_counter()
 
-                iterRez = round(O[0])
+                iterRez = round(iterCounter[0])
 
                 printPct = prevPrintPct
 
@@ -722,7 +722,7 @@ class KnapsackTests(unittest.TestCase):
         if verbose:
             print("3-partition problem for integer numbers tests.")
 
-        O = [0]
+        iterCounter = [0]
 
         tests = []
         # https://en.wikipedia.org/wiki/3-partition_problem
@@ -772,28 +772,28 @@ class KnapsackTests(unittest.TestCase):
 
                 case += 1
 
-                O[0] = 0
+                iterCounter[0] = 0
 
                 if verbose:
                     print(f"case {case}", end=" ")
 
                 t1 = time.perf_counter()
 
-                partResult, reminder, optCount = partitionN(A, NU, 3, O)
+                partResult, reminder, optCount = partitionN(A, NU, 3, iterCounter)
 
                 tt = round(time.perf_counter() - t1, 4)
 
-                pIter = O[0]
+                pIter = iterCounter[0]
 
-                O[0] = 0
+                iterCounter[0] = 0
 
                 t1 = time.perf_counter()
 
-                partResultH, reminderH, optCountH = hybridPartitionN(A, NU, 3, O)
+                partResultH, reminderH, optCountH = hybridPartitionN(A, NU, 3, iterCounter)
 
                 htt = round(time.perf_counter() - t1, 4)
 
-                hIter = O[0]
+                hIter = iterCounter[0]
 
                 print(f" time {tt}, hybrid {htt}, pIter = {pIter} hIter = {hIter}")
 
@@ -844,7 +844,7 @@ class KnapsackTests(unittest.TestCase):
 
                 case += 1
 
-                O[0] = 0
+                iterCounter[0] = 0
 
                 if verbose:
                     print(f"case {case}", end=" ")
@@ -854,21 +854,21 @@ class KnapsackTests(unittest.TestCase):
 
                 t1 = time.perf_counter()
 
-                partResult, reminder, optCount = partitionN(A, NU // 2, 6, O)
+                partResult, reminder, optCount = partitionN(A, NU // 2, 6, iterCounter)
 
                 tt = round(time.perf_counter() - t1, 4)
 
-                pIter = O[0]
+                pIter = iterCounter[0]
 
-                O[0] = 0
+                iterCounter[0] = 0
 
                 t1 = time.perf_counter()
 
-                partResultH, reminderH, optCountH = hybridPartitionN(A, NU // 2, 6, O)
+                partResultH, reminderH, optCountH = hybridPartitionN(A, NU // 2, 6, iterCounter)
 
                 htt = round(time.perf_counter() - t1, 4)
 
-                hIter = O[0]
+                hIter = iterCounter[0]
 
                 print(f" time {tt}, hybrid {htt}, pIter = {pIter} hIter = {hIter}")
 
@@ -919,7 +919,7 @@ class KnapsackTests(unittest.TestCase):
 
                 case += 1
 
-                O[0] = 0
+                iterCounter[0] = 0
 
                 if verbose:
                     print(f"case {case}", end=" ")
@@ -929,19 +929,19 @@ class KnapsackTests(unittest.TestCase):
 
                 t1 = time.perf_counter()
 
-                partResult, reminder, optCount = partitionN(decA, NU, 3, O)
+                partResult, reminder, optCount = partitionN(decA, NU, 3, iterCounter)
 
                 tt = round(time.perf_counter() - t1, 4)
 
-                pIter = O[0]
+                pIter = iterCounter[0]
 
                 t1 = time.perf_counter()
 
-                partResultH, reminderH, optCountH = hybridPartitionN(A, NU, 3, O)
+                partResultH, reminderH, optCountH = hybridPartitionN(A, NU, 3, iterCounter)
 
                 htt = round(time.perf_counter() - t1, 4)
 
-                hIter = O[0]
+                hIter = iterCounter[0]
 
                 print(f" time {tt}, hybrid {htt}, pIter = {pIter} hIter = {hIter}")
 
@@ -980,7 +980,7 @@ class KnapsackTests(unittest.TestCase):
             print("1-0 knapsack solver for Silvano Martello and Paolo Toth 1990 tests.")
 
         def testSilvano(W, V, R, c):
-            O = [0]
+            iterCounter = [0]
 
             ws, vs = sortReverseBoth(W, V)
 
@@ -994,10 +994,10 @@ class KnapsackTests(unittest.TestCase):
                     expectedSW += W[ind]
                 ind += 1
 
-            opt1, _, __, ___ = knapsack(c, ws, vs, O)
-            opt2, _, __, ___ = knapsackNd(wPoint((c, c)), [wPoint((a, a)) for a in ws], vs, O)
-            optP, _, __, ___ = paretoKnapsack(c, ws, vs, O)
-            optPH, _, __, ___ = hybridParetoKnapsack(c, ws, vs, O)
+            opt1, _, __, ___ = knapsack(c, ws, vs, iterCounter)
+            opt2, _, __, ___ = knapsackNd(wPoint((c, c)), [wPoint((a, a)) for a in ws], vs, iterCounter)
+            optP, _, __, ___ = paretoKnapsack(c, ws, vs, iterCounter)
+            optPH, _, __, ___ = hybridParetoKnapsack(c, ws, vs, iterCounter)
 
             self.assertEqual(expectedSV, opt1)
             self.assertEqual(opt1, opt2)
@@ -1028,7 +1028,7 @@ class KnapsackTests(unittest.TestCase):
         if verbose:
             print("Run equal-subset-sum knapsack for hardinstances_pisinger subset sum test dataset.")
 
-        O = [0]
+        iterCounter = [0]
 
         with open(os.path.join(f"{out_dir}", "hardInst.subset.sum.all.perf.csv"), 'w', newline='') as csvfile:
 
@@ -1070,7 +1070,7 @@ class KnapsackTests(unittest.TestCase):
 
                         if row[0] == "-----":
 
-                            O[0] = 0
+                            iterCounter[0] = 0
 
                             testCase.sort(reverse=True)
 
@@ -1081,7 +1081,7 @@ class KnapsackTests(unittest.TestCase):
 
                             t1 = time.perf_counter()
 
-                            optDesc, optItemsDesc = subsKnapsack(testKnapsack, testCase, O)
+                            optDesc, optItemsDesc = subsKnapsack(testKnapsack, testCase, iterCounter)
 
                             t2 = time.perf_counter()
 
@@ -1089,19 +1089,19 @@ class KnapsackTests(unittest.TestCase):
 
                             t1Full = time.perf_counter()
 
-                            rezIterDesc = O[0]
+                            rezIterDesc = iterCounter[0]
 
-                            O[0] = 0
+                            iterCounter[0] = 0
 
-                            optDescFull, optItemsDescFull = subsKnapsack(testKnapsack, testCase, O, doUseLimits=False)
+                            optDescFull, optItemsDescFull = subsKnapsack(testKnapsack, testCase, iterCounter, doUseLimits=False)
 
                             self.assertEqual(optDescFull, optDesc)
 
                             descTimeFull = (round(time.perf_counter() - t1Full, 4), "desc full")
 
-                            rezIterDescFull = O[0]
+                            rezIterDescFull = iterCounter[0]
 
-                            O[0] = 0
+                            iterCounter[0] = 0
 
                             expS = sum(testExpected)
 
@@ -1123,17 +1123,17 @@ class KnapsackTests(unittest.TestCase):
 
                             shuffle(nonSortTestCase)
 
-                            O[0] = 0
+                            iterCounter[0] = 0
 
                             t5 = time.perf_counter()
 
-                            optNonSort, optItemstNonSort = subsKnapsack(testKnapsack, nonSortTestCase, O)
+                            optNonSort, optItemstNonSort = subsKnapsack(testKnapsack, nonSortTestCase, iterCounter)
 
                             t6 = time.perf_counter()
 
                             nonTime = (round(t6 - t5, 4), "non")
 
-                            rezIterNon = O[0]
+                            rezIterNon = iterCounter[0]
 
                             if optNonSort < expS or optNonSort > testKnapsack:
                                 good = False
@@ -1149,17 +1149,17 @@ class KnapsackTests(unittest.TestCase):
                                         f"WARN: equal-subset-sum: NON sort  max iter exceeded: {2 * maxIter} rez iter: {rezIterNon}",
                                         end=" ")
 
-                            O[0] = 0
+                            iterCounter[0] = 0
 
                             if len(testCase) <= 200:
 
                                 t5 = time.perf_counter()
 
-                                optDescSortH, optItemstDescSortH = subsParetoKnapsack(testKnapsack, testCase, O)
+                                optDescSortH, optItemstDescSortH = subsParetoKnapsack(testKnapsack, testCase, iterCounter)
 
                                 t6 = time.perf_counter()
 
-                                descHIter = O[0]
+                                descHIter = iterCounter[0]
 
                                 if optDescSortH < expS or optDescSortH > testKnapsack:
                                     good = False
@@ -1274,17 +1274,17 @@ class KnapsackTests(unittest.TestCase):
 
                             expS = sum(testExpected)
 
-                            O = [0]
+                            iterCounter = [0]
 
                             t1 = time.perf_counter()
 
-                            optValDesc1, opt1Desc, optWeights1, optValues1 = knapsack(testKnapsack, w, v, O)
+                            optValDesc1, opt1Desc, optWeights1, optValues1 = knapsack(testKnapsack, w, v, iterCounter)
 
                             descTime = (round(time.perf_counter() - t1, 4), "desc")
 
-                            rezIterDesc = O[0]
+                            rezIterDesc = iterCounter[0]
 
-                            O = [0]
+                            iterCounter = [0]
 
                             good = True
 
@@ -1299,14 +1299,14 @@ class KnapsackTests(unittest.TestCase):
                             tFull1 = time.perf_counter()
 
                             opt1ValDescFull, opt1DescFull, optWeights1Full, optValues1Full = knapsack(testKnapsack, w,
-                                                                                                      v, O,
+                                                                                                      v, iterCounter,
                                                                                                       doUseLimits=False)
 
                             self.assertEqual(opt1ValDescFull, optValDesc1)
 
                             descTimeFull = (round(time.perf_counter() - tFull1, 4), "desc full")
 
-                            rezIterDesc = O[0]
+                            rezIterDesc = iterCounter[0]
 
                             if rezIterDesc > maxIter:
                                 if verbose:
@@ -1314,7 +1314,7 @@ class KnapsackTests(unittest.TestCase):
                                         f"WARN: 1-0: {caseNumber} max iter exceeded: {maxIter}  rez iter: {rezIterDesc}",
                                         end=" ")
 
-                            O = [0]
+                            iterCounter = [0]
 
                             t1 = time.perf_counter()
 
@@ -1322,11 +1322,11 @@ class KnapsackTests(unittest.TestCase):
 
                             opt2dValDesc, opt2dDesc, optWeights2dDesc, optValues2dDesc = knapsackNd(nTestKnapsack,
                                                                                                     [wPoint((a, a)) for
-                                                                                                     a in w], v, O)
+                                                                                                     a in w], v, iterCounter)
 
                             t2 = time.perf_counter()
 
-                            rezIter2DDesc = O[0]
+                            rezIter2DDesc = iterCounter[0]
 
                             desc2dTime = (round(t2 - t1, 4), "desc")
 
@@ -1338,7 +1338,7 @@ class KnapsackTests(unittest.TestCase):
                                         f"ERROR: 1-0: {caseNumber}  DESC 2D rez opt: {opt2dDesc}, test size: {testKnapsack}, rez values: {opt2dValDesc},  test values: {expS}",
                                         end=" ")
 
-                            O = [0]
+                            iterCounter = [0]
 
                             if len(v) <= 20:
 
@@ -1353,11 +1353,11 @@ class KnapsackTests(unittest.TestCase):
                                                                                                               for a in
                                                                                                               nonW],
                                                                                                           nonV,
-                                                                                                          O)
+                                                                                                          iterCounter)
 
                                 t2 = time.perf_counter()
 
-                                rezIter2Dnon = O[0]
+                                rezIter2Dnon = iterCounter[0]
 
                                 non2dTime = (round(t2 - t1, 4), "non")
 
@@ -1371,19 +1371,19 @@ class KnapsackTests(unittest.TestCase):
                             else:
                                 non2dTime = desc2dTime
 
-                            O = [0]
+                            iterCounter = [0]
 
                             t7 = time.perf_counter()
 
                             nonW, nonV = shuffleBoth(w, v)
 
-                            optVal1Non, opt1Non, optWeightsNon, optValuesNon = knapsack(testKnapsack, nonW, nonV, O)
+                            optVal1Non, opt1Non, optWeightsNon, optValuesNon = knapsack(testKnapsack, nonW, nonV, iterCounter)
 
                             t8 = time.perf_counter()
 
                             nonTime = (round(t8 - t7, 4), "non")
 
-                            rezIterNon = O[0]
+                            rezIterNon = iterCounter[0]
 
                             if optVal1Non < expS or opt1Non > testKnapsack:
                                 good = False
@@ -1393,11 +1393,11 @@ class KnapsackTests(unittest.TestCase):
                                         f"ERROR: 1-0: {caseNumber} NON rez opt: {opt1Non}, test size: {testKnapsack}, rez weights: {optVal1Non},  test values: {expS}",
                                         end=" ")
 
-                            O = [0]
+                            iterCounter = [0]
 
                             t8 = time.perf_counter()
 
-                            optValP, optP, optWeightsP, optValuesP = paretoKnapsack(testKnapsack, w, v, O)
+                            optValP, optP, optWeightsP, optValuesP = paretoKnapsack(testKnapsack, w, v, iterCounter)
 
                             t9 = time.perf_counter()
 
@@ -1407,7 +1407,7 @@ class KnapsackTests(unittest.TestCase):
                                 print(
                                     f" INT DESC {descTime[0]} NON {nonTime[0]} DESC 2D {desc2dTime[0]} NON 2D {non2dTime[0]} DESC FULL {descTimeFull[0]} PARETO {paretoTime[0]}")
 
-                            rezIterPareto = O[0]
+                            rezIterPareto = iterCounter[0]
 
                             if optValP < expS or optP > testKnapsack:
                                 good = False
@@ -1431,12 +1431,12 @@ class KnapsackTests(unittest.TestCase):
 
                             testKnapsackDecimal = DecimalData(testKnapsack)
 
-                            O = [0]
+                            iterCounter = [0]
 
                             t1 = time.perf_counter()
 
                             optValDec, optDec, optWeightsDec, optValuesDec = knapsack(testKnapsackDecimal, decimalW, v,
-                                                                                      O)
+                                                                                      iterCounter)
 
                             t2 = time.perf_counter()
 
@@ -1531,13 +1531,13 @@ class KnapsackTests(unittest.TestCase):
         if verbose:
             print(f"multidimensional N={len(values)} knapsack test")
 
-        O = [0]
+        iterCounter = [0]
 
         from flags.flags import printPct, doUseLimits, doSolveSuperInc
 
         t1 = time.perf_counter()
 
-        solver = knapsackNSolver(constraints, items, values, O, wPoint([0] * constraints.getSize()),
+        solver = knapsackNSolver(constraints, items, values, iterCounter, wPoint([0] * constraints.getSize()),
                                  forceUseLimits=False)
 
         solver.forceUseDpSolver = False
@@ -1555,6 +1555,6 @@ class KnapsackTests(unittest.TestCase):
 
         if verbose:
             print(
-                f"hybridKnapsackNd: total val: {opt} opt: {optDims}, testOpt: {greedyOptimumValue} iter: {round(O[0])}, time: {time.perf_counter() - t1}, items: {optItems}")
+                f"hybridKnapsackNd: total val: {opt} opt: {optDims}, testOpt: {greedyOptimumValue} iter: {round(iterCounter[0])}, time: {time.perf_counter() - t1}, items: {optItems}")
 
         self.assertTrue(opt >= greedyOptimumValue and optDims <= constraints)

@@ -17,7 +17,7 @@ TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR TH
 from collections import defaultdict
 
 
-def knapsack2d_dp(weightSize, volumeSize, weights, volumes, values, O):
+def knapsack2d_dp(weightSize, volumeSize, weights, volumes, values, iterCounter):
    
     table = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
 
@@ -31,13 +31,13 @@ def knapsack2d_dp(weightSize, volumeSize, weights, volumes, values, O):
         for j in range(weightSize + 1):
             for c in range(volumeSize + 1):
                 table[i + 1][j][c] = table[i][j][c]
-                O[0] += 1
+                iterCounter[0] += 1
             
 
         for j in range(thingConstraint1, weightSize + 1):
             for k in range(thingConstraint2, volumeSize + 1):
                 table[i + 1][j][k] = max(thingValue + table[i][j - thingConstraint1][k - thingConstraint2], table[i][j][k])
-                O[0] += 1
+                iterCounter[0] += 1
 
     w1 = table[len(weights)]
     v1 = w1[weightSize]

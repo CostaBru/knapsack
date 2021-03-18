@@ -23,10 +23,10 @@ from flags.flags import doUseLimits
 
 class subsetSumKnapsackSolver:
 
-    def __init__(self, size, items, O, forceUseLimits = False):
+    def __init__(self, size, items, iterCounter, forceUseLimits = False):
         self.size = size
         self.items = items
-        self.O = O
+        self.iterCounter = iterCounter
         self.forceUseLimits = forceUseLimits
         self.DP = None
         # inner stat
@@ -39,7 +39,7 @@ class subsetSumKnapsackSolver:
         self.doSolveSuperInc = True
         self.doUseLimits = True
 
-    def preProcess(self, size, items, forceUseLimits, O):
+    def preProcess(self, size, items, forceUseLimits, iterCounter):
        
         count = len(items)
         itemSum1, itemSum2, lessCountSum = 0, 0, 0
@@ -135,10 +135,10 @@ class subsetSumKnapsackSolver:
 
         size = min(itemSum, size)    
        
-        O[0] += count
+        iterCounter[0] += count
         return size, count, itemSum, lessCountSum, partialSums, starting, ending, isSuperIncreasing, superIncreasingItems, allAsc, allDesc
 
-    def checkCornerCases(self, size, items, sum, lessCountSum, O):        
+    def checkCornerCases(self, size, items, sum, lessCountSum, iterCounter):
 
         if  lessCountSum == 0:
             return [0,[]]
@@ -153,7 +153,7 @@ class subsetSumKnapsackSolver:
                 if itemWeight <= size:
                     lessCountItems.append(itemWeight)
 
-            O[0] += len(lessCountItems)
+            iterCounter[0] += len(lessCountItems)
 
             return [lessCountSum, lessCountItems]
 
@@ -162,7 +162,7 @@ class subsetSumKnapsackSolver:
 
         return None      
  
-    def yieldOrPushBack(self, circularPointQueue, newPoint, greaterQu, O):
+    def yieldOrPushBack(self, circularPointQueue, newPoint, greaterQu, iterCounter):
         if len(circularPointQueue) > 0:
                 peek = circularPointQueue[0]
 
@@ -171,7 +171,7 @@ class subsetSumKnapsackSolver:
                     circularPointQueue.append(newPoint)
                 else:
 
-                    O[0] += 1
+                    iterCounter[0] += 1
 
                     if len(greaterQu) > 0 and newPoint < greaterQu[0]:
                         greaterQu.insert(0, newPoint)
@@ -181,9 +181,9 @@ class subsetSumKnapsackSolver:
             yield newPoint
             circularPointQueue.append(newPoint)        
 
-    def getPoints(self, itemWeight, size, circularPointQueue, itemLimit, oldPointLimit, newPointLimit, prevCyclePointCount, uniquePointSet, skipCount, O):
+    def getPoints(self, itemWeight, size, circularPointQueue, itemLimit, oldPointLimit, newPointLimit, prevCyclePointCount, uniquePointSet, skipCount, iterCounter):
        
-        # merges ordered visited points with new points with keeping order in O(N) using single circular queue.
+        # merges ordered visited points with new points with keeping order in iterCounter(N) using single circular queue.
         # each getPoints method call starts fetching visited points from qu start, pops visited point and pushes new point and visited to the end of qu in ASC order.
         # we skip new point if it in list already
         # skips points if they will not contribute to optimal solution
@@ -193,7 +193,7 @@ class subsetSumKnapsackSolver:
         useItemItself = itemLimit >= size // 2
 
         if useItemItself and not itemWeight in uniquePointSet:
-            for p in self.yieldOrPushBack(circularPointQueue, itemWeight, greaterQu, O):
+            for p in self.yieldOrPushBack(circularPointQueue, itemWeight, greaterQu, iterCounter):
                 yield p
         else:
             if useItemItself:
@@ -212,7 +212,7 @@ class subsetSumKnapsackSolver:
                 circularPointQueue.append(quPoint)
 
             if  oldPoint >= oldPointLimit:
-                for p in self.yieldOrPushBack(circularPointQueue, oldPoint, greaterQu, O):
+                for p in self.yieldOrPushBack(circularPointQueue, oldPoint, greaterQu, iterCounter):
                     yield p
             else:
                 self.skippedPointsByLimits  += skipCount  
@@ -226,7 +226,7 @@ class subsetSumKnapsackSolver:
             if newPoint <= size:  
 
                 if not newPoint in uniquePointSet:
-                    for p in self.yieldOrPushBack(circularPointQueue, newPoint, greaterQu, O):
+                    for p in self.yieldOrPushBack(circularPointQueue, newPoint, greaterQu, iterCounter):
                         yield p
                 else:
                     self.skippedPointsByMap += skipCount
@@ -257,11 +257,11 @@ class subsetSumKnapsackSolver:
        
         return itemValue
 
-    def setValue(self, curDP, p, curVal, O):
+    def setValue(self, curDP, p, curVal, iterCounter):
         curDP[p] = curVal    
-        O[0] += 1
+        iterCounter[0] += 1
 
-    def backTraceItems(self, DP, resultI, resultP, items, lessItemsRange, allAsc, O):
+    def backTraceItems(self, DP, resultI, resultP, items, lessItemsRange, allAsc, iterCounter):
        
         opt = 0
         res = DP[resultI][resultP]
@@ -275,7 +275,7 @@ class subsetSumKnapsackSolver:
 
         for i in range(resultI, 0, -1):
            
-            O[0] += 1
+            iterCounter[0] += 1
 
             if res <= 0:
                 break      
@@ -305,9 +305,9 @@ class subsetSumKnapsackSolver:
         self.DP[starting - 1] = defaultdict()
         return self.DP
 
-    def solveSuperIncreasing(self, size, items, starting, ending, count, allAsc, O):
+    def solveSuperIncreasing(self, size, items, starting, ending, count, allAsc, iterCounter):
 
-        def indexLargestLessThanDesc(items, item, lo, hi, O):  
+        def indexLargestLessThanDesc(items, item, lo, hi, iterCounter):
 
             if item == 0:
                 return None  
@@ -315,7 +315,7 @@ class subsetSumKnapsackSolver:
             cnt = len(items)
 
             while lo <= hi:
-                O[0] += 1
+                iterCounter[0] += 1
                 mid = (lo + hi) // 2
 
                 val = items[mid]
@@ -333,13 +333,13 @@ class subsetSumKnapsackSolver:
             else:
                 return None
        
-        def indexLargestLessThanAsc(items, item, lo, hi, O):  
+        def indexLargestLessThanAsc(items, item, lo, hi, iterCounter):
 
             if item == 0:
                 return None  
 
             while lo <= hi:
-                O[0] += 1
+                iterCounter[0] += 1
                 mid = (lo + hi) // 2
 
                 val = items[mid]
@@ -361,17 +361,17 @@ class subsetSumKnapsackSolver:
 
         resultItems = []
         resultSum = 0
-        index = binSearch(items, size, starting - 1, ending - 1, O)
+        index = binSearch(items, size, starting - 1, ending - 1, iterCounter)
 
         while index is not None:
             value = items[index]
             resultItems.append(value)
             resultSum += value
             if allAsc:
-                index = binSearch(items, size - resultSum, starting - 1, index - 1, O)
+                index = binSearch(items, size - resultSum, starting - 1, index - 1, iterCounter)
             else:
-                index = binSearch(items, size - resultSum, index + 1, ending - 1, O)
-            O[0] += 1
+                index = binSearch(items, size - resultSum, index + 1, ending - 1, iterCounter)
+            iterCounter[0] += 1
        
         if self.printSuperIncreasingInfo:
             print(f"Superincreasing subset sum solver called for size {size} and count {count}. ASC={allAsc}")
@@ -401,17 +401,17 @@ class subsetSumKnapsackSolver:
 
     def solve(self):
 
-        size, items, forceUseLimits, O = self.size, self.items, self.forceUseLimits, self.O
+        size, items, forceUseLimits, iterCounter = self.size, self.items, self.forceUseLimits, self.iterCounter
 
-        size, count, sum, lessCountSum, partialSums, starting, ending, isSuperIncreasing, superIncreasingItems, allAsc, allDesc  = self.preProcess(size, items, forceUseLimits, O)
+        size, count, sum, lessCountSum, partialSums, starting, ending, isSuperIncreasing, superIncreasingItems, allAsc, allDesc  = self.preProcess(size, items, forceUseLimits, iterCounter)
 
-        cornerCasesCheck = self.checkCornerCases(size, items, sum, lessCountSum, O)
+        cornerCasesCheck = self.checkCornerCases(size, items, sum, lessCountSum, iterCounter)
 
         if  cornerCasesCheck:
             return cornerCasesCheck
 
         if self.doSolveSuperInc and isSuperIncreasing:
-            return self.solveSuperIncreasing(size, items, starting, ending, count, allAsc, O)
+            return self.solveSuperIncreasing(size, items, starting, ending, count, allAsc, iterCounter)
 
         lessItemsRange = 0
 
@@ -445,7 +445,7 @@ class subsetSumKnapsackSolver:
 
             itemLimit, oldPointLimit, newPointLimit, skipCount  = self.getLimits(size, itemIndex, items, partialSums, superIncreasingItems)
            
-            for p in self.getPoints(itemWeight, size, circularPointQueue, itemLimit, oldPointLimit, newPointLimit, prevPointCount, prevDP, skipCount, O):          
+            for p in self.getPoints(itemWeight, size, circularPointQueue, itemLimit, oldPointLimit, newPointLimit, prevPointCount, prevDP, skipCount, iterCounter):
 
                 curValue    =  self.getValue(p, prevDP)  
                 posblValue  =  self.getPossibleValue(p - itemWeight, itemValue, prevDP)
@@ -453,7 +453,7 @@ class subsetSumKnapsackSolver:
                 if posblValue and curValue < posblValue and posblValue <= size:
                     curValue = posblValue
 
-                self.setValue(curDP, p, curValue, O)
+                self.setValue(curDP, p, curValue, iterCounter)
 
                 if  maxValue < curValue:
                     resultP = p
@@ -461,12 +461,12 @@ class subsetSumKnapsackSolver:
                     maxValue = curValue            
 
                 if  size == curValue:
-                    return self.backTraceItems(DP, resultI, resultP, items, lessItemsRange, allAsc, O)  
+                    return self.backTraceItems(DP, resultI, resultP, items, lessItemsRange, allAsc, iterCounter)
 
                 newPointCount += 1
            
             if self.printInfo:
-                print(f"| {i - 1} | {newPointCount} | {round(O[0])} |")
+                print(f"| {i - 1} | {newPointCount} | {round(iterCounter[0])} |")
 
-        return  self.backTraceItems(DP, resultI, resultP, items, lessItemsRange, allAsc, O)
+        return  self.backTraceItems(DP, resultI, resultP, items, lessItemsRange, allAsc, iterCounter)
 

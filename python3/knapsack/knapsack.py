@@ -35,11 +35,11 @@ import os
 
 class knapsackSolver:
 
-    def __init__(self, size, weights, values, O, forceUseLimits=False):
+    def __init__(self, size, weights, values, iterCounter, forceUseLimits=False):
         self.size = size
         self.weights = weights
         self.values = values
-        self.O = O
+        self.iterCounter = iterCounter
         self.forceUseLimits = forceUseLimits
         self.forceUseDpSolver = False
         self.DP = None
@@ -54,7 +54,7 @@ class knapsackSolver:
         self.doUseLimits = True
         self.canBackTraceWhenSizeReached = False
 
-    def preProcess(self, constraints, items, values, forceUseLimits, O):
+    def preProcess(self, constraints, items, values, forceUseLimits, iterCounter):
 
         count = len(items)
         itemSum1, itemSum2, lessCountSum = 0, 0, 0
@@ -205,7 +205,7 @@ class knapsackSolver:
 
         constraints = min(itemSum, constraints)
 
-        O[0] += count
+        iterCounter[0] += count
         return constraints, lessCount, lessSizeItems, lessSizeValues, lessSizeItemsIndex, itemSum, lessCountSum, lessCountValuesSum, partialSums, isSuperIncreasing, superIncreasingItems, allAsc, allDesc, canUsePartialSums
 
     def checkCornerCases(self, size, lessSizeItems, lessSizeValues, lessSizeItemsIndex, lessCountSum, itemSum,
@@ -222,7 +222,7 @@ class knapsackSolver:
 
         return None
 
-    def yieldOrPushBack(self, circularPointQueue, newPoint, greaterQu, O):
+    def yieldOrPushBack(self, circularPointQueue, newPoint, greaterQu, iterCounter):
         if len(circularPointQueue) > 0:
             peek = circularPointQueue[0]
 
@@ -231,7 +231,7 @@ class knapsackSolver:
                 circularPointQueue.append(newPoint)
             else:
 
-                O[0] += 1
+                iterCounter[0] += 1
 
                 if len(greaterQu) > 0 and newPoint < greaterQu[0]:
                     greaterQu.insert(0, newPoint)
@@ -242,9 +242,9 @@ class knapsackSolver:
             circularPointQueue.append(newPoint)
 
     def getPoints(self, itemWeight, size, circularPointQueue, itemLimit, oldPointLimit, newPointLimit,
-                  prevCyclePointCount, uniquePointSet, skipCount, canUseLimits, O):
+                  prevCyclePointCount, uniquePointSet, skipCount, canUseLimits, iterCounter):
 
-        # merges ordered visited points with new points with keeping order in O(N) using single circular queue.
+        # merges ordered visited points with new points with keeping order in iterCounter(N) using single circular queue.
         # each getPoints method call starts fetching visited points from qu start, pops visited point and pushes new point and visited to the end of qu in ASC order.
         # we skip new point if it in list already
 
@@ -255,7 +255,7 @@ class knapsackSolver:
         greaterQu = deque()
 
         if useItemItself and not itemWeight in uniquePointSet:
-            for p in self.yieldOrPushBack(circularPointQueue, itemWeight, greaterQu, O):
+            for p in self.yieldOrPushBack(circularPointQueue, itemWeight, greaterQu, iterCounter):
                 yield p
         else:
             if useItemItself:
@@ -275,7 +275,7 @@ class knapsackSolver:
 
             if skipLimitCheck or oldPoint >= oldPointLimit:
 
-                for p in self.yieldOrPushBack(circularPointQueue, oldPoint, greaterQu, O):
+                for p in self.yieldOrPushBack(circularPointQueue, oldPoint, greaterQu, iterCounter):
                     yield p
 
             else:
@@ -290,7 +290,7 @@ class knapsackSolver:
             if newPoint <= size:
 
                 if not newPoint in uniquePointSet:
-                    for p in self.yieldOrPushBack(circularPointQueue, newPoint, greaterQu, O):
+                    for p in self.yieldOrPushBack(circularPointQueue, newPoint, greaterQu, iterCounter):
                         yield p
                 else:
                     self.skippedPointsByMap += skipCount
@@ -322,11 +322,11 @@ class knapsackSolver:
 
         return itemValue, itemWeight
 
-    def setValue(self, curDP, p, curVal, curW, O):
+    def setValue(self, curDP, p, curVal, curW, iterCounter):
         curDP[p] = (curVal, curW)
-        O[0] += 1
+        iterCounter[0] += 1
 
-    def backTraceItems(self, DP, resultI, resultP, items, values, itemsIndex, allAsc, O):
+    def backTraceItems(self, DP, resultI, resultP, items, values, itemsIndex, allAsc, iterCounter):
         opt = 0
         optSize = 0
         res = DP[resultI][resultP][0]
@@ -343,7 +343,7 @@ class knapsackSolver:
 
         for i in range(resultI, 0, -1):
 
-            O[0] += 1
+            iterCounter[0] += 1
 
             if res <= 0:
                 break
@@ -377,15 +377,15 @@ class knapsackSolver:
         self.DP[0] = {}
         return self.DP
 
-    def solveSuperIncreasing(self, size, items, values, itemsIndex, count, allAsc, O):
+    def solveSuperIncreasing(self, size, items, values, itemsIndex, count, allAsc, iterCounter):
 
-        def indexLargestLessThanAsc(items, item, lo, hi, O):
+        def indexLargestLessThanAsc(items, item, lo, hi, iterCounter):
 
             if item == 0:
                 return None
 
             while lo <= hi:
-                O[0] += 1
+                iterCounter[0] += 1
                 mid = (lo + hi) // 2
 
                 val = items[mid]
@@ -403,7 +403,7 @@ class knapsackSolver:
             else:
                 return None
 
-        def indexLargestLessThanDesc(items, item, lo, hi, O):
+        def indexLargestLessThanDesc(items, item, lo, hi, iterCounter):
 
             if item == 0:
                 return None
@@ -411,7 +411,7 @@ class knapsackSolver:
             cnt = len(items)
 
             while lo <= hi:
-                O[0] += 1
+                iterCounter[0] += 1
                 mid = (lo + hi) // 2
 
                 val = items[mid]
@@ -437,7 +437,7 @@ class knapsackSolver:
         resultIndex = []
         resultSum = 0
         resultItemSum = 0
-        index = binSearch(items, size, starting - 1, count - 1, O)
+        index = binSearch(items, size, starting - 1, count - 1, iterCounter)
 
         while index is not None:
             item = items[index]
@@ -448,11 +448,11 @@ class knapsackSolver:
             resultItemSum += item
             resultSum += value
             if allAsc:
-                index = binSearch(items, size - resultItemSum, starting - 1, index - 1, O)
+                index = binSearch(items, size - resultItemSum, starting - 1, index - 1, iterCounter)
             else:
-                index = binSearch(items, size - resultItemSum, index + 1, count - 1, O)
+                index = binSearch(items, size - resultItemSum, index + 1, count - 1, iterCounter)
 
-            O[0] += 1
+            iterCounter[0] += 1
 
         if self.printSuperIncreasingInfo:
             print(f"Superincreasing 1-0 solver called for size {size} and count {count}.  ASC={allAsc}")
@@ -477,13 +477,13 @@ class knapsackSolver:
 
         return partSumForItem, oldPointLimit, newPointLimit, skipCount
 
-    def solveByPareto(self, lessSizeItems, lessSizeValues, lessSizeItemsIndex, size, O):
+    def solveByPareto(self, lessSizeItems, lessSizeValues, lessSizeItemsIndex, size, iterCounter):
         if self.printInfo:
             print(f"1-0 knapsack pareto solver: N {len(lessSizeItems)}")
 
         paretoItems = [wPoint1(item) for item in lessSizeItems]
         paretoSolver = knapsackParetoSolver(paretoItems, lessSizeValues, lessSizeItemsIndex, wPoint1(size),
-                                            paretoPoint1(0, 0), wPoint1(0), O)
+                                            paretoPoint1(0, 0), wPoint1(0), iterCounter)
         paretoSolver.printInfo = self.printInfo
         paretoSolver.canBackTraceWhenSizeReached = self.canBackTraceWhenSizeReached
 
@@ -493,7 +493,7 @@ class knapsackSolver:
         return count - i if allAsc else i - 1
 
     def solveByDynamicPrograming(self, size, count, lessSizeItems, lessSizeValues, lessSizeItemsIndex, partialSums,
-                                 superIncreasingItems, allAsc, allDesc, canUsePartialSums, O):
+                                 superIncreasingItems, allAsc, allDesc, canUsePartialSums, iterCounter):
 
         DP = self.createDP(count)
 
@@ -526,7 +526,7 @@ class knapsackSolver:
                                                                                 canUsePartialSums)
 
             for p in self.getPoints(itemWeight, size, circularPointQueue, itemLimit, oldPointLimit, newPointLimit,
-                                    prevPointCount, prevDP, skipCount, canUsePartialSums, O):
+                                    prevPointCount, prevDP, skipCount, canUsePartialSums, iterCounter):
 
                 curValue, curWeight = self.getValue(p, prevDP)
                 posblValue, posblWeight = self.getPossibleValue(p - itemWeight, itemValue, itemWeight, prevDP)
@@ -535,7 +535,7 @@ class knapsackSolver:
                     curValue = posblValue
                     curWeight = posblWeight
 
-                self.setValue(curDP, p, curValue, curWeight, O)
+                self.setValue(curDP, p, curValue, curWeight, iterCounter)
 
                 if maxValue < curValue:
                     resultP = p
@@ -544,21 +544,21 @@ class knapsackSolver:
 
                 if self.canBackTraceWhenSizeReached and curWeight == size:
                     self.backTraceItems(DP, resultI, resultP, lessSizeItems, lessSizeValues, lessSizeItemsIndex, allAsc,
-                                        O)
+                                        iterCounter)
 
                 newPointCount += 1
 
             if self.printInfo:
-                print(f"| {i - 1} | {prevPointCount} | {round(O[0])} |")
+                print(f"| {i - 1} | {prevPointCount} | {round(iterCounter[0])} |")
 
-        return self.backTraceItems(DP, resultI, resultP, lessSizeItems, lessSizeValues, lessSizeItemsIndex, allAsc, O)
+        return self.backTraceItems(DP, resultI, resultP, lessSizeItems, lessSizeValues, lessSizeItemsIndex, allAsc, iterCounter)
 
     def solve(self):
 
-        size, weights, values, forceUseLimits, O = self.size, self.weights, self.values, self.forceUseLimits, self.O
+        size, weights, values, forceUseLimits, iterCounter = self.size, self.weights, self.values, self.forceUseLimits, self.iterCounter
 
         size, count, lessSizeItems, lessSizeValues, lessSizeItemsIndex, itemSum, lessCountSum, lessCountValuesSum, partialSums, superIncreasing, superIncreasingItems, allAsc, allDesc, canUsePartialSums = self.preProcess(
-            size, weights, values, forceUseLimits, O)
+            size, weights, values, forceUseLimits, iterCounter)
 
         cornerCasesCheck = self.checkCornerCases(size, lessSizeItems, lessSizeValues, lessSizeItemsIndex, lessCountSum,
                                                  itemSum, lessCountValuesSum)
@@ -567,11 +567,11 @@ class knapsackSolver:
             return cornerCasesCheck
 
         if self.doSolveSuperInc and superIncreasing:
-            return self.solveSuperIncreasing(size, lessSizeItems, lessSizeValues, lessSizeItemsIndex, count, allAsc, O)
+            return self.solveSuperIncreasing(size, lessSizeItems, lessSizeValues, lessSizeItemsIndex, count, allAsc, iterCounter)
 
         if canUsePartialSums and (allAsc or allDesc) or self.forceUseDpSolver:
             return self.solveByDynamicPrograming(size, count, lessSizeItems, lessSizeValues, lessSizeItemsIndex,
                                                  partialSums, superIncreasingItems, allAsc, allDesc, canUsePartialSums,
-                                                 O)
+                                                 iterCounter)
 
-        return self.solveByPareto(lessSizeItems, lessSizeValues, lessSizeItemsIndex, size, O)
+        return self.solveByPareto(lessSizeItems, lessSizeValues, lessSizeItemsIndex, size, iterCounter)

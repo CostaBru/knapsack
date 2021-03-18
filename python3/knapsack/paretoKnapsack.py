@@ -20,7 +20,7 @@ from collections import deque
 
 class knapsackParetoSolver:
 
-    def __init__(self, dimensions, values, indexes, constraint, emptyPoint, emptyDimension, O):
+    def __init__(self, dimensions, values, indexes, constraint, emptyPoint, emptyDimension, iterCounter):
         self.dimensions = dimensions
         self.values = values
         self.indexes = indexes
@@ -29,7 +29,7 @@ class knapsackParetoSolver:
         self.emptyDimension = emptyDimension
         self.forceUseLimits = False
         self.forceUsePareto = True
-        self.O = O
+        self.iterCounter = iterCounter
         self.totalPointCount = 0
         self.skippedPointsBySize = 0
         self.skippedPointsByMap = 0
@@ -46,12 +46,12 @@ class knapsackParetoSolver:
     def createNewPoint(self, values, profit, id):
         return self.emptyPoint.createNew(values.getDimensions(), profit, id)
 
-    def indexLargestLessThan(self,  items, item, lo, hi, O):  
+    def indexLargestLessThan(self,  items, item, lo, hi, iterCounter):
 
         ans = -1
 
         while lo <= hi:
-            O[0] += 1
+            iterCounter[0] += 1
             mid = (lo + hi) // 2
 
             val = items[mid]
@@ -64,25 +64,25 @@ class knapsackParetoSolver:
 
         return ans
 
-    def findLargerProfit(self, items, profitMax, O):
-        index = self.indexLargestLessThan(items, profitMax, 0, len(items) - 1, O)
+    def findLargerProfit(self, items, profitMax, iterCounter):
+        index = self.indexLargestLessThan(items, profitMax, 0, len(items) - 1, iterCounter)
 
         if index >= 0 and items[index].getProfit() > profitMax:
             return index
         else:
             return None
    
-    def mergeDiscardingDominated(self, oldList, newList, O):
+    def mergeDiscardingDominated(self, oldList, newList, iterCounter):
 
         result = []
         profitMax = -sys.maxsize
 
         while True:
 
-            O[0] += 1
+            iterCounter[0] += 1
 
-            oldPointIndex = self.findLargerProfit(oldList, profitMax, O)
-            newPointIndex = self.findLargerProfit(newList, profitMax, O)
+            oldPointIndex = self.findLargerProfit(oldList, profitMax, iterCounter)
+            newPointIndex = self.findLargerProfit(newList, profitMax, iterCounter)
 
             if oldPointIndex is None:
 
@@ -92,7 +92,7 @@ class knapsackParetoSolver:
                         newPoint = newList[ind]
                         result.append(newPoint)
 
-                        O[0] += 1
+                        iterCounter[0] += 1
 
                 break
 
@@ -102,7 +102,7 @@ class knapsackParetoSolver:
 
                     for ind in range(oldPointIndex, len(oldList)):
                         result.append(oldList[ind])
-                        O[0] += 1
+                        iterCounter[0] += 1
 
                 break
 
@@ -118,25 +118,25 @@ class knapsackParetoSolver:
                
         return result
 
-    def sortByRatio(self, w, v, t, O):
+    def sortByRatio(self, w, v, t, iterCounter):
         if len(w) > 0:
             sorted_pairs = sorted(zip(w, v, t), key=lambda t: (t[1] / t[0], t[1], t[0]))
             tuples = zip(*sorted_pairs)
-            O[0] += len(w) * math.log2(len(w))
+            iterCounter[0] += len(w) * math.log2(len(w))
             return [list(tuple) for tuple in  tuples]
        
         return w, v, t
 
-    def sortByDims(self, w, v, t, O):
+    def sortByDims(self, w, v, t, iterCounter):
         if len(w) > 0:
             sorted_pairs = sorted(zip(w, v, t), key=lambda t: (t[0], t[0] / t[1]))
             tuples = zip(*sorted_pairs)
-            O[0] += len(w) * math.log2(len(w))
+            iterCounter[0] += len(w) * math.log2(len(w))
             return [list(tuple) for tuple in  tuples]
        
         return w, v, t
 
-    def backTraceItems(self, maxProfitPoint, count, O):
+    def backTraceItems(self, maxProfitPoint, count, iterCounter):
         if maxProfitPoint:
 
             optSize = self.emptyDimension
@@ -148,7 +148,7 @@ class knapsackParetoSolver:
                 optIndexes.append(self.indexes[id])
                 optSize += self.dimensions[id]
 
-            O[0] += len(optItems)
+            iterCounter[0] += len(optItems)
 
             if self.printInfo:
                 print(f"Skipped points by MAP: {self.skippedPointsByMap}, by LIMITS: {self.skippedPointsByLimits}; by SIZE: {self.skippedPointsBySize}; by PARETO: {self.skippedPointsByPareto}; Total points: {self.totalPointCount}; N={count};")
@@ -156,7 +156,7 @@ class knapsackParetoSolver:
             return maxProfitPoint.getProfit(), optSize, optItems, optValues, optIndexes
         return 0, self.emptyPoint, [], [], []
 
-    def preProcess(self, constraints, items, values, forceUseLimits, O):
+    def preProcess(self, constraints, items, values, forceUseLimits, iterCounter):
        
         count = len(items)
         itemSum1, itemSum2, lessCountSum = self.emptyDimension, self.emptyDimension, self.emptyDimension
@@ -313,7 +313,7 @@ class knapsackParetoSolver:
 
         constraints = constraints.adjustMin(itemSum)
        
-        O[0] += count
+        iterCounter[0] += count
         return constraints, lessCount,  lessSizeItems, lessSizeValues, lessSizeItemsIndex, itemSum, lessCountSum, lessCountValuesSum, partialSums, isSuperIncreasing, superIncreasingItems, allAsc, allDesc, canUsePartialSums
 
     def checkCornerCases(self, constraints, lessSizeItems, lessSizeValues, lessSizeItemsIndex, lessCountSum, itemSum, lessCountValuesSum):        
@@ -329,15 +329,15 @@ class knapsackParetoSolver:
 
         return None      
 
-    def solveSuperIncreasing(self, size, items, values, itemsIndex, count, allAsc, O):
+    def solveSuperIncreasing(self, size, items, values, itemsIndex, count, allAsc, iterCounter):
 
-        def indexLargestLessThanAsc(items, item, lo, hi, O):  
+        def indexLargestLessThanAsc(items, item, lo, hi, iterCounter):
 
             if item == self.emptyDimension:
                 return None  
 
             while lo <= hi:
-                O[0] += 1
+                iterCounter[0] += 1
                 mid = (lo + hi) // 2
 
                 val = items[mid]
@@ -355,7 +355,7 @@ class knapsackParetoSolver:
             else:
                 return None
 
-        def indexLargestLessThanDesc(items, item, lo, hi, O):  
+        def indexLargestLessThanDesc(items, item, lo, hi, iterCounter):
 
             if item == self.emptyDimension:
                 return None  
@@ -363,7 +363,7 @@ class knapsackParetoSolver:
             cnt = len(items)
 
             while lo <= hi:
-                O[0] += 1
+                iterCounter[0] += 1
                 mid = (lo + hi) // 2
 
                 val = items[mid]
@@ -389,7 +389,7 @@ class knapsackParetoSolver:
         resultIndex = []
         resultSum = 0
         resultItemSum = self.emptyDimension
-        index = binSearch(items, size, starting - 1, count - 1, O)
+        index = binSearch(items, size, starting - 1, count - 1, iterCounter)
 
         while index is not None:
             item = items[index]
@@ -400,11 +400,11 @@ class knapsackParetoSolver:
             resultItemSum += item
             resultSum += value
             if allAsc:
-                index = binSearch(items, size - resultItemSum, starting - 1, index - 1, O)
+                index = binSearch(items, size - resultItemSum, starting - 1, index - 1, iterCounter)
             else:
-                index = binSearch(items, size - resultItemSum, index + 1, count - 1, O)
+                index = binSearch(items, size - resultItemSum, index + 1, count - 1, iterCounter)
 
-            O[0] += 1
+            iterCounter[0] += 1
 
         if self.printSuperIncreasingInfo:
             print(f"Superincreasing pareto solver called for size {size} and count {count}.  ASC={allAsc}")
@@ -473,9 +473,9 @@ class knapsackParetoSolver:
     def getItemIndex(self, count, i, allAsc):
         return count - i if allAsc else i - 1
 
-    def iteratePoints(self, i,  itemDimensions, itemProfit, itemId, constraintPoint, maxProfitPoint, circularPointQueue, prevCyclePointCount, halfConstraint, itemLimit, oldPointLimit, newPointLimit, distinctPoints1,  distinctPoints2, skipCount, canUseLimits, O):
+    def iteratePoints(self, i,  itemDimensions, itemProfit, itemId, constraintPoint, maxProfitPoint, circularPointQueue, prevCyclePointCount, halfConstraint, itemLimit, oldPointLimit, newPointLimit, distinctPoints1,  distinctPoints2, skipCount, canUseLimits, iterCounter):
        
-        # merges ordered visited points with new points with keeping order in O(N) using single circular queue.
+        # merges ordered visited points with new points with keeping order in iterCounter(N) using single circular queue.
         # each getPoints method call starts fetching visited points from qu start, pops visited point and pushes new point and visited to the end of qu in ASC order.
         # we skip new point if it in list already
         # skips points if they will not contribute to optimal solution (in case of desc flow and (equal values or values equal to first dimension))
@@ -534,11 +534,11 @@ class knapsackParetoSolver:
 
         newPointCount = len(circularPointQueue)
 
-        O[0] += newPointCount + 1      
+        iterCounter[0] += newPointCount + 1
 
         if self.printInfo:
             self.totalPointCount += newPointCount
-            print(f"| {i - 1} | {newPointCount} | {round(O[0])} |")
+            print(f"| {i - 1} | {newPointCount} | {round(iterCounter[0])} |")
 
         return newPointCount, maxProfitPoint
 
@@ -566,16 +566,16 @@ class knapsackParetoSolver:
 
             itemLimit, oldPointLimit, newPointLimit, skipCount = self.getLimits(constraint, itemIndex, sortedItems, partialSums, superIncreasingItems, canUsePartialSums)
 
-            newPointCount, maxProfitPoint = self.iteratePoints(i, itemDimensions, itemProfit, itemId, constraint, maxProfitPoint, circularPointQueue, prevPointCount, halfConstraint, itemLimit,  oldPointLimit, newPointLimit, distinctPoints1,  distinctPoints1, skipCount, canUsePartialSums, self.O)
+            newPointCount, maxProfitPoint = self.iteratePoints(i, itemDimensions, itemProfit, itemId, constraint, maxProfitPoint, circularPointQueue, prevPointCount, halfConstraint, itemLimit,  oldPointLimit, newPointLimit, distinctPoints1,  distinctPoints1, skipCount, canUsePartialSums, self.iterCounter)
          
             if self.canBackTraceWhenSizeReached and maxProfitPoint.isDimensionEquals(constraint):
-                return self.backTraceItems(maxProfitPoint, itemsCount, self.O)
+                return self.backTraceItems(maxProfitPoint, itemsCount, self.iterCounter)
 
             prevPointCount = newPointCount        
 
-        return self.backTraceItems(maxProfitPoint, itemsCount, self.O)
+        return self.backTraceItems(maxProfitPoint, itemsCount, self.iterCounter)
 
-    def getNewPoints(self, i, maxProfitPoint, itemDimensions, itemProfit, itemId, oldPoints, constraint, prevDistinctPoints, newDistinctPoints, skipCount, O):
+    def getNewPoints(self, i, maxProfitPoint, itemDimensions, itemProfit, itemId, oldPoints, constraint, prevDistinctPoints, newDistinctPoints, skipCount, iterCounter):
 
         result = []
 
@@ -606,15 +606,15 @@ class knapsackParetoSolver:
 
         newPointCount = len(oldPoints)
 
-        O[0] += len(oldPoints) + 1      
+        iterCounter[0] += len(oldPoints) + 1
 
         if self.printInfo:
             self.totalPointCount += newPointCount
-            print(f"| {i - 1} | {newPointCount} | {round(O[0])} |")
+            print(f"| {i - 1} | {newPointCount} | {round(iterCounter[0])} |")
 
         return result, maxProfitPoint
 
-    def solvePareto(self, constraint, sortedItems, sortedValues, sortedIndexes, O):
+    def solvePareto(self, constraint, sortedItems, sortedValues, sortedIndexes, iterCounter):
 
         maxProfitPoint, emptyPoint = self.emptyPoint, self.emptyPoint
 
@@ -631,17 +631,17 @@ class knapsackParetoSolver:
 
             itemDimensions, itemProfit, itemId = sortedItems[i - 1], sortedValues[i - 1], sortedIndexes[i - 1]
 
-            newPoints, maxProfitPoint = self.getNewPoints(i, maxProfitPoint, itemDimensions, itemProfit, itemId, oldPoints, constraint, distinctPoints, distinctPoints, skipCount, O)
+            newPoints, maxProfitPoint = self.getNewPoints(i, maxProfitPoint, itemDimensions, itemProfit, itemId, oldPoints, constraint, distinctPoints, distinctPoints, skipCount, iterCounter)
          
             # Point A is dominated by point B if B achieves a larger profit with the same or less weight than A.
-            paretoOptimal  = self.mergeDiscardingDominated(oldPoints, newPoints, O)
+            paretoOptimal  = self.mergeDiscardingDominated(oldPoints, newPoints, iterCounter)
 
             if self.canBackTraceWhenSizeReached and maxProfitPoint.isDimensionEquals(constraint):
-                return self.backTraceItems(maxProfitPoint, itemsCount, O)
+                return self.backTraceItems(maxProfitPoint, itemsCount, iterCounter)
 
             oldPoints = paretoOptimal
 
-        return self.backTraceItems(maxProfitPoint, itemsCount, O)
+        return self.backTraceItems(maxProfitPoint, itemsCount, iterCounter)
 
     def solve(self):
 
@@ -651,7 +651,7 @@ class knapsackParetoSolver:
 
         if canTrySolveUsingDp:
 
-            constraint, count, lessSizeItems, lessSizeValues, lessSizeItemsIndex, itemSum, lessCountSum, lessCountValuesSum, partialSums, superIncreasing, superIncreasingItems, allAsc, allDesc, canUsePartialSums = self.preProcess(self.constraint, self.dimensions, self.values, self.forceUseLimits, self.O)
+            constraint, count, lessSizeItems, lessSizeValues, lessSizeItemsIndex, itemSum, lessCountSum, lessCountValuesSum, partialSums, superIncreasing, superIncreasingItems, allAsc, allDesc, canUsePartialSums = self.preProcess(self.constraint, self.dimensions, self.values, self.forceUseLimits, self.iterCounter)
 
             cornerCasesCheck = self.checkCornerCases(constraint, lessSizeItems, lessSizeValues, lessSizeItemsIndex, lessCountSum, itemSum, lessCountValuesSum)
 
@@ -659,7 +659,7 @@ class knapsackParetoSolver:
                 return cornerCasesCheck
 
             if self.doSolveSuperInc and superIncreasing:
-                return self.solveSuperIncreasing(constraint, lessSizeItems, lessSizeValues, lessSizeItemsIndex, count, allAsc, self.O)
+                return self.solveSuperIncreasing(constraint, lessSizeItems, lessSizeValues, lessSizeItemsIndex, count, allAsc, self.iterCounter)
 
             canSolveUsingDp = not self.forceUsePareto and (self.forceUseLimits or self.canBackTraceWhenSizeReached or canUsePartialSums)
 
@@ -677,7 +677,7 @@ class knapsackParetoSolver:
 
         sortingFunc = self.sortByRatio if self.useRatioSort else self.sortByDims
 
-        sortedItems, sortedValues, sortedIndexes = sortingFunc(lessSizeItems, lessSizeValues, lessSizeItemsIndex, self.O)
+        sortedItems, sortedValues, sortedIndexes = sortingFunc(lessSizeItems, lessSizeValues, lessSizeItemsIndex, self.iterCounter)
 
-        return self.solvePareto(constraint, sortedItems, sortedValues, sortedIndexes, self.O)
+        return self.solvePareto(constraint, sortedItems, sortedValues, sortedIndexes, self.iterCounter)
        

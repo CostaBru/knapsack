@@ -43,28 +43,28 @@ class partitionItem:
 
 class partitionSolver:
 
-    def __init__(self, items, sizesOrPartitions, groupSize, O, optimizationLimit) -> None:
+    def __init__(self, items, sizesOrPartitions, groupSize, iterCounter, optimizationLimit) -> None:
         self.items = items
         self.sizesOrPartitions = sizesOrPartitions
         self.groupSize = groupSize
-        self.O = O
+        self.iterCounter = iterCounter
         self.useHybridParetoGrouping = True
         self.optimizationLimit = optimizationLimit
         self.printInfo = False
         self.printOptimizationInfo = False
 
-    def prepareGrouping(self, A, O):
+    def prepareGrouping(self, A, iterCounter):
 
         group = defaultdict(list)
 
         for c in A:
             group[c].append(c)
        
-        O[0] += len(A)
+        iterCounter[0] += len(A)
 
         return group
    
-    def groupItems(self, group, O):
+    def groupItems(self, group, iterCounter):
 
         allUnique = True
         nonUniqueList = defaultdict(int)
@@ -76,12 +76,12 @@ class partitionSolver:
             if len(group[k]) > 1:
                 allUnique = False
 
-        O[0] += len(group)
+        iterCounter[0] += len(group)
 
         return allUnique, nonUniqueList
 
 
-    def getSingleDuplicatePartitions(self, items, count, sizes, groupSize, O):
+    def getSingleDuplicatePartitions(self, items, count, sizes, groupSize, iterCounter):
 
         quotientResult, remainderResult  = [], partitionItem([], [])
 
@@ -135,7 +135,7 @@ class partitionSolver:
 
             return  quotientResult, partitionItem(remainderResult, [len(remainderResult) // groupSize]), 0
 
-    def optimizePartitions(self, quotients, remainder, sizes, groupSize, optimizationLimit, O):
+    def optimizePartitions(self, quotients, remainder, sizes, groupSize, optimizationLimit, iterCounter):
 
         def mergeTwoSorted(itemSet1, itemSet2):
 
@@ -220,7 +220,7 @@ class partitionSolver:
             def __hash__(self):
                 return hash(self.Items)
 
-        def optimize(p, remainderItem, groupSize, limit, O):
+        def optimize(p, remainderItem, groupSize, limit, iterCounter):
 
             newSet = []
             newSizes = []
@@ -230,8 +230,8 @@ class partitionSolver:
                 newSizes += remainderItem.Sizes
                 newSizes += p.Sizes
 
-                O[0] += len(p.Items) + len(remainderItem.Items)
-                O[0] += len(p.Sizes) + len(remainderItem.Sizes)  
+                iterCounter[0] += len(p.Items) + len(remainderItem.Items)
+                iterCounter[0] += len(p.Sizes) + len(remainderItem.Sizes)
 
             elif limit == 3:
                 newSet += remainderItem.Items
@@ -246,8 +246,8 @@ class partitionSolver:
                 for r in reversed(p.Items):
                     newSet.append(r)
 
-                O[0] += len(p.Items) + len(remainderItem.Items)
-                O[0] += len(p.Sizes) + len(remainderItem.Sizes)          
+                iterCounter[0] += len(p.Items) + len(remainderItem.Items)
+                iterCounter[0] += len(p.Sizes) + len(remainderItem.Sizes)
             else:
                 newSizes += p.Sizes
                 newSizes += remainderItem.Sizes
@@ -258,10 +258,10 @@ class partitionSolver:
                 random.shuffle(newSet)
                 random.shuffle(newSizes)
 
-                O[0] += (len(p.Items) + len(remainderItem.Items)) * 2
-                O[0] += (len(p.Sizes) + len(remainderItem.Sizes)) * 2
+                iterCounter[0] += (len(p.Items) + len(remainderItem.Items)) * 2
+                iterCounter[0] += (len(p.Sizes) + len(remainderItem.Sizes)) * 2
 
-            return  self.divideSet(newSet, newSizes, groupSize, O)
+            return  self.divideSet(newSet, newSizes, groupSize, iterCounter)
 
         def getPoints(i, item, uniqueSet, limit):
 
@@ -277,13 +277,13 @@ class partitionSolver:
                     if newPoint not in uniqueSet:
                         yield newPoint
 
-        def incOForPoint(O, p):
-            O[0] += 1
-            O[0] += len(p.Items)
-            O[0] += len(p.Sizes)
-            O[0] += len(p.Indexes)
+        def incOForPoint(iterCounter, p):
+            iterCounter[0] += 1
+            iterCounter[0] += len(p.Items)
+            iterCounter[0] += len(p.Sizes)
+            iterCounter[0] += len(p.Indexes)
 
-        def backTrace(optimizationsMade, remainderItem, originalQuotient, originalRemainder, optimizationCount, O):
+        def backTrace(optimizationsMade, remainderItem, originalQuotient, originalRemainder, optimizationCount, iterCounter):
 
             if len(optimizationsMade) == 0:
                 return originalQuotient, originalRemainder, optimizationCount
@@ -293,9 +293,9 @@ class partitionSolver:
 
             for optPoint in optimizationsMade:
                 skipIndexes.update(optPoint.Indexes)
-                O[0] += 2 * len(optPoint.Items)
+                iterCounter[0] += 2 * len(optPoint.Items)
                 bestPartition.append(partitionItem(list(reversed(optPoint.Items)), optPoint.Sizes))
-                incOForPoint(O, optPoint)
+                incOForPoint(iterCounter, optPoint)
 
             optimizationCount += len(optimizationsMade)
            
@@ -304,44 +304,44 @@ class partitionSolver:
                     continue
                 it = originalQuotient[i]
                 bestPartition.append(it)
-                O[0] += 1
+                iterCounter[0] += 1
 
             return bestPartition, remainderItem, optimizationCount
 
-        def incOForPartition(O, optItem):
-            O[0] += 1
-            O[0] += len(optItem.Items)
-            O[0] += len(optItem.Sizes)
+        def incOForPartition(iterCounter, optItem):
+            iterCounter[0] += 1
+            iterCounter[0] += len(optItem.Items)
+            iterCounter[0] += len(optItem.Sizes)
 
-        def prepareQuotientsAndRemainder(quotients, groupSize, remainder, limit, O):
+        def prepareQuotientsAndRemainder(quotients, groupSize, remainder, limit, iterCounter):
 
             if limit == 0:
 
                 remainder.Items.sort()
 
-                O[0] += len(remainder.Items) * math.log2(len(remainder.Items))
-                O[0] += 1
+                iterCounter[0] += len(remainder.Items) * math.log2(len(remainder.Items))
+                iterCounter[0] += 1
 
                 for q in quotients:
                     q.Items.sort()
 
-                    O[0] += len( q.Items) * math.log2(len(q.Items))
-                    O[0] += 1        
+                    iterCounter[0] += len( q.Items) * math.log2(len(q.Items))
+                    iterCounter[0] += 1
 
             elif limit > 2:
                 random.shuffle(quotients)
                 random.shuffle(remainder.Items)
 
-                O[0] += len(quotients)    
-                O[0] += len(remainder.Items)    
+                iterCounter[0] += len(quotients)
+                iterCounter[0] += len(remainder.Items)
             else:
                 random.shuffle(quotients)
                 random.shuffle(remainder.Items)
 
-                O[0] += len(quotients)      
-                O[0] += len(remainder.Items)    
+                iterCounter[0] += len(quotients)
+                iterCounter[0] += len(remainder.Items)
            
-        prepareQuotientsAndRemainder(quotients, groupSize, remainder,  0, O)    
+        prepareQuotientsAndRemainder(quotients, groupSize, remainder,  0, iterCounter)
 
         remainderItem = remainder
 
@@ -376,46 +376,46 @@ class partitionSolver:
                     if len(optimizedIndexes) > 0 and not p.Indexes.isdisjoint(optimizedIndexes):
                         continue
 
-                    optQuotient, optReminder, _ = optimize(p, remainderItem, groupSize, limit, O)
+                    optQuotient, optReminder, _ = optimize(p, remainderItem, groupSize, limit, iterCounter)
 
-                    incOForPoint(O, p)
+                    incOForPoint(iterCounter, p)
 
                     if  len(optReminder) < minReminderLen or len(optReminder.Sizes) < len(remainderItem.Sizes):
                        
                         for optItem in optQuotient:
                             optimizationsMade.append(partitionPoint(optItem.Items, optItem.Sizes, p.Indexes))
                             optimizedIndexes.update(p.Indexes)
-                            incOForPartition(O, optItem)
+                            incOForPartition(iterCounter, optItem)
                        
                         remainderItem = optReminder
                         minReminderLen = len(remainderItem)
 
                         if len(optReminder.Sizes) == 0:
-                            return backTrace(optimizationsMade, remainderItem, quotients, remainder, optimizationCount, O)
+                            return backTrace(optimizationsMade, remainderItem, quotients, remainder, optimizationCount, iterCounter)
                     else:
                         newPoints.append(p)
 
                     if  minReminderLen == 0:
-                        return backTrace(optimizationsMade, remainderItem, quotients, remainder, optimizationCount, O)
+                        return backTrace(optimizationsMade, remainderItem, quotients, remainder, optimizationCount, iterCounter)
 
             if len(optimizedIndexes) > 0:
-                quotients, remainder, optimizations = backTrace(optimizationsMade, remainderItem, quotients, remainder, optimizationCount, O)
+                quotients, remainder, optimizations = backTrace(optimizationsMade, remainderItem, quotients, remainder, optimizationCount, iterCounter)
                 optimizationCount += optimizations
            
-            prepareQuotientsAndRemainder(quotients, groupSize, remainder, limit, O)
+            prepareQuotientsAndRemainder(quotients, groupSize, remainder, limit, iterCounter)
                
         return  quotients, remainder, optimizationCount
 
 
-    def sortDuplicatesForPartitioning(self, group, count, nonUniqueList, O):
+    def sortDuplicatesForPartitioning(self, group, count, nonUniqueList, iterCounter):
         A_sort = []
 
         keys = list(group.keys())
         keysCount = len(keys)
-        O[0] += keysCount
+        iterCounter[0] += keysCount
 
         keys.sort()
-        O[0] += keysCount * math.log2(keysCount)
+        iterCounter[0] += keysCount * math.log2(keysCount)
 
         i = 0
         removeKeys = []
@@ -439,11 +439,11 @@ class partitionSolver:
                     keys.remove(k)
                 removeKeys.clear()
                
-        O[0] += count
+        iterCounter[0] += count
 
         return A_sort
 
-    def partitionOverSameCountDuplicates(self, nonUniqueList, sizes, groupSize, optimizationLimit, O):
+    def partitionOverSameCountDuplicates(self, nonUniqueList, sizes, groupSize, optimizationLimit, iterCounter):
 
         sameCount = True
 
@@ -452,17 +452,17 @@ class partitionSolver:
         for k in nonUniqueList.keys():
             if nonUniqueList[k] != cnt:
                 sameCount = False
-                O[0] += 1
+                iterCounter[0] += 1
                 break
 
         if sameCount:
 
             nonUKeys = list(nonUniqueList.keys())
             newLen = len(nonUKeys)
-            O[0] += newLen
+            iterCounter[0] += newLen
 
             nonUKeys.sort(reverse=True)
-            O[0] += newLen * math.log2(newLen)
+            iterCounter[0] += newLen * math.log2(newLen)
 
             s = sum(nonUKeys)
             n = len(sizes)
@@ -476,9 +476,9 @@ class partitionSolver:
                 size = Decimal(Decimal(s) / Decimal(Decimal(n) / Decimal(cnt)))
                 newSizes = [size] * newN
 
-            O[0] += newLen
+            iterCounter[0] += newLen
            
-            quotients, remainder, optCount = self.divideSet(nonUKeys, newSizes, groupSize, O)
+            quotients, remainder, optCount = self.divideSet(nonUKeys, newSizes, groupSize, iterCounter)
 
             quotientResult, remainderResult  = [], []
 
@@ -491,14 +491,14 @@ class partitionSolver:
             if  len(remainderResult) == 0 or len(quotientResult) == len(sizes) or len(quotients) == 0:
                 return quotientResult, remainderResult, optCount
 
-            return self.optimizePartitions(remainderResult, quotientResult, sizes, groupSize, optimizationLimit, O)
+            return self.optimizePartitions(remainderResult, quotientResult, sizes, groupSize, optimizationLimit, iterCounter)
 
         return None
 
-    def paretoGroupingOperator(self, size, reminderItems, forceUseLimits, O):
+    def paretoGroupingOperator(self, size, reminderItems, forceUseLimits, iterCounter):
         paretoItems = [wPoint1(item) for item in reminderItems]
    
-        solver = knapsackParetoSolver(paretoItems, reminderItems, range(0, len(reminderItems)), wPoint1(size), paretoPoint0(0), wPoint1(0), O)
+        solver = knapsackParetoSolver(paretoItems, reminderItems, range(0, len(reminderItems)), wPoint1(size), paretoPoint0(0), wPoint1(0), iterCounter)
    
         solver.printInfo = self.printInfo
         solver.forceUseLimits = forceUseLimits
@@ -509,9 +509,9 @@ class partitionSolver:
 
         return  bestValue, bestValues
    
-    def dpGroupingOperator(self, size, reminderItems, forceUseLimits, O):
+    def dpGroupingOperator(self, size, reminderItems, forceUseLimits, iterCounter):
    
-        solver = subsetSumKnapsackSolver(size, reminderItems, O)
+        solver = subsetSumKnapsackSolver(size, reminderItems, iterCounter)
    
         solver.printInfo = self.printInfo
         solver.forceUseLimits = forceUseLimits
@@ -519,11 +519,11 @@ class partitionSolver:
 
         return  bestValue, bestItems
 
-    def paretoGrouping2dOperator(self, size, reminderItems, groupSize, forceUseLimits, O):
+    def paretoGrouping2dOperator(self, size, reminderItems, groupSize, forceUseLimits, iterCounter):
         paretoItems, constraints = [wPoint2(item, 1) for item in reminderItems], wPoint2(size, groupSize)
-        O[0] += len(reminderItems)  
+        iterCounter[0] += len(reminderItems)
 
-        solver = knapsackParetoSolver(paretoItems, reminderItems, range(0, len(reminderItems)), constraints, paretoPoint2(0, 0, 0), wPoint2(0, 0), O)
+        solver = knapsackParetoSolver(paretoItems, reminderItems, range(0, len(reminderItems)), constraints, paretoPoint2(0, 0, 0), wPoint2(0, 0), iterCounter)
    
         solver.printInfo = self.printInfo
         solver.forceUseLimits = forceUseLimits
@@ -534,12 +534,12 @@ class partitionSolver:
 
         return  bestSize, bestValues
    
-    def dpGrouping2dOperator(self, size, reminderItems, groupSize, forceUseLimits, O):
+    def dpGrouping2dOperator(self, size, reminderItems, groupSize, forceUseLimits, iterCounter):
    
         dimensions, constraints  = [wPoint2(item, 1) for item in reminderItems], wPoint2(size, groupSize)
-        O[0] += len(reminderItems)  
+        iterCounter[0] += len(reminderItems)
 
-        solver = knapsackNSolver(constraints, dimensions, reminderItems, O, wPoint2(0, 0), forceUseLimits)
+        solver = knapsackNSolver(constraints, dimensions, reminderItems, iterCounter, wPoint2(0, 0), forceUseLimits)
    
         solver.printInfo = self.printInfo
         solver.printDpInfo =  self.printInfo
@@ -550,7 +550,7 @@ class partitionSolver:
 
         return  optDims, optValues
 
-    def divideSet(self, items, sizes, groupSize, O, forceUseLimits = False):    
+    def divideSet(self, items, sizes, groupSize, iterCounter, forceUseLimits = False):
 
         quotients = []
         reminderSizes = []
@@ -569,7 +569,7 @@ class partitionSolver:
 
                 if n == 1:
 
-                    O[0] += len(reminderItems)
+                    iterCounter[0] += len(reminderItems)
 
                     remSum = sum(reminderItems)
 
@@ -581,7 +581,7 @@ class partitionSolver:
                         reminderSizes.append(size)
                         break  
 
-                optDims, optValues = knapsack2dDivider(size, reminderItems, groupSize, forceUseLimits, O)
+                optDims, optValues = knapsack2dDivider(size, reminderItems, groupSize, forceUseLimits, iterCounter)
 
                 if optDims.getDimension(0) == size and optDims.getDimension(1) == groupSize:
 
@@ -590,14 +590,14 @@ class partitionSolver:
                     for toRemove in optValues:
                         reminderItems.remove(toRemove)
 
-                    O[0] += len(optValues)
+                    iterCounter[0] += len(optValues)
                 else:
                     reminderSizes.append(size)
             else:
 
                 if n == 1:
 
-                    O[0] += len(reminderItems)
+                    iterCounter[0] += len(reminderItems)
 
                     remSum = sum(reminderItems)
 
@@ -609,7 +609,7 @@ class partitionSolver:
                         reminderSizes.append(size)
                         break
 
-                optimal, optimalList = subsDivider(size, reminderItems, forceUseLimits, O)
+                optimal, optimalList = subsDivider(size, reminderItems, forceUseLimits, iterCounter)
 
                 if optimal == size:          
 
@@ -618,7 +618,7 @@ class partitionSolver:
                     for toRemove in optimalList:
                         reminderItems.remove(toRemove)  
 
-                    O[0] += len(optimalList)    
+                    iterCounter[0] += len(optimalList)
                 else:
                     reminderSizes.append(size)
 
@@ -644,7 +644,7 @@ class partitionSolver:
 
     def solve(self):
 
-        items, sizesOrPartitions, groupSize, O, optimizationLimit = self.items, self.sizesOrPartitions, self.groupSize, self.O, self.optimizationLimit
+        items, sizesOrPartitions, groupSize, iterCounter, optimizationLimit = self.items, self.sizesOrPartitions, self.groupSize, self.iterCounter, self.optimizationLimit
 
         count = len(items)
         sizes, sameSizes = self.getSizes(items, sizesOrPartitions)
@@ -652,11 +652,11 @@ class partitionSolver:
         if  count < len(sizes):
             return [], [], 0
        
-        group = self.prepareGrouping(items, O)  
-        allUnique, nonUniqueList = self.groupItems(group, O)
+        group = self.prepareGrouping(items, iterCounter)
+        allUnique, nonUniqueList = self.groupItems(group, iterCounter)
 
         if len(nonUniqueList) == 1:
-            return self.getSingleDuplicatePartitions(items, count, sizes, groupSize, O)
+            return self.getSingleDuplicatePartitions(items, count, sizes, groupSize, iterCounter)
 
         quotients, remainder, optCount = [], [], 0
 
@@ -665,20 +665,20 @@ class partitionSolver:
             items = list(items)
             items.sort()
 
-            O[0] += count * math.log2(count)
-            O[0] += count
+            iterCounter[0] += count * math.log2(count)
+            iterCounter[0] += count
 
-            quotients, remainder, optCount = self.divideSet(items, sizes, groupSize, O)
+            quotients, remainder, optCount = self.divideSet(items, sizes, groupSize, iterCounter)
         else:
             if  len(nonUniqueList) > len(sizes) and groupSize == 0 and sameSizes:
-                partResult = self.partitionOverSameCountDuplicates(nonUniqueList, sizes, 0, optimizationLimit, O)
+                partResult = self.partitionOverSameCountDuplicates(nonUniqueList, sizes, 0, optimizationLimit, iterCounter)
                 if partResult:
                     return partResult
 
-            sortedDuplicates = self.sortDuplicatesForPartitioning(group, count, nonUniqueList, O)
-            quotients, remainder, optCount = self.divideSet(sortedDuplicates, sizes, groupSize, O, forceUseLimits=True)
+            sortedDuplicates = self.sortDuplicatesForPartitioning(group, count, nonUniqueList, iterCounter)
+            quotients, remainder, optCount = self.divideSet(sortedDuplicates, sizes, groupSize, iterCounter, forceUseLimits=True)
    
         if  len(remainder) == 0 or len(quotients) == len(sizes) or len(quotients) == 0:
             return quotients, remainder, optCount
 
-        return self.optimizePartitions(quotients, remainder, sizes, groupSize, optimizationLimit, O)  
+        return self.optimizePartitions(quotients, remainder, sizes, groupSize, optimizationLimit, iterCounter)

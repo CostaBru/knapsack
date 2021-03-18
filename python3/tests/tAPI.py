@@ -6,8 +6,8 @@ from knapsack.wPoint import wPoint1, wPoint
 from partition.partitionN import partitionSolver
 
 
-def subsKnapsack(size, items, O, printPct=False, doSolveSuperInc=True, doUseLimits=True):
-    solver = subsetSumKnapsackSolver(size, items, O, forceUseLimits=False)
+def subsKnapsack(size, items, iterCounter, printPct=False, doSolveSuperInc=True, doUseLimits=True):
+    solver = subsetSumKnapsackSolver(size, items, iterCounter, forceUseLimits=False)
 
     solver.printInfo = printPct
     solver.printSuperIncreasingInfo = True
@@ -18,8 +18,8 @@ def subsKnapsack(size, items, O, printPct=False, doSolveSuperInc=True, doUseLimi
     return bestValue, bestItems
 
 
-def knapsack(size, items, values, O, printPct=False, doSolveSuperInc=True, doUseLimits=True):
-    solver = knapsackSolver(size, items, values, O, forceUseLimits=False)
+def knapsack(size, items, values, iterCounter, printPct=False, doSolveSuperInc=True, doUseLimits=True):
+    solver = knapsackSolver(size, items, values, iterCounter, forceUseLimits=False)
 
     solver.forceUseDpSolver = True
     solver.printInfo = printPct
@@ -31,8 +31,8 @@ def knapsack(size, items, values, O, printPct=False, doSolveSuperInc=True, doUse
     return bestValue, bestSize, bestItems, bestValues
 
 
-def hybridKnapsack(size, items, values, O, printPct=False, doSolveSuperInc=True, doUseLimits=True):
-    solver = knapsackSolver(size, items, values, O, forceUseLimits=False)
+def hybridKnapsack(size, items, values, iterCounter, printPct=False, doSolveSuperInc=True, doUseLimits=True):
+    solver = knapsackSolver(size, items, values, iterCounter, forceUseLimits=False)
 
     solver.forceUseDpSolver = False
     solver.printInfo = printPct
@@ -44,7 +44,7 @@ def hybridKnapsack(size, items, values, O, printPct=False, doSolveSuperInc=True,
     return bestValue, bestSize, bestItems, bestValues
 
 
-def paretoKnapsack(size, items, values, O,
+def paretoKnapsack(size, items, values, iterCounter,
                    useRatioSort=False,
                    printPct=False,
                    doSolveSuperInc=True,
@@ -52,7 +52,7 @@ def paretoKnapsack(size, items, values, O,
     paretoItems = [wPoint1(item) for item in items]
 
     solver = knapsackParetoSolver(paretoItems, values, range(len(values)), wPoint1(size), paretoPoint1(0, 0),
-                                  wPoint1(0), O)
+                                  wPoint1(0), iterCounter)
 
     solver.printInfo = printPct
     solver.forceUsePareto = True
@@ -62,7 +62,7 @@ def paretoKnapsack(size, items, values, O,
     return bestValue, bestSize.getDimension(0), bestItems, bestValues
 
 
-def hybridParetoKnapsack(size, items, values, O,
+def hybridParetoKnapsack(size, items, values, iterCounter,
                          useRatioSort=False,
                          printPct=False,
                          doSolveSuperInc=True,
@@ -72,7 +72,7 @@ def hybridParetoKnapsack(size, items, values, O,
     paretoItems = [wPoint1(item) for item in items]
 
     solver = knapsackParetoSolver(paretoItems, values, range(len(values)), wPoint1(size), paretoPoint1(0, 0),
-                                  wPoint1(0), O)
+                                  wPoint1(0), iterCounter)
 
     solver.printInfo = printPct
     solver.forceUsePareto = forceUsePareto
@@ -82,16 +82,16 @@ def hybridParetoKnapsack(size, items, values, O,
     return bestValue, bestSize.getDimension(0), bestItems, bestValues
 
 
-def subsParetoKnapsack(size, items, O,
+def subsParetoKnapsack(size, items, iterCounter,
                        printPct=False,
                        doSolveSuperInc=True,
                        doUseLimits=True):
     paretoItems = [wPoint1(item) for item in items]
 
-    O[0] += len(paretoItems)
+    iterCounter[0] += len(paretoItems)
 
     solver = knapsackParetoSolver(paretoItems, items, range(len(items)), wPoint1(size), paretoPoint0(0), wPoint1(0),
-                                  O)
+                                  iterCounter)
 
     solver.printInfo = printPct
     solver.doUseLimits = doUseLimits
@@ -101,12 +101,12 @@ def subsParetoKnapsack(size, items, O,
     return bestValue, bestItems
 
 
-def knapsackNd(constraints, items, values, O,
+def knapsackNd(constraints, items, values, iterCounter,
                printPct=False,
                doSolveSuperInc=True,
                doUseLimits=True
                ):
-    solver = knapsackNSolver(constraints, items, values, O, wPoint([0] * constraints.getSize()),
+    solver = knapsackNSolver(constraints, items, values, iterCounter, wPoint([0] * constraints.getSize()),
                              forceUseLimits=False)
 
     solver.forceUseDpSolver = True
@@ -120,12 +120,12 @@ def knapsackNd(constraints, items, values, O,
     return bestValue, bestSize, bestItems, bestValues
 
 
-def hybridKnapsackNd(constraints, items, values, O,
+def hybridKnapsackNd(constraints, items, values, iterCounter,
                      printPct=False,
                      doSolveSuperInc=True,
                      doUseLimits=True
                      ):
-    solver = knapsackNSolver(constraints, items, values, O, wPoint([0] * constraints.getSize()),
+    solver = knapsackNSolver(constraints, items, values, iterCounter, wPoint([0] * constraints.getSize()),
                              forceUseLimits=False)
 
     solver.forceUseDpSolver = False
@@ -139,11 +139,11 @@ def hybridKnapsackNd(constraints, items, values, O,
     return bestValue, bestSize, bestItems, bestValues
 
 
-def partitionN(items, sizesOrPartitions, groupSize, O,
+def partitionN(items, sizesOrPartitions, groupSize, iterCounter,
                optimizationLimit=-1,
                printPct=False
                ):
-    solver = partitionSolver(items, sizesOrPartitions, groupSize, O, optimizationLimit)
+    solver = partitionSolver(items, sizesOrPartitions, groupSize, iterCounter, optimizationLimit)
 
     solver.printOptimizationInfo = True
     solver.printInfo = printPct
@@ -153,11 +153,11 @@ def partitionN(items, sizesOrPartitions, groupSize, O,
     return quotients, reminder, optimizationCount
 
 
-def hybridPartitionN(items, sizesOrPartitions, groupSize, O,
+def hybridPartitionN(items, sizesOrPartitions, groupSize, iterCounter,
                      optimizationLimit=-1,
                      printPct=False
                      ):
-    solver = partitionSolver(items, sizesOrPartitions, groupSize, O, optimizationLimit)
+    solver = partitionSolver(items, sizesOrPartitions, groupSize, iterCounter, optimizationLimit)
 
     solver.printOptimizationInfo = True
     solver.printInfo = printPct

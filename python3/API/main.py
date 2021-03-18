@@ -24,7 +24,7 @@ from flags.flags import *
 from partition.partitionN import partitionSolver
 
 
-def subsKnapsack(size, items, O):
+def subsKnapsack(size, items, iterCounter):
     """
     The subset sum knapsack API.
 
@@ -32,12 +32,12 @@ def subsKnapsack(size, items, O):
     :type size: int
     :param items: knapsack items
     :type items: items int or decimal
-    :param O: iteration counter
-    :type O: array
+    :param iterCounter: iteration counter
+    :type iterCounter: array
 
     :return: bestValue, bestItems
     """
-    solver = subsetSumKnapsackSolver(size, items, O, forceUseLimits=False)
+    solver = subsetSumKnapsackSolver(size, items, iterCounter, forceUseLimits=False)
 
     solver.printInfo = printPct
     solver.printSuperIncreasingInfo = verbose
@@ -48,7 +48,7 @@ def subsKnapsack(size, items, O):
     return bestValue, bestItems
 
 
-def knapsack(size, items, values, O):
+def knapsack(size, items, values, iterCounter):
     """
     The 1/0 knapsack API.
 
@@ -61,13 +61,13 @@ def knapsack(size, items, values, O):
     :param values: knapsack values
     :type values: items int or decimal
 
-    :param O: iteration counter
-    :type O: array
+    :param iterCounter: iteration counter
+    :type iterCounter: array
 
     :return: bestValue, bestSize, bestItems, bestValues
     """
 
-    solver = knapsackSolver(size, items, values, O, forceUseLimits=False)
+    solver = knapsackSolver(size, items, values, iterCounter, forceUseLimits=False)
 
     solver.forceUseDpSolver = True
     solver.printInfo = printPct
@@ -79,7 +79,7 @@ def knapsack(size, items, values, O):
     return bestValue, bestSize, bestItems, bestValues
 
 
-def hybridKnapsack(size, items, values, O):
+def hybridKnapsack(size, items, values, iterCounter):
     """
     The KB hybrid 1/0 knapsack API. For worst case it calls Pareto solver.
 
@@ -92,13 +92,13 @@ def hybridKnapsack(size, items, values, O):
     :param values: knapsack values
     :type values: items int or decimal
 
-    :param O: iteration counter
-    :type O: array
+    :param iterCounter: iteration counter
+    :type iterCounter: array
 
     :return: bestValue, bestSize, bestItems, bestValues
     """
 
-    solver = knapsackSolver(size, items, values, O, forceUseLimits=False)
+    solver = knapsackSolver(size, items, values, iterCounter, forceUseLimits=False)
 
     solver.forceUseDpSolver = False
     solver.printInfo = printPct
@@ -110,7 +110,7 @@ def hybridKnapsack(size, items, values, O):
     return bestValue, bestSize, bestItems, bestValues
 
 
-def paretoKnapsack(size, items, values, O, useRatioSort=False):
+def paretoKnapsack(size, items, values, iterCounter, useRatioSort=False):
     """
     The KB Pareto solver API.
 
@@ -123,8 +123,8 @@ def paretoKnapsack(size, items, values, O, useRatioSort=False):
     :param values: knapsack values
     :type values: items int or decimal
 
-    :param O: iteration counter
-    :type O: array
+    :param iterCounter: iteration counter
+    :type iterCounter: array
 
     :param useRatioSort: which sorting behaviour use ratio or dimension ASC
     :type useRatioSort: bool
@@ -135,7 +135,7 @@ def paretoKnapsack(size, items, values, O, useRatioSort=False):
     paretoItems = [wPoint1(item) for item in items]
 
     solver = knapsackParetoSolver(paretoItems, values, range(len(values)), wPoint1(size), paretoPoint1(0, 0),
-                                  wPoint1(0), O)
+                                  wPoint1(0), iterCounter)
 
     solver.printInfo = printPct
     solver.forceUsePareto = True
@@ -145,7 +145,7 @@ def paretoKnapsack(size, items, values, O, useRatioSort=False):
     return bestValue, bestSize.getDimension(0), bestItems, bestValues
 
 
-def hybridParetoKnapsack(size, items, values, O, useRatioSort=False):
+def hybridParetoKnapsack(size, items, values, iterCounter, useRatioSort=False):
     """
     The hybrid KB/Pareto solver API. It calls KB solver for worst cases of Pareto.
 
@@ -158,8 +158,8 @@ def hybridParetoKnapsack(size, items, values, O, useRatioSort=False):
     :param values: knapsack values
     :type values: items int or decimal
 
-    :param O: iteration counter
-    :type O: array
+    :param iterCounter: iteration counter
+    :type iterCounter: array
 
     :param useRatioSort: which sorting behaviour use ratio or dimension ASC
     :type useRatioSort: bool
@@ -170,7 +170,7 @@ def hybridParetoKnapsack(size, items, values, O, useRatioSort=False):
     paretoItems = [wPoint1(item) for item in items]
 
     solver = knapsackParetoSolver(paretoItems, values, range(len(values)), wPoint1(size), paretoPoint1(0, 0),
-                                  wPoint1(0), O)
+                                  wPoint1(0), iterCounter)
 
     solver.printInfo = printPct
     solver.forceUsePareto = False
@@ -180,7 +180,7 @@ def hybridParetoKnapsack(size, items, values, O, useRatioSort=False):
     return bestValue, bestSize.getDimension(0), bestItems, bestValues
 
 
-def subsParetoKnapsack(size, items, O):
+def subsParetoKnapsack(size, items, iterCounter):
     """
     The hybrid KB/Pareto solver API. It calls KB solver only.
 
@@ -190,17 +190,17 @@ def subsParetoKnapsack(size, items, O):
     :param items: knapsack items
     :type items: items int or decimal
 
-    :param O: iteration counter
-    :type O: array
+    :param iterCounter: iteration counter
+    :type iterCounter: array
 
     :return: bestValue, bestItems
     """
 
     paretoItems = [wPoint1(item) for item in items]
 
-    O[0] += len(paretoItems)
+    iterCounter[0] += len(paretoItems)
 
-    solver = knapsackParetoSolver(paretoItems, items, range(len(items)), wPoint1(size), paretoPoint0(0), wPoint1(0), O)
+    solver = knapsackParetoSolver(paretoItems, items, range(len(items)), wPoint1(size), paretoPoint0(0), wPoint1(0), iterCounter)
 
     solver.printInfo = printPct
     solver.doUseLimits = doUseLimits
@@ -210,7 +210,7 @@ def subsParetoKnapsack(size, items, O):
     return bestValue, bestItems
 
 
-def knapsackNd(constraints, items, values, O):
+def knapsackNd(constraints, items, values, iterCounter):
     """
     The N dimensional DP knapsack solver API.
 
@@ -223,13 +223,13 @@ def knapsackNd(constraints, items, values, O):
     :param values: N dim knapsack values
     :type values: items int or decimal
 
-    :param O: iteration counter
-    :type O: array
+    :param iterCounter: iteration counter
+    :type iterCounter: array
 
     :return: bestValue, bestSize, bestItems, bestValues
     """
 
-    solver = knapsackNSolver(constraints, items, values, O, wPoint([0] * constraints.getSize()), forceUseLimits=False)
+    solver = knapsackNSolver(constraints, items, values, iterCounter, wPoint([0] * constraints.getSize()), forceUseLimits=False)
 
     solver.forceUseDpSolver = True
     solver.printInfo = printPct
@@ -242,7 +242,7 @@ def knapsackNd(constraints, items, values, O):
     return bestValue, bestSize, bestItems, bestValues
 
 
-def hybridKnapsackNd(constraints, items, values, O):
+def hybridKnapsackNd(constraints, items, values, iterCounter):
     """
     The N dimensional DP knapsack solver API. For worst case calls the pareto solvers for each dimension and performs DP
     over union of each dimension results. Exits when each dimension gives less than maximum found.
@@ -256,13 +256,13 @@ def hybridKnapsackNd(constraints, items, values, O):
     :param values: N dim knapsack values
     :type values: items int or decimal
 
-    :param O: iteration counter
-    :type O: array
+    :param iterCounter: iteration counter
+    :type iterCounter: array
 
     :return: bestValue, bestSize, bestItems, bestValues
     """
 
-    solver = knapsackNSolver(constraints, items, values, O, wPoint([0] * constraints.getSize()), forceUseLimits=False)
+    solver = knapsackNSolver(constraints, items, values, iterCounter, wPoint([0] * constraints.getSize()), forceUseLimits=False)
 
     solver.forceUseDpSolver = False
     solver.useParetoAsNGreedySolver = True
@@ -275,7 +275,7 @@ def hybridKnapsackNd(constraints, items, values, O):
     return bestValue, bestSize, bestItems, bestValues
 
 
-def partitionN(items, sizesOrPartitions, groupSize, O, optimizationLimit=-1):
+def partitionN(items, sizesOrPartitions, groupSize, iterCounter, optimizationLimit=-1):
     """
     The N partition solver API. It divides items given by equal sums. Number of partitions with equal sums is given by parameter.
     The array of custom sums can be passed instead of partitions. We can set up the count of items in group via parameter.
@@ -289,8 +289,8 @@ def partitionN(items, sizesOrPartitions, groupSize, O, optimizationLimit=-1):
     :param groupSize: group size count
     :type groupSize: int
 
-    :param O: iteration counter
-    :type O: array
+    :param iterCounter: iteration counter
+    :type iterCounter: array
 
     :param optimizationLimit: iteration counter
     :type optimizationLimit: int
@@ -298,7 +298,7 @@ def partitionN(items, sizesOrPartitions, groupSize, O, optimizationLimit=-1):
     :return: quotients, reminder, optimizationCount
     """
 
-    solver = partitionSolver(items, sizesOrPartitions, groupSize, O, optimizationLimit)
+    solver = partitionSolver(items, sizesOrPartitions, groupSize, iterCounter, optimizationLimit)
 
     solver.printOptimizationInfo = True
     solver.printInfo = printPct
@@ -308,7 +308,7 @@ def partitionN(items, sizesOrPartitions, groupSize, O, optimizationLimit=-1):
     return quotients, reminder, optimizationCount
 
 
-def hybridPartitionN(items, sizesOrPartitions, groupSize, O, optimizationLimit=-1):
+def hybridPartitionN(items, sizesOrPartitions, groupSize, iterCounter, optimizationLimit=-1):
     """
     The N hybrid partition solver API. It divides items given by equal sums. Number of partitions with equal sums is given by parameter.
     The array of custom sums can be passed instead of partitions. We can set up the count of items in group via parameter.
@@ -322,15 +322,15 @@ def hybridPartitionN(items, sizesOrPartitions, groupSize, O, optimizationLimit=-
     :param groupSize: group size count
     :type groupSize: int
 
-    :param O: iteration counter
-    :type O: array
+    :param iterCounter: iteration counter
+    :type iterCounter: array
 
     :param optimizationLimit: iteration counter
     :type optimizationLimit: int
 
     :return: quotients, reminder, optimizationCount
     """
-    solver = partitionSolver(items, sizesOrPartitions, groupSize, O, optimizationLimit)
+    solver = partitionSolver(items, sizesOrPartitions, groupSize, iterCounter, optimizationLimit)
 
     solver.printOptimizationInfo = True
     solver.printInfo = printPct

@@ -42,7 +42,7 @@ class PartitionTests(unittest.TestCase):
         if verbose:
             print("N equal-subset-sum integer tests.")
 
-        O = [0]
+        iterCounter = [0]
 
         tests = []
 
@@ -107,14 +107,14 @@ class PartitionTests(unittest.TestCase):
 
                 case += 1
 
-                O[0] = 0
+                iterCounter[0] = 0
 
                 if verbose:
                     print(f"case {case}", end=" ")
 
                 t1 = time.perf_counter()
 
-                partResult, reminder, optCount = partitionN(A, NU, 0, O)
+                partResult, reminder, optCount = partitionN(A, NU, 0, iterCounter)
 
                 tt = round(time.perf_counter() - t1, 4)
 
@@ -130,7 +130,7 @@ class PartitionTests(unittest.TestCase):
                         print(f"optCount {optCount}")
                         print(f"len {len(A)}")
                         print(f"sum {sum(A)}")
-                        print(f"iter {O[0]}")
+                        print(f"iter {iterCounter[0]}")
 
                     self.assertTrue(False)
 
@@ -156,7 +156,7 @@ class PartitionTests(unittest.TestCase):
 
                 case += 1
 
-                O[0] = 0
+                iterCounter[0] = 0
 
                 if verbose:
                     print(f"case {case}", end=" ")
@@ -167,7 +167,7 @@ class PartitionTests(unittest.TestCase):
 
                 t1 = time.perf_counter()
 
-                partResult, reminder, optCount = partitionN(decA, NU, 0, O)
+                partResult, reminder, optCount = partitionN(decA, NU, 0, iterCounter)
 
                 tt = round(time.perf_counter() - t1, 4)
 
@@ -183,7 +183,7 @@ class PartitionTests(unittest.TestCase):
                         print(f"optCount {optCount}")
                         print(f"len {len(A)}")
                         print(f"sum {sum(A)}")
-                        print(f"iter {O[0]}")
+                        print(f"iter {iterCounter[0]}")
 
                     self.assertTrue(False)
 
@@ -231,7 +231,7 @@ class PartitionTests(unittest.TestCase):
                         if caseId != 0 and caseId != i:
                             continue
 
-                        O = [0]
+                        iterCounter = [0]
 
                         subSet = []
 
@@ -263,12 +263,12 @@ class PartitionTests(unittest.TestCase):
 
                             t1 = time.perf_counter()
 
-                            partResult, resultReminder, optCount = partitionN(subSet, partition, 0, O)
+                            partResult, resultReminder, optCount = partitionN(subSet, partition, 0, iterCounter)
 
                             t2 = time.perf_counter()
 
                             if verbose:
-                                print(f"iter {round(O[0])}, optimizations {optCount}, dt {t2 - t1}")
+                                print(f"iter {round(iterCounter[0])}, optimizations {optCount}, dt {t2 - t1}")
 
                             resultPart = len(partResult)
 
@@ -288,11 +288,11 @@ class PartitionTests(unittest.TestCase):
                                 sumRem = sum(resultReminder.Items)
 
                                 print(
-                                    f"ERROR: integer partiton: item = {item}, case i {i}, case part limit {partLimit}, n = {len(subSet)}, rezult partition {resultPart}, expected partition {partition}, rez sum {rezSum}, total sum {rezSum + sumRem}, expected sum {expectedSum} , iter {round(O[0])}")
+                                    f"ERROR: integer partiton: item = {item}, case i {i}, case part limit {partLimit}, n = {len(subSet)}, rezult partition {resultPart}, expected partition {partition}, rez sum {rezSum}, total sum {rezSum + sumRem}, expected sum {expectedSum} , iter {round(iterCounter[0])}")
 
                             writer.writerow({'item': str(item), 'case': str(i), 'limit': str(partLimit),
                                              'partition': str(partition), 'N': str(len(subSet)),
-                                             'optimizations': str(optCount), 'iter': str(round(O[0])),
+                                             'optimizations': str(optCount), 'iter': str(round(iterCounter[0])),
                                              'max iter': str(((partition) ** 3) * ((len(subSet) // partition) ** 4)),
                                              'good': str(good)})
 
@@ -312,7 +312,7 @@ class PartitionTests(unittest.TestCase):
         if verbose:
             print("NP hard partition optimization integer tests.")
 
-        O = [0]
+        iterCounter = [0]
         tests = []
 
         A, NU = [3, 383, 401, 405, 580, 659, 730, 1024, 1100, 1175, 1601, 2299, 3908, 4391, 4485, 5524], 4
@@ -353,7 +353,7 @@ class PartitionTests(unittest.TestCase):
 
                 case += 1
 
-                O[0] = 0
+                iterCounter[0] = 0
 
                 if verbose:
                     print(f"case {case} ", end="")
@@ -381,21 +381,21 @@ class PartitionTests(unittest.TestCase):
 
                 t1 = time.perf_counter()
 
-                partResult, reminder, optCount = partitionN(testCase, singleTestSizes, 0, O, 1000)
+                partResult, reminder, optCount = partitionN(testCase, singleTestSizes, 0, iterCounter, 1000)
 
                 tt = round(time.perf_counter() - t1, 4)
 
-                pIter = O[0]
+                pIter = iterCounter[0]
 
-                O[0] = 0
+                iterCounter[0] = 0
 
                 t1 = time.perf_counter()
 
-                partResultH, reminderH, optCountH = hybridPartitionN(testCase, singleTestSizes, 0, O, 1000)
+                partResultH, reminderH, optCountH = hybridPartitionN(testCase, singleTestSizes, 0, iterCounter, 1000)
 
                 htt = round(time.perf_counter() - t1, 4)
 
-                hIter = O[0]
+                hIter = iterCounter[0]
 
                 if verbose:
                     print(
@@ -481,7 +481,7 @@ class PartitionTests(unittest.TestCase):
             for i in range(NU):
                 singleTestSizes.append(size)
 
-        O = [0]
+        iterCounter = [0]
 
         shuffle(singleTest)
         shuffle(singleTestSizes)
@@ -497,13 +497,13 @@ class PartitionTests(unittest.TestCase):
 
             t1 = time.perf_counter()
 
-            partResult, reminder, optCount = partitionN(singleTest, singleTestSizes, 0, O)
+            partResult, reminder, optCount = partitionN(singleTest, singleTestSizes, 0, iterCounter)
 
             tt = round(time.perf_counter() - t1, 4)
 
-            pIter = O[0]
+            pIter = iterCounter[0]
 
-            O[0] = 0
+            iterCounter[0] = 0
 
             if len(reminder) != 0:
 
@@ -520,11 +520,11 @@ class PartitionTests(unittest.TestCase):
 
             t1 = time.perf_counter()
 
-            partResultH, reminderH, optCountH = hybridPartitionN(singleTest, singleTestSizes, 0, O)
+            partResultH, reminderH, optCountH = hybridPartitionN(singleTest, singleTestSizes, 0, iterCounter)
 
             htt = round(time.perf_counter() - t1, 4)
 
-            hIter = O[0]
+            hIter = iterCounter[0]
 
             print(f" time {tt}, hybrid {htt}, pIter = {pIter} hIter = {hIter}")
 
