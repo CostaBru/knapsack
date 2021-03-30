@@ -23,6 +23,7 @@ from knapsack.knapsackNd import knapsackNSolver
 from knapsack.paretoKnapsack import knapsackParetoSolver
 from knapsack.paretoPoint import paretoPoint0, paretoPoint2
 from knapsack.subsKnapsack import subsetSumKnapsackSolver
+from knapsack.subsetSumParetoSolver import subsetSumParetoSolver
 from knapsack.wPoint import wPoint1, wPoint2
 
 
@@ -496,15 +497,12 @@ class partitionSolver:
         return None
 
     def paretoGroupingOperator(self, size, reminderItems, forceUseLimits, iterCounter):
-        paretoItems = [wPoint1(item) for item in reminderItems]
-   
-        solver = knapsackParetoSolver(paretoItems, reminderItems, range(0, len(reminderItems)), wPoint1(size), paretoPoint0(0), wPoint1(0), iterCounter)
+
+        solver = subsetSumParetoSolver(size, reminderItems, iterCounter)
    
         solver.printInfo = self.printInfo
         solver.forceUseLimits = forceUseLimits
-        solver.forceUsePareto = False
-        solver.subsetSum = True
-   
+
         bestValue, bestSize, bestItems, bestValues, bestIndexes = solver.solve()
 
         return  bestValue, bestValues
@@ -515,6 +513,7 @@ class partitionSolver:
    
         solver.printInfo = self.printInfo
         solver.forceUseLimits = forceUseLimits
+
         bestValue, bestItems = solver.solve()
 
         return  bestValue, bestItems

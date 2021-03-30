@@ -2,6 +2,7 @@ from knapsack.knapsack import knapsackSolver, knapsackParetoSolver
 from knapsack.knapsackNd import knapsackNSolver
 from knapsack.paretoPoint import paretoPoint1, paretoPoint0
 from knapsack.subsKnapsack import subsetSumKnapsackSolver
+from knapsack.subsetSumParetoSolver import subsetSumParetoSolver
 from knapsack.wPoint import wPoint1, wPoint
 from partition.partitionN import partitionSolver
 
@@ -86,18 +87,14 @@ def subsParetoKnapsack(size, items, iterCounter,
                        printPct=False,
                        doSolveSuperInc=True,
                        doUseLimits=True):
-    paretoItems = [wPoint1(item) for item in items]
-
-    iterCounter[0] += len(paretoItems)
-
-    solver = knapsackParetoSolver(paretoItems, items, range(len(items)), wPoint1(size), paretoPoint0(0), wPoint1(0),
-                                  iterCounter)
+    solver = subsetSumParetoSolver(size, items, iterCounter, forceUseLimits=False)
 
     solver.printInfo = printPct
+    solver.printSuperIncreasingInfo = True
+    solver.doSolveSuperInc = doSolveSuperInc
     solver.doUseLimits = doUseLimits
-    solver.canBackTraceWhenSizeReached = True
 
-    bestValue, bestSize, bestItems, bestValues, bestIndexes = solver.solve()
+    bestValue, bestItems = solver.solve()
     return bestValue, bestItems
 
 

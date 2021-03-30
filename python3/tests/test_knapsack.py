@@ -53,6 +53,7 @@ class KnapsackTests(unittest.TestCase):
 
         A = [Decimal("0.2"), Decimal("1.200001"), Decimal("2.9000001"), Decimal("3.30000009"), Decimal("4.3"),
              Decimal("5.5"), Decimal("6.6"), Decimal("7.7"), Decimal("8.8"), Decimal("9.8")]
+
         A.sort(reverse=True)
 
         s = Decimal("10.5")
@@ -80,16 +81,15 @@ class KnapsackTests(unittest.TestCase):
         opt, optValues1 = subsKnapsack(s, A, iterCounter)
         self.assertEqual(expectedValue, opt)
 
-    # Polynominal: Superincreasing tests for equal-subset-sum knapsack, 1-0 knapsack, and N dimension knapsacks, where N = 2.
+        opt, optValues1 = subsParetoKnapsack(s, A, iterCounter)
+        self.assertEqual(expectedValue, opt)
+
+    # Polynomial: Superincreasing tests for equal-subset-sum knapsack, 1-0 knapsack, and N dimension knapsacks, where N = 2.
     # @unittest.skip("temp")
     def test_2_superincreasing(self):
 
-        from flags.flags import doSolveSuperInc
-
         if verbose:
             print("Superincreasing integer numbers tests.")
-
-        prevDoSolveSuperInc = doSolveSuperInc
 
         iterCounter = [0]
         A = [1, 2, 5, 21, 69, 189, 376, 919]
@@ -99,38 +99,24 @@ class KnapsackTests(unittest.TestCase):
             if i % 2 == 1:
                 A.reverse()
 
-            C = 10
-
-            nLogN = len(A) * math.log2(len(A))
-
             for s in range(sum(A)):
-                doSolveSuperInc = False
 
-                opt1, expected = subsKnapsack(s, A, iterCounter)
+                opt1, expected = subsKnapsack(s, A, iterCounter, doSolveSuperInc=False)
 
-                doSolveSuperInc = True
-
-                iterCounter[0] = 0
                 opt2, optValues1 = subsKnapsack(s, A, iterCounter)
-
                 self.assertTrue(listValuesEqual(optValues1, expected))
-                self.assertTrue(iterCounter[0] <= C * len(A) + nLogN)
 
-                iterCounter[0] = 0
                 opt, optDim, optItems, optValues2 = knapsack(s, A, A, iterCounter)
                 self.assertTrue(listValuesEqual(optValues2, expected))
-                self.assertTrue(iterCounter[0] <= C * len(A) + nLogN)
 
-                iterCounter[0] = 0
                 opt, optDim, optItems3, optValues3 = knapsackNd(wPoint((s, s)), [wPoint((a, a)) for a in A], A, iterCounter)
                 self.assertTrue(listValuesEqual(optValues3, expected))
-                self.assertTrue(iterCounter[0] <= 100 * nLogN)
 
-                iterCounter[0] = 0
                 opt, optDim, optItems, optValuesP = paretoKnapsack(s, A, A, iterCounter)
                 self.assertTrue(listValuesEqual(optValuesP, expected))
 
-        doSolveSuperInc = prevDoSolveSuperInc
+                opt, optValuesSP = subsParetoKnapsack(s, A, iterCounter)
+                self.assertTrue(listValuesEqual(optValuesSP, expected))
 
         if verbose:
             print("Superincreasing rational numbers tests.")
@@ -138,42 +124,28 @@ class KnapsackTests(unittest.TestCase):
         for s in range(sum(A)):
             decA = list(A)
 
-            nLogN = len(A) * math.log2(len(A))
-
             DecimalArray(decA)
 
             decS = DecimalData(s)
 
-            doSolveSuperInc = False
-
-            opt, expected = subsKnapsack(decS, decA, iterCounter)
-
-            doSolveSuperInc = True
+            opt, expected = subsKnapsack(decS, decA, iterCounter, doSolveSuperInc=False)
 
             opt, decOptValues1 = subsKnapsack(decS, decA, iterCounter)
-
-            iterCounter[0] = 0
             self.assertTrue(listValuesEqual(decOptValues1, expected))
-            self.assertTrue(iterCounter[0] <= 10 * nLogN)
 
-            iterCounter[0] = 0
+            opt, decOptValuesSP = subsParetoKnapsack(decS, decA, iterCounter)
+            self.assertTrue(listValuesEqual(decOptValuesSP, expected))
+
             opt, optDim, decOptItems, decOptValues2 = knapsack(decS, decA, decA, iterCounter)
             self.assertTrue(listValuesEqual(decOptValues2, expected))
-            self.assertTrue(iterCounter[0] <= 10 * len(A) + nLogN)
 
-            iterCounter[0] = 0
-            opt, optDim, decOptItems3, optValues3 = knapsackNd(wPoint((decS, decS)), [wPoint((da, da)) for da in decA],
-                                                               decA, iterCounter)
+            opt, optDim, decOptItems3, optValues3 = knapsackNd(wPoint((decS, decS)), [wPoint((da, da)) for da in decA], decA, iterCounter)
             self.assertTrue(listValuesEqual(optValues3, expected))
-            self.assertTrue(iterCounter[0] <= 100 * nLogN)
 
-            iterCounter[0] = 0
             opt, optDim, decOptItems, decOptValuesP = paretoKnapsack(decS, decA, decA, iterCounter)
             self.assertTrue(listValuesEqual(decOptValuesP, expected))
 
-        doSolveSuperInc = prevDoSolveSuperInc
-
-    # Polynominal: Partial superincreasing numbers tests.
+    # Polynomial: Partial superincreasing numbers tests.
     # @unittest.skip("temp")
     def test_3_partial_superincreasing(self):
         if verbose:
@@ -198,48 +170,39 @@ class KnapsackTests(unittest.TestCase):
                 if revers:
                     testCase.reverse()
 
-                nLogN = len(testCase) * math.log2(len(testCase))
-
                 for s in range(3, sum(testCase)):
 
-                    doSolveSuperInc = False
+                    optE, expected = subsKnapsack(s, testCase, iterCounter, doSolveSuperInc=False)
 
-                    optE, expected = subsKnapsack(s, testCase, iterCounter)
-
-                    doSolveSuperInc = True
-
-                    if verbose:
-                        print(f"Partial superincreasing test: s = {s},  reverse = {revers}, index {i}")
+                    if verbose: print(f"Partial superincreasing test: s = {s},  reverse = {revers}, index {i}")
 
                     iterCounter[0] = 0
                     opt1, optValues1 = subsKnapsack(s, testCase, iterCounter)
                     self.assertTrue(listValuesEqual(optValues1, expected) or sum(expected) == opt1)
 
                     iterCounter[0] = 0
+                    opt1, optValuesSP = subsParetoKnapsack(s, testCase, iterCounter)
+                    self.assertTrue(listValuesEqual(optValuesSP, expected) or sum(optValuesSP) == opt1)
+
+                    iterCounter[0] = 0
                     opt2, optDim, optItems, optValues2 = knapsack(s, testCase, testCase, iterCounter)
                     self.assertTrue(listValuesEqual(optValues2, expected) or sum(expected) == opt2)
 
                     iterCounter[0] = 0
-                    opt3, optDim, optItems3, optValues3 = knapsackNd(wPoint((s, s)), [wPoint((a, a)) for a in testCase],
-                                                                     testCase, iterCounter)
+                    opt3, optDim, optItems3, optValues3 = knapsackNd(wPoint((s, s)), [wPoint((a, a)) for a in testCase], testCase, iterCounter)
                     self.assertTrue(listValuesEqual(optValues3, expected) or sum(expected) == opt3)
 
                     iterCounter[0] = 0
                     opt4, optDim, optItems, optValues4 = paretoKnapsack(s, testCase, testCase, iterCounter)
                     self.assertTrue(listValuesEqual(optValues4, expected) or sum(expected) == opt4)
 
-    # Polynominal: Partial geometric progression numbers tests.
+    # Polynomial: Partial geometric progression numbers tests.
     # @unittest.skip("temp")
     def test_4_partial_geometric_progression(self):
 
-        from flags.flags import doSolveSuperInc
-
-        if verbose:
-            print("Partial geometric progression numbers tests.")
+        if verbose: print("Partial geometric progression numbers tests.")
 
         iterCounter = [0]
-
-        prevDoSolveSuperInc = doSolveSuperInc
 
         A = [2] * 10
 
@@ -252,48 +215,36 @@ class KnapsackTests(unittest.TestCase):
 
             testCase.insert(i + 1, testCase[i] + 1)
 
-            nLogN = len(testCase) * math.log2(len(testCase))
-
             step = sum(testCase) // 100
 
             for s in range(step, sum(testCase), step):
-                doSolveSuperInc = False
 
-                optE, expected = subsKnapsack(s, testCase, iterCounter)
-
-                doSolveSuperInc = True
+                optE, expected = subsKnapsack(s, testCase, iterCounter, doSolveSuperInc=False)
 
                 t1 = time.perf_counter()
 
-                iterCounter[0] = 0
                 opt1, optValues1 = subsKnapsack(s, testCase, iterCounter)
                 self.assertTrue(listValuesEqual(optValues1, expected))
 
                 t2 = time.perf_counter()
 
-                iterCounter[0] = 0
                 opt2, optDim, optItems, optValues2 = knapsack(s, testCase, testCase, iterCounter)
                 self.assertTrue(listValuesEqual(optValues2, expected))
 
                 t3 = time.perf_counter()
 
-                iterCounter[0] = 0
                 opt3, optDim, optItems3, optValues3 = knapsackNd(wPoint((s, s)), [wPoint((a, a)) for a in testCase],
                                                                  testCase, iterCounter)
                 self.assertTrue(listValuesEqual(optValues3, expected))
 
                 t4 = time.perf_counter()
 
-                iterCounter[0] = 0
                 opt2, optDim, optItems, optValuesP = paretoKnapsack(s, testCase, testCase, iterCounter)
                 self.assertTrue(listValuesEqual(optValuesP, expected))
 
                 t5 = time.perf_counter()
 
-                print(
-                    f"Partial geometric progression test: i {i}, size {s}, subs {round(t2 - t1, 4)}, 1-0 {round(t3 - t2, 4)}, 2D {round(t4 - t3, 4)}, pareto {round(t5 - t4, 4)}.")
-
-        doSolveSuperInc = prevDoSolveSuperInc
+                if verbose: print(f"Partial geometric progression test: i {i}, size {s}, subs {round(t2 - t1, 4)}, 1-0 {round(t3 - t2, 4)}, 2D {round(t4 - t3, 4)}, pareto {round(t5 - t4, 4)}.")
 
     # NP complete: 2D knapsack matching with classic DP solution results. N=13
     # @unittest.skip("temp")
@@ -306,8 +257,7 @@ class KnapsackTests(unittest.TestCase):
         testCaseV = [8, 4, 12, 18, 5, 2, 1, 4, 3, 2, 2, 4, 10, 9]
         testCaseVal = [50, 30, 20, 50, 30, 40, 50, 60, 10, 70, 80, 10, 15, 30]
 
-        if verbose:
-            print(f"2D knapsack matching with classic DP solution results. N={len(testCaseW)}")
+        if verbose: print(f"2D knapsack matching with classic DP solution results. N={len(testCaseW)}")
 
         s_weights, s_volumes, s_values = sortReverse3Both(testCaseW, testCaseV, testCaseVal)
 
@@ -316,8 +266,7 @@ class KnapsackTests(unittest.TestCase):
             for testKnapsackWeight in range(min(testCaseW), sum(testCaseW) - 1):
                 for testKnapsackVolume in range(min(testCaseV), sum(testCaseV) - 1):
 
-                    dpRes = knapsack2d_dp(testKnapsackWeight, testKnapsackVolume, testCaseW, testCaseV, testCaseVal,
-                                          O_dp)
+                    dpRes = knapsack2d_dp(testKnapsackWeight, testKnapsackVolume, testCaseW, testCaseV, testCaseVal, O_dp)
 
                     dims = [None] * len(s_weights)
 
@@ -334,13 +283,12 @@ class KnapsackTests(unittest.TestCase):
                     if opt != dpRes or resW > testKnapsackWeight or resVol > testKnapsackVolume:
                         if verbose:
                             print(f"W: {testKnapsackWeight} V: {testKnapsackVolume}", end="")
-                            print(
-                                f" k sum val : {sum(optValues)}, dp: {dpRes}  k sum vol : {resVol} k sum w : {resW}  all sum val: {sum(s_values)} all sum vol: {sum(s_volumes)} all sum w: {sum(s_weights)}")
+                            print(f" k sum val : {sum(optValues)}, dp: {dpRes}  k sum vol : {resVol} k sum w : {resW}  all sum val: {sum(s_values)} all sum vol: {sum(s_volumes)} all sum w: {sum(s_weights)}")
                         self.assertTrue(False)
 
     # NP hard: Integer and Decimal mixed multidimensional knapsack problem (MKP) test
     # @unittest.skip("temp")
-    def test_10_MKP(self):
+    def test_91_MKP(self):
 
         data = [(821, Decimal("0.8"), 118),
                 (1144, Decimal("1"), 322),
@@ -404,8 +352,7 @@ class KnapsackTests(unittest.TestCase):
         descDims2d, descValues = sortReverseBoth(dims2d, values)
         constr2d = wPoint((12210, Decimal(12)))
 
-        if verbose:
-            print(f"Integer and Decimal mixed multidimensional knapsack problem (MKP) test. N {len(data)}")
+        if verbose: print(f"Integer and Decimal mixed multidimensional knapsack problem (MKP) test. N {len(data)}")
 
         iterCounter = [0]
 
@@ -422,9 +369,7 @@ class KnapsackTests(unittest.TestCase):
         iterMax = 2 ** (len(data))
         iterRez = round(iterCounter[0])
 
-        if verbose:
-            print(
-                f"MKP time: {round(t2 - t1, 4)}, optimized - genetic expected: {optRez - genExpectedValue}, iter: {iterRez}, iterMax: {iterMax}, dIter: {iterMax - iterRez}")
+        if verbose: print( f"MKP time: {round(t2 - t1, 4)}, optimized - genetic expected: {optRez - genExpectedValue}, iter: {iterRez}, iterMax: {iterMax}, dIter: {iterMax - iterRez}")
 
         self.assertTrue(good)
 
@@ -456,8 +401,7 @@ class KnapsackTests(unittest.TestCase):
         sumOfAll = sum([p[0] for p in mixDimData])
         minItem = min([p[0] for p in mixDimData]) - 1
 
-        if verbose:
-            print(f"MKS 2d matching results with limits turned on")
+        if verbose: print(f"MKS 2d matching results with limits turned on")
 
         from flags.flags import doUseLimits
 
@@ -504,9 +448,7 @@ class KnapsackTests(unittest.TestCase):
 
                     good = optValue3 == optValue2 and optDims3 <= constr2d and optDims2 <= constr2d
 
-                    if verbose:
-                        print(
-                            f"MKS 2d, ASC={ascOrder}, constaint1: {constaint1}, constaint2: {constaint2}, time: {round(t2 - t1, 4)}, optimized - expected: {optValue3 - optValue2}, dlen {len(optValues3) - len(optValues2)} , iter: {iterRez}, dIter: {fullIterRez - iterRez}, dt {tFull - tLimitsOn}")
+                    if verbose: print(f"MKS 2d, ASC={ascOrder}, constraint1: {constaint1}, constraint2: {constaint2}, time: {round(t2 - t1, 4)}, optimized - expected: {optValue3 - optValue2}, dlen {len(optValues3) - len(optValues2)} , iter: {iterRez}, dIter: {fullIterRez - iterRez}, dt {tFull - tLimitsOn}")
 
                     self.assertTrue(good)
 
@@ -540,12 +482,7 @@ class KnapsackTests(unittest.TestCase):
         sumOfAll = sum([p[0] for p in mixDimData])
         minItem = min([p[0] for p in mixDimData]) - 1
 
-        if verbose:
-            print(f"MKS N partition 2d matching results with limits turned off")
-
-        from flags.flags import doUseLimits
-
-        prevDoUseLimits = doUseLimits
+        if verbose: print(f"MKS N partition 2d matching results with limits turned off")
 
         for i in range(1, 3):
 
@@ -557,9 +494,9 @@ class KnapsackTests(unittest.TestCase):
 
                 for constaint2 in range(1, len(mixDimData)):
 
-                    ascOrder = True
-                    constaint1 = 6711
-                    constaint2 = 6
+                    #ascOrder = True
+                    #constaint1 = 6711
+                    #constaint2 = 6
 
                     testDescDims = list(descDims2d)
                     testDescValues = list(descValues2d)
@@ -571,17 +508,13 @@ class KnapsackTests(unittest.TestCase):
 
                     constr2d = wPoint((constaint1, constaint2))
 
-                    doUseLimits = False
-
-                    optValue2, optDim2, optItems2, optValues2 = knapsackNd(constr2d, testDescDims, testDescValues, iterCounter)
+                    optValue2, optDim2, optItems2, optValues2 = knapsackNd(constr2d, testDescDims, testDescValues, iterCounter, doUseLimits=False)
 
                     tFull = round(time.perf_counter() - t1, 4)
 
                     fullIterRez = iterCounter[0]
 
                     iterCounter = [0]
-
-                    doUseLimits = True
 
                     t1 = time.perf_counter()
 
@@ -595,13 +528,9 @@ class KnapsackTests(unittest.TestCase):
 
                     good = optValue2 == optValue3 and optDim3 <= constr2d
 
-                    if verbose:
-                        print(
-                            f"MKS N partition test:  ASC={ascOrder}, constaint1: {constaint1}, constaint2 {constaint2} , time: {round(t2 - t1, 4)}, optimized - expected: {optValue2 - optValue3}, dlen {len(optValues3) - len(optValues2)} , iter: {iterRez}, dIter: {fullIterRez - iterRez}, dt {tFull - tLimitsOn}")
+                    if verbose: print(f"MKS N partition test:  ASC={ascOrder}, constaint1: {constaint1}, constaint2 {constaint2} , time: {round(t2 - t1, 4)}, optimized - expected: {optValue2 - optValue3}, dlen {len(optValues3) - len(optValues2)} , iter: {iterRez}, dIter: {fullIterRez - iterRez}, dt {tFull - tLimitsOn}")
 
                     self.assertTrue(good)
-
-        doUseLimits = prevDoUseLimits
 
     # NP complete: Integer 1-0 knapsack problem limits tests
     # @unittest.skip("temp")
@@ -643,13 +572,7 @@ class KnapsackTests(unittest.TestCase):
         sumOfAll = sum([p[0] for p in mixDimData])
         minItem = min([p[0] for p in mixDimData]) - 1
 
-        if verbose:
-            print(f"Integer 1-0 knapsack problem limits tests")
-
-        from flags.flags import printPct, doUseLimits
-
-        prevDoUseLimits = doUseLimits
-        prevPrintPct = printPct
+        if verbose: print(f"Integer 1-0 knapsack problem limits tests")
 
         for i in range(1, 3):
 
@@ -667,17 +590,13 @@ class KnapsackTests(unittest.TestCase):
 
                 t1 = time.perf_counter()
 
-                doUseLimits = False
-
-                optValue2, optDims2, optItems2, optValues2 = knapsack(constraint, testDescDims, testDescValues, iterCounter)
+                optValue2, optDims2, optItems2, optValues2 = knapsack(constraint, testDescDims, testDescValues, iterCounter, doUseLimits=False)
 
                 tFull = round(time.perf_counter() - t1, 4)
 
                 fullIterRez = iterCounter[0]
 
                 iterCounter = [0]
-
-                doUseLimits = True
 
                 t1 = time.perf_counter()
 
@@ -695,18 +614,11 @@ class KnapsackTests(unittest.TestCase):
 
                 iterRez = round(iterCounter[0])
 
-                printPct = prevPrintPct
-
                 good = optValue3 == optValue2 and optValueP == optValue2 and optDims3 <= constraint and optDims2 <= constraint and optDimsP <= constraint
 
-                if verbose:
-                    print(
-                        f"1-0 knapsack limits test:  ASC={ascOrder}, constraint: {constraint}, time: {round(t2 - t1, 4)}, optimized - expected: {optValue2 - optValue3}, dlen {len(optValues3) - len(optValues2)} , iter: {iterRez}, dIter: {fullIterRez - iterRez}, dt {tFull - tLimitsOn}")
+                if verbose: print(f"1-0 knapsack limits test:  ASC={ascOrder}, constraint: {constraint}, time: {round(t2 - t1, 4)}, optimized - expected: {optValue2 - optValue3}, dlen {len(optValues3) - len(optValues2)} , iter: {iterRez}, dIter: {fullIterRez - iterRez}, dt {tFull - tLimitsOn}")
 
                 self.assertTrue(good)
-
-        doUseLimits = prevDoUseLimits
-        printPct = prevPrintPct
 
     # NP complete: Strict 3 and 6 partition problem tests.
     # @unittest.skip("temp")
@@ -719,8 +631,7 @@ class KnapsackTests(unittest.TestCase):
             rez.sort()
             return rez
 
-        if verbose:
-            print("3-partition problem for integer numbers tests.")
+        if verbose: print("3-partition problem for integer numbers tests.")
 
         iterCounter = [0]
 
@@ -764,8 +675,7 @@ class KnapsackTests(unittest.TestCase):
 
             seed(newSeed)
 
-            if verbose:
-                print(f"random seed is {newSeed}")
+            if verbose: print(f"random seed is {newSeed}")
 
             case = 0
             for A, NU in tests:
@@ -774,8 +684,7 @@ class KnapsackTests(unittest.TestCase):
 
                 iterCounter[0] = 0
 
-                if verbose:
-                    print(f"case {case}", end=" ")
+                if verbose: print(f"case {case}", end=" ")
 
                 t1 = time.perf_counter()
 
@@ -795,7 +704,7 @@ class KnapsackTests(unittest.TestCase):
 
                 hIter = iterCounter[0]
 
-                print(f" time {tt}, hybrid {htt}, pIter = {pIter} hIter = {hIter}")
+                if verbose:  print(f" time {tt}, hybrid {htt}, pIter = {pIter} hIter = {hIter}")
 
                 if len(reminder) != 0 or len(partResult) != NU:
 
@@ -827,8 +736,7 @@ class KnapsackTests(unittest.TestCase):
 
         seed(dtNow)
 
-        if verbose:
-            print("6-partition problem for integer tests.")
+        if verbose:  print("6-partition problem for integer tests.")
 
         for i in range(randomTestCount):
 
@@ -836,8 +744,7 @@ class KnapsackTests(unittest.TestCase):
 
             seed(newSeed)
 
-            if verbose:
-                print(f"random seed is {newSeed}")
+            if verbose:  print(f"random seed is {newSeed}")
 
             case = 0
             for A, NU in tests:
@@ -846,8 +753,7 @@ class KnapsackTests(unittest.TestCase):
 
                 iterCounter[0] = 0
 
-                if verbose:
-                    print(f"case {case}", end=" ")
+                if verbose:  print(f"case {case}", end=" ")
 
                 if NU % 6 != 0:
                     continue
@@ -870,7 +776,7 @@ class KnapsackTests(unittest.TestCase):
 
                 hIter = iterCounter[0]
 
-                print(f" time {tt}, hybrid {htt}, pIter = {pIter} hIter = {hIter}")
+                if verbose:  print(f" time {tt}, hybrid {htt}, pIter = {pIter} hIter = {hIter}")
 
                 if len(reminder) != 0 or len(partResult) != NU // 2:
 
@@ -902,8 +808,7 @@ class KnapsackTests(unittest.TestCase):
 
         seed(dtNow)
 
-        if verbose:
-            print("3-partition problem for rational numbers tests.")
+        if verbose:  print("3-partition problem for rational numbers tests.")
 
         for i in range(randomTestCount):
 
@@ -911,8 +816,7 @@ class KnapsackTests(unittest.TestCase):
 
             seed(newSeed)
 
-            if verbose:
-                print(f"random seed is {newSeed}", end="")
+            if verbose:  print(f"random seed is {newSeed}", end="")
 
             case = 0
             for A, NU in tests:
@@ -921,8 +825,7 @@ class KnapsackTests(unittest.TestCase):
 
                 iterCounter[0] = 0
 
-                if verbose:
-                    print(f"case {case}", end=" ")
+                if verbose:   print(f"case {case}", end=" ")
 
                 decA = list(A)
                 DecimalArray(decA)
@@ -943,7 +846,7 @@ class KnapsackTests(unittest.TestCase):
 
                 hIter = iterCounter[0]
 
-                print(f" time {tt}, hybrid {htt}, pIter = {pIter} hIter = {hIter}")
+                if verbose:  print(f" time {tt}, hybrid {htt}, pIter = {pIter} hIter = {hIter}")
 
                 if len(reminder) != 0 or len(partResult) != NU:
 
@@ -976,8 +879,7 @@ class KnapsackTests(unittest.TestCase):
     # NP complete: 1-0 knapsack for Silvano Martello and Paolo Toth 1990 tests.
     # @unittest.skip("temp")
     def test_6_Silvano_Paolo_1_0_knapsack(self):
-        if verbose:
-            print("1-0 knapsack solver for Silvano Martello and Paolo Toth 1990 tests.")
+        if verbose:   print("1-0 knapsack solver for Silvano Martello and Paolo Toth 1990 tests.")
 
         def testSilvano(W, V, R, c):
             iterCounter = [0]
@@ -1025,8 +927,7 @@ class KnapsackTests(unittest.TestCase):
     # NP weak: Equal-subset-sum knapsack for hardinstances_pisinger subset sum test dataset.
     # @unittest.skip("temp")
     def test_8_equal_subset_sum_files(self):
-        if verbose:
-            print("Run equal-subset-sum knapsack for hardinstances_pisinger subset sum test dataset.")
+        if verbose:   print("Run equal-subset-sum knapsack for hardinstances_pisinger subset sum test dataset.")
 
         iterCounter = [0]
 
@@ -1074,8 +975,7 @@ class KnapsackTests(unittest.TestCase):
 
                             testCase.sort(reverse=True)
 
-                            if verbose:
-                                print(f"{f} case {caseNumber}", end=" ")
+                            if verbose:  print(f"{f} case {caseNumber}", end=" ")
 
                             maxIter = 4 * (len(testCase) ** 3)
 
@@ -1093,7 +993,7 @@ class KnapsackTests(unittest.TestCase):
 
                             iterCounter[0] = 0
 
-                            optDescFull, optItemsDescFull = subsKnapsack(testKnapsack, testCase, iterCounter, doUseLimits=False)
+                            optDescFull, optItemsDescFull = subsKnapsack(testKnapsack, testCase, iterCounter)
 
                             self.assertEqual(optDescFull, optDesc)
 
@@ -1151,33 +1051,29 @@ class KnapsackTests(unittest.TestCase):
 
                             iterCounter[0] = 0
 
-                            if len(testCase) <= 200:
+                            t5 = time.perf_counter()
 
-                                t5 = time.perf_counter()
+                            optDescSortH, optItemstDescSortH = subsParetoKnapsack(testKnapsack, testCase, iterCounter, printPct=False, doUseLimits=True)
 
-                                optDescSortH, optItemstDescSortH = subsParetoKnapsack(testKnapsack, testCase, iterCounter)
+                            t6 = time.perf_counter()
 
-                                t6 = time.perf_counter()
+                            descHIter = iterCounter[0]
 
-                                descHIter = iterCounter[0]
+                            if optDescSortH < expS or optDescSortH > testKnapsack:
+                                good = False
+                                allGood = False
+                                if verbose:
+                                    print(
+                                        f"ERROR: equal-subset-sum: DESC sort hybrid pareto  rez opt: {optDescSortH}, test opt: {testKnapsack}, test values: {expS}",
+                                        end=" ")
 
-                                if optDescSortH < expS or optDescSortH > testKnapsack:
-                                    good = False
-                                    allGood = False
-                                    if verbose:
-                                        print(
-                                            f"ERROR: equal-subset-sum: DESC sort hybrid pareto  rez opt: {optDescSortH}, test opt: {testKnapsack}, test values: {expS}",
-                                            end=" ")
+                            if descHIter > maxIter:
+                                if verbose:
+                                    print(
+                                        f"WARN: equal-subset-sum: DESC sort hybrid pareto  max iter exceeded: {2 * maxIter} rez iter: {descHIter}",
+                                        end=" ")
 
-                                if descHIter > maxIter:
-                                    if verbose:
-                                        print(
-                                            f"WARN: equal-subset-sum: DESC sort hybrid pareto  max iter exceeded: {2 * maxIter} rez iter: {descHIter}",
-                                            end=" ")
-
-                                descHTime = (round(t6 - t5, 4), "desc h pareto")
-                            else:
-                                descHTime = ((100000), "desc h pareto")
+                            descHTime = (round(t6 - t5, 4), "desc h pareto")
 
                             bestTime = min([descTime, nonTime, descHTime], key=lambda t: t[0])[1]
 
@@ -1188,8 +1084,7 @@ class KnapsackTests(unittest.TestCase):
                             bestIter = min([descIterItem, nonIterItem, descHIterItem], key=lambda t: t[0])[1]
 
                             if verbose:
-                                print(
-                                    f" DESC {descTime[0]} NON {nonTime[0]} DESC FULL {descTimeFull[0]} DESC H PARETO {descHTime[0]}")
+                                print(   f" DESC {descTime[0]} NON {nonTime[0]} DESC FULL {descTimeFull[0]} DESC H PARETO {descHTime[0]}")
 
                             writer.writerow({'file': str(f), 'case': str(caseNumber), 'size': str(testKnapsack),
                                              'iter desc': str(rezIterDesc), 'iter non': str(rezIterNon),
@@ -1528,8 +1423,7 @@ class KnapsackTests(unittest.TestCase):
         items = [wPoint((p[0] * dimensionMultiplier, p[1] * dimensionMultiplier)) for p in lwData100]
         constraints = wPoint((lConstraint * dimensionMultiplier, wConstraint * dimensionMultiplier))
 
-        if verbose:
-            print(f"multidimensional N={len(values)} knapsack test")
+        if verbose:  print(f"multidimensional N={len(values)} knapsack test")
 
         iterCounter = [0]
 

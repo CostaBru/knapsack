@@ -487,12 +487,11 @@ class knapsackParetoSolver:
 
         itemPoint = self.createNewPoint(itemDimensions, itemProfit, itemId)
 
-        #useItemItself = skipLimitCheck or itemLimit >= halfConstraint
         useItemItself = True
 
         if useItemItself:
 
-            if not itemPoint in distinctPoints1:
+            if  itemPoint not in distinctPoints1:
                 self.iterateOrPushBack(circularPointQueue, itemPoint, greaterQu, distinctPoints2)
 
                 if maxProfitPoint.getProfit() <= itemPoint.getProfit():
@@ -517,7 +516,7 @@ class knapsackParetoSolver:
 
             if  newPoint <= constraintPoint:
 
-                if not newPoint in distinctPoints1:  
+                if  newPoint not in distinctPoints1:
 
                     self.iterateOrPushBack(circularPointQueue, newPoint, greaterQu, distinctPoints2)
 
@@ -562,7 +561,7 @@ class knapsackParetoSolver:
 
             itemIndex = self.getItemIndex(itemsCount, i, allAsc)
 
-            itemDimensions, itemProfit, itemId = sortedItems[itemIndex ], sortedValues[itemIndex], sortedIndexes[itemIndex]
+            itemDimensions, itemProfit, itemId = sortedItems[itemIndex], sortedValues[itemIndex], sortedIndexes[itemIndex]
 
             itemLimit, oldPointLimit, newPointLimit, skipCount = self.getLimits(constraint, itemIndex, sortedItems, partialSums, superIncreasingItems, canUsePartialSums)
 

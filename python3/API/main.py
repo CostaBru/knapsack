@@ -17,6 +17,7 @@ from knapsack.paretoPoint import paretoPoint0
 from knapsack.subsKnapsack import *
 from knapsack.knapsack import *
 from knapsack.knapsackNd import *
+from knapsack.subsetSumParetoSolver import subsetSumParetoSolver
 from knapsack.wPoint import *
 from flags.flags import *
 
@@ -46,7 +47,6 @@ def subsKnapsack(size, items, iterCounter):
 
     bestValue, bestItems = solver.solve()
     return bestValue, bestItems
-
 
 def knapsack(size, items, values, iterCounter):
     """
@@ -182,31 +182,26 @@ def hybridParetoKnapsack(size, items, values, iterCounter, useRatioSort=False):
 
 def subsParetoKnapsack(size, items, iterCounter):
     """
-    The hybrid KB/Pareto solver API. It calls KB solver only.
+    The subset sum knapsack KB pareto API.
 
     :param size: size of knapsack
     :type size: int
-
     :param items: knapsack items
     :type items: items int or decimal
-
     :param iterCounter: iteration counter
     :type iterCounter: array
 
     :return: bestValue, bestItems
     """
 
-    paretoItems = [wPoint1(item) for item in items]
-
-    iterCounter[0] += len(paretoItems)
-
-    solver = knapsackParetoSolver(paretoItems, items, range(len(items)), wPoint1(size), paretoPoint0(0), wPoint1(0), iterCounter)
+    solver = subsetSumParetoSolver(size, items, iterCounter, forceUseLimits=False)
 
     solver.printInfo = printPct
+    solver.printSuperIncreasingInfo = verbose
+    solver.doSolveSuperInc = doSolveSuperInc
     solver.doUseLimits = doUseLimits
-    solver.canBackTraceWhenSizeReached = True
 
-    bestValue, bestSize, bestItems, bestValues, bestIndexes = solver.solve()
+    bestValue, bestItems = solver.solve()
     return bestValue, bestItems
 
 
