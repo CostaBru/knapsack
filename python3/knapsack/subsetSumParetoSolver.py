@@ -13,8 +13,6 @@ IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMA
 TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
-import math
-import sys
 from collections import deque
 
 
@@ -88,23 +86,18 @@ class subsetSumParetoSolver:
 
             for i in range(0, count):
 
-                item2 = items[i]
-
                 iBack = count - i - 1
 
-                item1 = items[iBack]              
-
+                item1, item2 = items[iBack], items[i]
                 superIncreasingItem1, superIncreasingItem2 = False, False
 
                 if  item1 <= constraints:
-
                     if item1 < itemSum1:
                         isSuperIncreasing1 = False
                     else:
                         superIncreasingItem1 = True
 
                 if  item2 <= constraints:
-
                     if item2 < itemSum2:
                         isSuperIncreasing2 = False
                     else:
@@ -119,7 +112,6 @@ class subsetSumParetoSolver:
                 if allDesc:
                     if not prevItem1 <= item1:
                         allDesc = False
-               
                 if allAsc:
                     if prevItem1 < item1:
                         allAsc = False
@@ -135,8 +127,6 @@ class subsetSumParetoSolver:
 
                 prevItem1 = item1
 
-            partialSums = []
-            superIncreasingItems = []
             isSuperIncreasing = False
             itemSum = itemSum2
 
@@ -254,14 +244,14 @@ class subsetSumParetoSolver:
             iterCounter[0] += 1
 
         if self.printSuperIncreasingInfo:
-            print(f"Superincreasing pareto solver called for size {size} and count {count}.  ASC={allAsc}")
+            print(f"Superincreasing subset sum pareto solver called for size {size} and count {count}.  ASC={allAsc}")
        
         return  resultItemSum, resultItems
 
     def getLimits(self, constraints, i, items, partialSums, superIncreasingItems, canUsePartialSums):
 
         if not self.doUseLimits or not canUsePartialSums:
-            return self.emptyPoint, None, None, 0
+            return self.emptyPoint, self.emptyPoint, self.emptyPoint, self.emptyPoint
 
         skipCount = 2 ** (len(items) - (i + 1)) if self.printInfo else 0
 
@@ -285,7 +275,6 @@ class subsetSumParetoSolver:
                 circularPointQueue.append(newPoint)
                 distinctPoints2.add(pointValues[newPoint])
             else:
-
                 greaterQuPeek = greaterQu[0] if len(greaterQu) > 0 else None
 
                 if greaterQuPeek and pointValues[newPoint] <= pointValues[greaterQuPeek]:
@@ -296,7 +285,8 @@ class subsetSumParetoSolver:
             circularPointQueue.append(newPoint)
             distinctPoints2.add(newPoint)
 
-    def iterateLessThanOldPoint(self, oldPoint, pointValues, circularPointQueue, canUseLimits, greaterQu, oldPointLimit, skipCount, distinctPoints2):
+    def iterateLessThanOldPoint(self, oldPoint, pointValues, circularPointQueue, canUseLimits, greaterQu,
+                                oldPointLimit, skipCount, distinctPoints2):
 
         while len(greaterQu) > 0 and pointValues[greaterQu[0]] < pointValues[oldPoint]:
 
@@ -320,7 +310,9 @@ class subsetSumParetoSolver:
     def getItemIndex(self, count, i, allAsc):
         return count - i if allAsc else i - 1
 
-    def iteratePoints(self, i, itemId, itemDimensions, pointValues, pointSources, pointIds, constraintPoint, maxProfitPoint, circularPointQueue, prevCyclePointCount, halfConstraint, itemLimit, oldPointLimit, newPointLimit, distinctPoints1,  distinctPoints2, skipCount, canUseLimits, iterCounter):
+    def iteratePoints(self, i, itemId, itemDimensions, pointValues, pointSources, pointIds, constraintPoint,
+                      maxProfitPoint, circularPointQueue, prevCyclePointCount, halfConstraint, itemLimit, oldPointLimit,
+                      newPointLimit, distinctPoints1,  distinctPoints2, skipCount, canUseLimits, iterCounter):
        
         # merges ordered visited points with new points with keeping order in iterCounter(N) using single circular queue.
         # each getPoints method call starts fetching visited points from qu start, pops visited point and pushes new point and visited to the end of qu in ASC order.
@@ -340,23 +332,19 @@ class subsetSumParetoSolver:
         useItemItself = skipLimitCheck or itemLimit >= halfConstraint
 
         if useItemItself:
-
             if  itemDimensions not in distinctPoints1:
                 self.iterateOrPushBack(circularPointQueue, itemPoint, pointValues, greaterQu, distinctPoints2)
 
-                if maxProfitPoint < itemDimensions:
-                    maxProfitPoint = itemPoint  
-            else:            
-                self.skippedPointsByMap += skipCount
-        else:
-            self.skippedPointsByLimits += skipCount
+                if maxProfitPoint < itemDimensions:  maxProfitPoint = itemPoint
+
+            else: self.skippedPointsByMap += skipCount
+        else:     self.skippedPointsByLimits += skipCount
 
         for pi in range(prevCyclePointCount):
 
             oldPoint = circularPointQueue.popleft()    
 
-            if not self.iterateLessThanOldPoint(oldPoint, pointValues, circularPointQueue, canUseLimits, greaterQu, oldPointLimit, skipCount, distinctPoints2):
-                continue
+            self.iterateLessThanOldPoint(oldPoint, pointValues, circularPointQueue, canUseLimits, greaterQu, oldPointLimit, skipCount, distinctPoints2)
 
             newPointDim = pointValues[oldPoint] + itemDimensions
             newPoint = len(pointValues)
@@ -366,7 +354,6 @@ class subsetSumParetoSolver:
                 continue
 
             if  newPointDim <= constraintPoint:
-
                 if  newPointDim not in distinctPoints1:
 
                     pointValues.append(newPointDim)
@@ -375,12 +362,10 @@ class subsetSumParetoSolver:
 
                     self.iterateOrPushBack(circularPointQueue, newPoint, pointValues, greaterQu, distinctPoints2)
 
-                    if pointValues[maxProfitPoint] < newPointDim:
-                        maxProfitPoint = newPoint
-                else:
-                    self.skippedPointsByMap += skipCount
-            else:
-                self.skippedPointsBySize += skipCount
+                    if pointValues[maxProfitPoint] < newPointDim:   maxProfitPoint = newPoint
+
+                else:  self.skippedPointsByMap += skipCount
+            else:      self.skippedPointsBySize += skipCount
 
         self.iterateGreaterPoints(greaterQu, circularPointQueue, pointValues, distinctPoints2)
 

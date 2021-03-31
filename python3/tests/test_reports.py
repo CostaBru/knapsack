@@ -228,14 +228,14 @@ class ReportsTests(unittest.TestCase):
                 prevPareto = o2
 
     # KB knapsacks and pareto reports for random.sample(range(1, 1000), 50)
-    # @unittest.skip("temp")
+    #@unittest.skip("temp")
     def test_knapsacks_and_pareto_random_1_1000_50(self):
 
         if verbose:
             print("KB knapsacks and pareto reports for random.sample(range(1, 1000), 50)")
 
-        numbers = sample(range(1, 1000), 50)
-        numbers.sort(reverse=False)
+        numbers = sample(range(1, 1000), 25)
+        numbers.sort()
 
         if verbose:
             print(f"len {len(numbers)} sum {sum(numbers)}")
@@ -270,7 +270,11 @@ class ReportsTests(unittest.TestCase):
 
                 iterCounter[0] = 0
 
+                t1 = time.perf_counter()
+
                 opt3, optDim3, optItems3, optVal3 = paretoKnapsack(s, numbers, numbers, iterCounter, printPct=True)
+
+                parTime = time.perf_counter() - t1
 
                 o3 = round(iterCounter[0])
 
@@ -284,12 +288,11 @@ class ReportsTests(unittest.TestCase):
 
                 oH = round(iterCounter[0])
 
+                print(f"knapsack time {round(knapTime, 4)}, pareto time {round(parTime, 4)}, hybrid pareto time {round(paretoHTime, 4)}")
+
                 if opt != opt2 or (opt != opt3) or opt4 != opt:
                     print(f"ERROR: {opt} - {opt2} - {opt3} - {opt4}size {s}")
                     self.assertTrue(False)
-
-                prevIters = o1
-                prevPareto = o2
 
     # KB knapsacks and pareto reports for random.sample(range(1, 10000000000000000), 10)
     # @unittest.skip("temp")

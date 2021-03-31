@@ -1437,11 +1437,12 @@ class KnapsackTests(unittest.TestCase):
         solver.forceUseDpSolver = False
         solver.useParetoAsNGreedySolver = True
         solver.printInfo = printPct
-        solver.printGreedyInfo = True
-        solver.printSuperIncreasingInfo = verbose
         solver.doSolveSuperInc = doSolveSuperInc
         solver.doUseLimits = doUseLimits
         solver.useRatioSortForPareto = True
+        solver.printDpInfo = verbose
+        solver.printGreedyInfo = verbose
+        solver.printSuperIncreasingInfo = verbose
 
         bestValue, bestSize, bestItems, bestValues = solver.solve()
 

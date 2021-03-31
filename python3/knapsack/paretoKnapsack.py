@@ -58,7 +58,7 @@ class knapsackParetoSolver:
        
             if val.getProfit() > item:
                 hi = mid - 1
-                ans = mid;
+                ans = mid
             else:
                 lo = mid + 1
 
@@ -462,8 +462,6 @@ class knapsackParetoSolver:
         else:
             self.skippedPointsByLimits += skipCount
 
-        return True
-
     def iterateGreaterPoints(self, greaterQu, circularPointQueue, distinctPoints2):
         while len(greaterQu) > 0:
             quPoint = greaterQu.popleft()
@@ -505,8 +503,7 @@ class knapsackParetoSolver:
 
             oldPoint = circularPointQueue.popleft()    
 
-            if not self.iterateLessThanOldPoint(oldPoint, circularPointQueue, canUseLimits, greaterQu, oldPointLimit, skipCount, distinctPoints2):
-                continue
+            self.iterateLessThanOldPoint(oldPoint, circularPointQueue, canUseLimits, greaterQu, oldPointLimit, skipCount, distinctPoints2)
 
             newPoint = oldPoint + itemPoint
 

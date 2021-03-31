@@ -254,7 +254,7 @@ class knapsackSolver:
 
         greaterQu = deque()
 
-        if useItemItself and not itemWeight in uniquePointSet:
+        if useItemItself and itemWeight not in uniquePointSet:
             for p in self.yieldOrPushBack(circularPointQueue, itemWeight, greaterQu, iterCounter):
                 yield p
         else:
@@ -289,7 +289,7 @@ class knapsackSolver:
 
             if newPoint <= size:
 
-                if not newPoint in uniquePointSet:
+                if  newPoint not in uniquePointSet:
                     for p in self.yieldOrPushBack(circularPointQueue, newPoint, greaterQu, iterCounter):
                         yield p
                 else:
