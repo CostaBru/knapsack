@@ -946,8 +946,8 @@ class KnapsackTests(unittest.TestCase):
             testKnapsack = 0
             rowToSkip = 0
 
-            files = ["knapPI_16_20_1000", "knapPI_16_50_1000"]
-            # files = ["knapPI_16_20_1000", "knapPI_16_50_1000", "knapPI_16_100_1000", "knapPI_16_200_1000", "knapPI_16_500_1000"]
+            #files = ["knapPI_16_20_1000", "knapPI_16_50_1000"]
+            files = ["knapPI_16_20_1000", "knapPI_16_50_1000", "knapPI_16_100_1000", "knapPI_16_200_1000", "knapPI_16_500_1000"]
 
             fi = 0
 
@@ -1193,9 +1193,8 @@ class KnapsackTests(unittest.TestCase):
 
                             tFull1 = time.perf_counter()
 
-                            opt1ValDescFull, opt1DescFull, optWeights1Full, optValues1Full = knapsack(testKnapsack, w,
-                                                                                                      v, iterCounter,
-                                                                                                      doUseLimits=False)
+                            opt1ValDescFull, opt1DescFull, optWeights1Full, optValues1Full = \
+                                knapsack(testKnapsack, w, v, iterCounter, doUseLimits=False)
 
                             self.assertEqual(opt1ValDescFull, optValDesc1)
 
@@ -1215,9 +1214,8 @@ class KnapsackTests(unittest.TestCase):
 
                             nTestKnapsack = wPoint((testKnapsack, testKnapsack))
 
-                            opt2dValDesc, opt2dDesc, optWeights2dDesc, optValues2dDesc = knapsackNd(nTestKnapsack,
-                                                                                                    [wPoint((a, a)) for
-                                                                                                     a in w], v, iterCounter)
+                            opt2dValDesc, opt2dDesc, optWeights2dDesc, optValues2dDesc = \
+                                knapsackNd(nTestKnapsack, [wPoint((a, a)) for a in w], v, iterCounter)
 
                             t2 = time.perf_counter()
 
@@ -1242,13 +1240,8 @@ class KnapsackTests(unittest.TestCase):
 
                                 nTestKnapsack = wPoint((testKnapsack, testKnapsack))
 
-                                opt2dValNon, opt2dNon, optWeights2dNon, optValues2dNon = hybridKnapsackNd(nTestKnapsack,
-                                                                                                          [wPoint(
-                                                                                                              (a, a))
-                                                                                                              for a in
-                                                                                                              nonW],
-                                                                                                          nonV,
-                                                                                                          iterCounter)
+                                opt2dValNon, opt2dNon, optWeights2dNon, optValues2dNon = \
+                                    hybridKnapsackNd(nTestKnapsack,[wPoint((a, a))for a in nonW], nonV, iterCounter)
 
                                 t2 = time.perf_counter()
 

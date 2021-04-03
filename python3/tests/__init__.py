@@ -61,6 +61,10 @@ stdLogger = StdoutLogger(sys.stdout)
 def try_redirect_out(fileNamePart, prefix):
     if printToFile:
         nt = datetime.datetime.now()
+
+        if not os.path.exists(out_dir):
+            os.mkdir(out_dir)
+
         fileName = os.path.join(f"{out_dir}", f"{fileNamePart}.{prefix}.out.{nt.hour}-{nt.minute}.txt")
 
         if isinstance(sys.stdout, Logger):
