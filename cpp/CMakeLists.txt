@@ -1,0 +1,12 @@
+cmake_minimum_required(VERSION 3.19)
+set(CMAKE_CXX_STANDARD 20)
+
+project(KB_knapsack_partition_solution CXX)
+
+add_subdirectory(knapsack)
+include_directories(knapsack)
+add_subdirectory(partition)
+include_directories(partition)
+
+add_subdirectory(knapsack_tests)
+add_subdirectory(partition_tests)
