@@ -76,12 +76,13 @@ namespace kb_knapsack {
 
 
     template<typename T, typename W>
-    class pareto_point {
+    struct pareto_point {
     public:
         T dimensions;
         W profit;
-        int itemId = 0;
-        const pareto_point<T, W>* source = nullptr;
+        int itemId = -1;
+        int source = -1;
+        int id = -1;
 
         pareto_point(){
         }
@@ -90,6 +91,7 @@ namespace kb_knapsack {
             dimensions = dims;
             profit = value;
             itemId = id;
+            source = -1;
         }
 
         W getProfit(){
@@ -97,17 +99,39 @@ namespace kb_knapsack {
         }
 
         bool hasSource(){
-            return source != nullptr;
+            return source >= 0;
         }
 
         bool isDimensionEquals(T dim){
             return dimensions == dim;
         }
 
-        friend pareto_point operator+(const pareto_point &c1, const pareto_point &c2) {
+        friend pareto_point operator+(pareto_point &c1, pareto_point &c2) {
             auto p = pareto_point(c1.dimensions + c2.dimensions, c1.profit + c2.profit, c2.itemId);
-            p.source = &c1;
+            p.source = c1.id;
             return p;
+        }
+
+        pareto_point(const pareto_point& that)
+        {
+            dimensions = that.dimensions;
+            profit = that.profit;
+            itemId = that.itemId;
+            source = that.source;
+            id = that.id;
+        }
+
+        pareto_point& operator=(const pareto_point& that)
+        {
+            if (this != &that)
+            {
+                dimensions = that.dimensions;
+                profit = that.profit;
+                itemId = that.itemId;
+                source = that.source;
+                id = that.id;
+            }
+            return *this;
         }
     };
 
@@ -204,18 +228,115 @@ namespace kb_knapsack {
         knapsack_solver(){
         }
 
-        T m_constraints;
-        T m_emptyDimension;
-        W m_emptyValue;
-        std::vector<T> m_dimensions;
-        std::vector<W> m_values;
-        std::vector<int> m_indexes;
-        bool m_forceUseLimits = false;
-        bool m_doSolveSuperInc = true;
-        bool m_doUseLimits= true;
-        bool m_useRatioSort= true;
-        bool m_canBackTraceWhenSizeReached = false;
-        bool m_forceUsePareto = false;
+        T Constrains;
+        T EmptyDimension;
+        W EmptyValue;
+        W MinValue;
+        std::vector<T> Dimensions;
+        std::vector<W> Values;
+        std::vector<int> Ids;
+        bool ForceUseLimits = false;
+        bool DoSolveSuperInc = true;
+        bool DoUseLimits= true;
+        bool UseRatioSort= true;
+        bool CanBackTraceWhenSizeReached = false;
+        bool ForceUsePareto = false;
+
+        KNAPSACK_RESULT Solve(){
+
+            auto canTrySolveUsingDp = not ForceUsePareto and (DoUseLimits or DoSolveSuperInc or ForceUseLimits or CanBackTraceWhenSizeReached);
+
+            std::vector<T> lessSizeItems;
+            std::vector<W> lessSizeValues;
+            std::vector<int> lessSizeItemsIndex;
+
+            T constraints = Constrains;
+
+            if (canTrySolveUsingDp) {
+
+                std::vector<T> partialSums;
+                std::vector<bool> superIncreasingItems;
+
+                auto params = preProcess(Constrains,
+                                         Dimensions,
+                                         Values,
+                                         ForceUseLimits,
+                                         lessSizeItems,
+                                         lessSizeValues,
+                                         lessSizeItemsIndex,
+                                         partialSums,
+                                         superIncreasingItems);
+
+                constraints = std::get<0>(params);
+                auto count = std::get<1>(params);
+                auto itemSum = std::get<2>(params);
+                auto lessCountSum = std::get<3>(params);
+                auto lessCountValuesSum = std::get<4>(params);
+                auto isSuperIncreasing = std::get<5>(params);
+                auto allAsc = std::get<6>(params);
+                auto allDesc = std::get<7>(params);
+                auto canUsePartialSums = std::get<8>(params);
+
+                auto cornerCasesCheck = checkCornerCases(
+                        constraints,
+                        lessSizeItems,
+                        lessSizeValues,
+                        lessSizeItemsIndex,
+                        lessCountSum,
+                        itemSum,
+                        lessCountValuesSum);
+
+                auto isCornerCase = std::get<0>(cornerCasesCheck);
+
+                if (isCornerCase) {
+
+                    auto cornerCaseResult = std::get<1>(cornerCasesCheck);
+                    return cornerCaseResult;
+                }
+
+                if (DoSolveSuperInc && isSuperIncreasing) {
+
+                    return solveSuperIncreasing(constraints,
+                                                lessSizeItems,
+                                                lessSizeValues,
+                                                lessSizeItemsIndex,
+                                                count,
+                                                allAsc);
+                }
+
+                bool canSolveUsingDp = ! ForceUsePareto && (ForceUseLimits || CanBackTraceWhenSizeReached || canUsePartialSums);
+
+                if (canSolveUsingDp) {
+
+                    return solveUsingLimitsOnly(constraints,
+                                                lessSizeItems,
+                                                lessSizeValues,
+                                                lessSizeItemsIndex,
+                                                allAsc,
+                                                partialSums,
+                                                superIncreasingItems,
+                                                canUsePartialSums);
+                }
+            } else{
+                auto lessSizeItems = Dimensions;
+                auto lessSizeValues = Values;
+                auto lessSizeItemsIndex = Ids;
+            }
+
+            std::vector<T> sortedItems(lessSizeItems);
+            std::vector<W> sortedValues(lessSizeValues);
+            std::vector<int> sortedIndexes(lessSizeItemsIndex);
+
+            if (UseRatioSort){
+                sortByRatio(sortedItems, sortedValues, sortedIndexes);
+            } else {
+                sortByDims(sortedItems, sortedValues, sortedIndexes);
+            }
+
+            return solvePareto(constraints, sortedItems, sortedValues, sortedIndexes);
+        }
+
+    private:
 
         void sortByRatio(std::vector<T>& dimensions, std::vector<W>& values, std::vector<int>& indexes){
 
@@ -241,122 +362,38 @@ namespace kb_knapsack {
             applySort3<T, W, int>(dimensions, values, indexes,  p.size(), p);
         }
 
-        KNAPSACK_RESULT Solve(){
-
-            auto canTrySolveUsingDp = not m_forceUsePareto and (m_doUseLimits or m_doSolveSuperInc or m_forceUseLimits or m_canBackTraceWhenSizeReached);
-
-            auto canSolveUsingDp = false;
-            auto lessSizeItems = m_dimensions;
-            auto lessSizeValues = m_values;
-            auto lessSizeItemsIndex = m_indexes;
-
-            T constraints = m_constraints;
-
-            if (canTrySolveUsingDp) {
-
-                auto params = preProcess(m_constraints, m_dimensions, m_values, m_forceUseLimits);
-
-                constraints = std::get<0>(params);
-                auto count = std::get<1>(params);
-                lessSizeItems = std::get<2>(params);
-                lessSizeValues = std::get<3>(params);
-                lessSizeItemsIndex = std::get<4>(params);
-                auto lessCountSum = std::get<5>(params);
-                auto itemSum = std::get<6>(params);
-                auto lessCountValuesSum = std::get<7>(params);
-                auto partialSums = std::get<8>(params);
-                auto isSuperIncreasing = std::get<9>(params);
-                auto superIncreasingItems = std::get<10>(params);
-                auto allAsc = std::get<11>(params);
-                auto allDesc = std::get<12>(params);
-                auto canUsePartialSums = std::get<13>(params);
-
-                auto cornerCasesCheck = checkCornerCases(
-                        constraints,
-                        lessSizeItems,
-                        lessSizeValues,
-                        lessSizeItemsIndex,
-                        lessCountSum,
-                        itemSum,
-                        lessCountValuesSum);
-
-                auto isCornerCase = std::get<0>(cornerCasesCheck);
-
-                if (isCornerCase) {
-
-                    auto cornerCaseResult = std::get<1>(cornerCasesCheck);
-                    return cornerCaseResult;
-                }
-
-                if (m_doSolveSuperInc && isSuperIncreasing) {
-
-                    return solveSuperIncreasing(constraints,
-                                                lessSizeItems,
-                                                lessSizeValues,
-                                                lessSizeItemsIndex,
-                                                count,
-                                                allAsc);
-                }
-
-                bool canSolveUsingDp = ! m_forceUsePareto && (m_forceUseLimits || m_canBackTraceWhenSizeReached || canUsePartialSums);
-
-                if (canSolveUsingDp) {
-
-                    return solveUsingLimitsOnly(constraints,
-                                                lessSizeItems,
-                                                lessSizeValues,
-                                                lessSizeItemsIndex,
-                                                allAsc,
-                                                partialSums,
-                                                superIncreasingItems,
-                                                canUsePartialSums);
-                }
-            }
-
-            std::vector<T> sortedItems(lessSizeItems);
-            std::vector<W> sortedValues(lessSizeValues);
-            std::vector<int> sortedIndexes(lessSizeItemsIndex);
-
-            if (m_useRatioSort){
-                sortByRatio(sortedItems, sortedValues, sortedIndexes);
-            } else {
-                sortByDims(sortedItems, sortedValues, sortedIndexes);
-            }
-
-            return solvePareto(constraints, sortedItems, sortedValues, sortedIndexes);
-        }
-
         std::tuple<
         /* 0 constraints */ T,
         /* 1 lessCount */ int,
-        /* 2 lessSizeItems */ std::vector<T>,
-        /* 3 lessSizeValues */ std::vector<W>,
-        /* 4 lessSizeItemsIndex */ std::vector<int>,
-        /* 5 itemSum */  T,
-        /* 6 lessCountSum */  T,
-        /* 7 lessCountValuesSum */  W,
-        /* 8 partialSums */  std::vector<T>,
-        /* 9 isSuperIncreasing */  bool,
-        /* 10 superIncreasingItems */  std::vector<bool>,
-        /* 11 allAsc */  bool,
-        /* 12 allDesc */  bool,
-        /* 13 canUsePartialSums */  bool
+        /* 2 itemSum */  T,
+        /* 3 lessCountSum */  T,
+        /* 4 lessCountValuesSum */  W,
+        /* 5 isSuperIncreasing */  bool,
+        /* 6 allAsc */  bool,
+        /* 7 allDesc */  bool,
+        /* 8 canUsePartialSums */  bool
         >
-                preProcess(T& constraints, std::vector<T>& items, std::vector<W>& values, bool& forceUseLimits){
+                preProcess(
+                        T& constraints,
+                        std::vector<T>& items,
+                        std::vector<W>& values,
+                        bool& forceUseLimits,
+                        std::vector<T> &lessSizeItems,
+                        std::vector<W> &lessSizeValues,
+                        std::vector<int> &lessSizeItemsIndex,
+                        std::vector<T> &partialSums,
+                        std::vector<bool> &superIncreasingItems
+                        ){
 
             auto count = items.size();
 
-            auto itemSum1 = m_emptyDimension;
-            auto itemSum2 = m_emptyDimension;
-            auto lessCountSum = m_emptyDimension;
+            auto itemSum1 = EmptyDimension;
+            auto itemSum2 = EmptyDimension;
+            auto lessCountSum = EmptyDimension;
 
             W valuesSum1;
             W valuesSum2;
             W lessCountValuesSum;
-
-            std::vector<T> lessSizeItems;
-            std::vector<W> lessSizeValues;
-            std::vector<int> lessSizeItemsIndex;
 
             std::vector<T> partialSums1;
             std::vector<bool> superIncreasingItems1 = {false};
@@ -372,15 +409,13 @@ namespace kb_knapsack {
 
             auto lessCount = 0;
 
-            auto itemSum = m_emptyDimension;
-            std::vector<T> partialSums;
-            bool isSuperIncreasing;
-            std::vector<bool> superIncreasingItems;
+            auto itemSum = EmptyDimension;
+            bool isSuperIncreasing = false;
 
             if (count > 0)
             {
-                auto prevItem1 = *items.end();
-                auto prevValue1 = *values.end();
+                auto prevItem1 = items[count - 1];
+                auto prevValue1 = values[count - 1];
 
                 for(auto i = 0; i < count; ++i) {
 
@@ -447,7 +482,7 @@ namespace kb_knapsack {
                     partialSums2.push_back(itemSum1);
 
                     if (allDesc){
-                        if (! prevItem1 <= item1) {
+                        if (! (prevItem1 <= item1)) {
                             allDesc = false;
                         }
                     }
@@ -494,14 +529,14 @@ namespace kb_knapsack {
                                     (isSuperIncreasingValues2 && allAscValues);
 
                 if (allAsc && canUsePartialSums) {
-                    partialSums = partialSums2;
-                    superIncreasingItems = superIncreasingItems2;
+                    partialSums.swap(partialSums2);
+                    superIncreasingItems.swap(superIncreasingItems2);
                     isSuperIncreasing = isSuperIncreasing2;
                     itemSum = itemSum2;
                 }
                 else if  ((allDesc && canUsePartialSums) || forceUseLimits) {
-                    partialSums = partialSums1;
-                    superIncreasingItems = superIncreasingItems1;
+                    partialSums.swap(partialSums1);
+                    superIncreasingItems.swap(superIncreasingItems1);
                     isSuperIncreasing = isSuperIncreasing1;
                     itemSum = itemSum1;
 
@@ -511,16 +546,16 @@ namespace kb_knapsack {
                 else {
                     if (allAsc and allAscValues) {
                         itemSum = itemSum2;
-                        partialSums = partialSums2;
+                        partialSums.swap(partialSums2);
                         std::reverse(partialSums.begin(), partialSums.end());
-                        superIncreasingItems = superIncreasingItems2;
+                        superIncreasingItems.swap(superIncreasingItems2);
                         std::reverse(superIncreasingItems.begin(), superIncreasingItems.end());
                         canUsePartialSums = true;
                     } else if (allDesc and allDescValues) {
                         itemSum = itemSum1;
-                        partialSums = partialSums1;
+                        partialSums.swap(partialSums1);
                         std::reverse(partialSums.begin(), partialSums.end());
-                        superIncreasingItems = superIncreasingItems1;
+                        superIncreasingItems.swap(superIncreasingItems1);
                         std::reverse(superIncreasingItems.begin(), superIncreasingItems.end());
                         canUsePartialSums = true;
                     } else {
@@ -530,7 +565,7 @@ namespace kb_knapsack {
                             partialSums = {};
                             canUsePartialSums = false;
                         } else {
-                            partialSums = partialSums2;
+                            partialSums.swap(partialSums2);
                             std::reverse(partialSums.begin(), partialSums.end());
                         }
                     }
@@ -547,15 +582,10 @@ namespace kb_knapsack {
 
             return std::make_tuple(constraints,
                                    lessCount,
-                                   lessSizeItems,
-                                   lessSizeValues,
-                                   lessSizeItemsIndex,
                                    itemSum,
                                    lessCountSum,
                                    lessCountValuesSum,
-                                   partialSums,
                                    isSuperIncreasing,
-                                   superIncreasingItems,
                                    allAsc,
                                    allDesc,
                                    canUsePartialSums);
@@ -570,13 +600,13 @@ namespace kb_knapsack {
                 T& itemSum,
                 W& lessCountValuesSum){
 
-            W zero = m_emptyValue;
+            W zero = EmptyValue;
             std::vector<T> emptyItems;
             std::vector<W> emptyValues;
             std::vector<int> emptyIndexes;
 
-            if  (lessCountSum == m_emptyDimension) {
-                return std::make_tuple(true, std::make_tuple(zero, m_emptyDimension, emptyItems, emptyValues, emptyIndexes));
+            if  (lessCountSum == EmptyDimension) {
+                return std::make_tuple(true, std::make_tuple(zero, EmptyDimension, emptyItems, emptyValues, emptyIndexes));
             }
 
             if  (lessCountSum <= constraints) {
@@ -587,12 +617,12 @@ namespace kb_knapsack {
                 return std::make_tuple(true, std::make_tuple(lessCountValuesSum, itemSum, lessSizeItems, lessSizeValues, lessSizeItemsIndex));
             }
 
-            return std::make_tuple(false, std::make_tuple(zero, m_emptyDimension, emptyItems, emptyValues, emptyIndexes));
+            return std::make_tuple(false, std::make_tuple(zero, EmptyDimension, emptyItems, emptyValues, emptyIndexes));
         }
 
         int indexLargestLessThanAsc(std::vector<T>& items, T item, int lo, int hi) {
 
-            if (item == m_emptyDimension)
+            if (item == EmptyDimension)
             {
                 return -1;
             }
@@ -629,7 +659,7 @@ namespace kb_knapsack {
 
         int indexLargestLessThanDesc(std::vector<T>& items, T item, int lo, int hi) {
 
-            if (item == m_emptyDimension)
+            if (item == EmptyDimension)
             {
                 return -1;
             }
@@ -677,8 +707,8 @@ namespace kb_knapsack {
             std::vector<T> resultItems;
             std::vector<W> resultValues;
             std::vector<int> resultIndex;
-            W resultSum;
-            T resultItemSum = m_emptyDimension;
+            W resultSum = EmptyValue;
+            T resultItemSum = EmptyDimension;
 
             auto index = -1;
 
@@ -690,8 +720,8 @@ namespace kb_knapsack {
 
             while (index >= 0)
             {
-                auto item = items[index];
-                auto value = values[index];
+                auto& item = items[index];
+                auto& value = values[index];
 
                 resultItems.push_back(item);
                 resultValues.push_back(value);
@@ -721,7 +751,7 @@ namespace kb_knapsack {
             T oldPointLimit;
             T newPointLimit;
 
-            if (!m_doUseLimits || !canUsePartialSums) {
+            if (!DoUseLimits || !canUsePartialSums) {
                 return std::make_tuple(false, partSumForItem, oldPointLimit, newPointLimit);
             }
 
@@ -736,7 +766,7 @@ namespace kb_knapsack {
             newPointLimit = constraints - partSumForItem;
             oldPointLimit = newPointLimit;
 
-            if (m_doSolveSuperInc && newPointLimit && superIncreasingItem) {
+            if (DoSolveSuperInc && newPointLimit && superIncreasingItem) {
                 oldPointLimit = newPointLimit + items[i];
             }
 
@@ -793,10 +823,10 @@ namespace kb_knapsack {
 
                 distinctPoints2.insert(quPoint);
                 circularPointQueue.push_back(quPoint);
+            }
 
-                if ((canUseLimits == false) || (oldPoint.dimensions < oldPointLimit) == false) {
-                    iterateOrPushBack(circularPointQueue, oldPoint, greaterQu, distinctPoints2);
-                }
+            if ((canUseLimits == false) || (oldPoint.dimensions < oldPointLimit) == false) {
+                iterateOrPushBack(circularPointQueue, oldPoint, greaterQu, distinctPoints2);
             }
         }
 
@@ -821,6 +851,7 @@ namespace kb_knapsack {
 
         std::tuple<int, PARETO_POINT> iteratePoints(
                 int& i,
+                PARETO_LIST &sourcePoints,
                 T& itemDimensions,
                 W& itemProfit,
                 int& itemId,
@@ -847,6 +878,9 @@ namespace kb_knapsack {
             auto skipLimitCheck = canUseLimits == false;
 
             PARETO_POINT itemPoint(itemDimensions, itemProfit, itemId);
+
+            itemPoint.id = sourcePoints.size();
+            sourcePoints.push_back(itemPoint);
 
             auto useItemItself = true;
 
@@ -883,6 +917,9 @@ namespace kb_knapsack {
                 if (newPoint.dimensions <= constraintPoint) {
                     if (distinctPoints1.contains(newPoint) == false) {
 
+                        newPoint.id = sourcePoints.size();
+                        sourcePoints.push_back(newPoint);
+
                         iterateOrPushBack(circularPointQueue, newPoint, greaterQu, distinctPoints2);
 
                         if (maxProfitPoint.getProfit() <= newPoint.getProfit()) {
@@ -910,32 +947,35 @@ namespace kb_knapsack {
                 PARETO_LIST& oldPoints,
                 T& constraint,
                 PARETO_SET& prevDistinctPoints,
-                PARETO_SET& newDistinctPoints) {
+                PARETO_SET& newDistinctPoints,
+                PARETO_LIST& sourcePoints) {
 
             PARETO_LIST result;
 
             PARETO_POINT itemPoint = pareto_point(itemDimensions, itemProfit, itemId);
 
-            for(const auto oldPoint : oldPoints) {
-                PARETO_POINT newPoint = oldPoint + itemPoint;
+            for(auto& oldPoint : oldPoints) {
+
+                auto newPoint = oldPoint + itemPoint;
 
                 if (newPoint.dimensions <= constraint) {
+
+                    newPoint.id = sourcePoints.size();
+                    sourcePoints.push_back(newPoint);
 
                     if (prevDistinctPoints.contains(newPoint) == false) {
                         newDistinctPoints.insert(newPoint);
                         result.push_back(newPoint);
                     }
-                }
 
-                if (m_useRatioSort) {
-
-                    if (maxProfitPoint.getProfit() <= newPoint.getProfit() && maxProfitPoint.dimensions < newPoint.dimensions) {
-                        maxProfitPoint = newPoint;
-                    }
-
-                }  else {
                     if (maxProfitPoint.getProfit() <= newPoint.getProfit()) {
-                        maxProfitPoint = newPoint;
+                        if (UseRatioSort && maxProfitPoint.getProfit() == newPoint.getProfit()) {
+                            if (maxProfitPoint.dimensions < newPoint.dimensions) {
+                                maxProfitPoint = newPoint;
+                            }
+                        } else {
+                            maxProfitPoint = newPoint;
+                        }
                     }
                 }
             }
@@ -945,22 +985,23 @@ namespace kb_knapsack {
 
         KNAPSACK_RESULT solveUsingLimitsOnly(
                 T constraint,
-                std::vector<T> sortedItems,
-                std::vector<W> sortedValues,
-                std::vector<int> sortedIndexes,
+                std::vector<T> &sortedItems,
+                std::vector<W> &sortedValues,
+                std::vector<int> &sortedIndexes,
                 bool allAsc,
-                std::vector<T> partialSums,
-                std::vector<bool> superIncreasingItems,
+                std::vector<T> &partialSums,
+                std::vector<bool> &superIncreasingItems,
                 bool canUsePartialSums) {
 
             PARETO_SET distinctPoints1;
 
             int itemsCount = sortedItems.size();
 
-            W zeroValue = m_emptyValue;
-            pareto_point maxProfitPoint(m_emptyDimension, zeroValue, 0);
+            W zeroValue = EmptyValue;
+            pareto_point maxProfitPoint(EmptyDimension, zeroValue, 0);
 
             PARETO_DEQUEUE circularPointQueue;
+            PARETO_LIST sourcePoints;
 
             int prevPointCount = 0;
 
@@ -971,8 +1012,8 @@ namespace kb_knapsack {
                 auto itemIndex = getItemIndex(itemsCount, i, allAsc);
 
                 auto itemDimensions =  sortedItems[itemIndex];
-                auto itemProfit = sortedValues[itemIndex];
-                auto itemId =  sortedIndexes[itemIndex];
+                auto itemProfit     =  sortedValues[itemIndex];
+                auto itemId         =  sortedIndexes[itemIndex];
 
                 auto limitParams = getLimits(constraint,
                                              itemIndex,
@@ -987,34 +1028,34 @@ namespace kb_knapsack {
                 auto newPointLimit = std::get<3>(limitParams);
 
                 auto iterResult = iteratePoints(i,
-                                              itemDimensions,
-                                              itemProfit,
-                                              itemId,
-                                              constraint,
-                                              maxProfitPoint,
-                                              circularPointQueue,
-                                              prevPointCount,
-                                              halfConstraint,
-                                              itemLimit,
-                                              oldPointLimit,
-                                              newPointLimit,
-                                              distinctPoints1,
-                                              distinctPoints1,
+                                                sourcePoints,
+                                               itemDimensions,
+                                               itemProfit,
+                                               itemId,
+                                               constraint,
+                                               maxProfitPoint,
+                                               circularPointQueue,
+                                               prevPointCount,
+                                               halfConstraint,
+                                               itemLimit,
+                                               oldPointLimit,
+                                               newPointLimit,
+                                               distinctPoints1,
+                                               distinctPoints1,
                                               canUsePartialSums && canUseLimits
                                                               );
 
                 auto newPointCount = std::get<0>(iterResult);
                 auto maxProfitPoint = std::get<1>(iterResult);
 
-                if (m_canBackTraceWhenSizeReached && maxProfitPoint.isDimensionEquals(constraint)) {
-                    return backTraceItems(maxProfitPoint, itemsCount);
+                if (CanBackTraceWhenSizeReached && maxProfitPoint.dimensions == constraint) {
+                    return backTraceItems(maxProfitPoint, itemsCount, sourcePoints);
                 }
 
                 prevPointCount = newPointCount;
             }
 
-
-            return backTraceItems(maxProfitPoint, itemsCount);
+            return backTraceItems(maxProfitPoint, itemsCount, sourcePoints);
         }
 
         int indexLargestLessThan(PARETO_LIST& items, W& item, int lo, int hi){
@@ -1049,10 +1090,9 @@ namespace kb_knapsack {
             }
         }
 
-        PARETO_LIST mergeDiscardingDominated(PARETO_LIST& oldList, PARETO_LIST& newList) {
+        void mergeDiscardingDominated(PARETO_LIST& result, PARETO_LIST& oldList, PARETO_LIST& newList) {
 
-            PARETO_LIST result;
-            W profitMax;
+            W profitMax = MinValue;
 
             while(true) {
 
@@ -1060,12 +1100,10 @@ namespace kb_knapsack {
                 auto newPointIndex = findLargerProfit(newList, profitMax);
 
                 if (oldPointIndex == -1) {
-
                     if (newPointIndex >= 0) {
                         for (int ind = 0; ind < newList.size(); ++ind) {
 
-                            auto newPoint = newList[ind];
-                            result.push_back(newPoint);
+                            result.push_back(newList[ind]);
                         }
                     }
                     break;
@@ -1075,15 +1113,14 @@ namespace kb_knapsack {
                     if (oldPointIndex >= 0) {
                         for (int ind = oldPointIndex; ind < oldList.size(); ++ind) {
 
-                            auto oldPoint = oldList[ind];
-                            result.push_back(oldPoint);
+                            result.push_back(oldList[ind]);
                         }
                     }
                     break;
                 }
 
-                auto oldPoint = oldList[oldPointIndex];
-                auto newPoint = newList[newPointIndex];
+                PARETO_POINT& oldPoint = oldList[oldPointIndex];
+                PARETO_POINT& newPoint = newList[newPointIndex];
 
                 if (oldPoint.dimensions < newPoint.dimensions || (oldPoint.dimensions == newPoint.dimensions && oldPoint.getProfit() > newPoint.getProfit())) {
 
@@ -1095,18 +1132,16 @@ namespace kb_knapsack {
                     profitMax = newPoint.getProfit();
                 }
             }
-
-            return result;
         }
 
-        KNAPSACK_RESULT backTraceItems(pareto_point<W, T>& maxProfitPoint, int count) {
+        KNAPSACK_RESULT backTraceItems(pareto_point<W, T>& maxProfitPoint, int count, PARETO_LIST &sourcePoints) {
 
-            W zeroProfit = m_emptyValue;
+            W zeroProfit = EmptyValue;
             std::vector<T> optItems;
             std::vector<W> optValues;
             std::vector<int> optIndexes;
 
-            auto optSize = m_emptyDimension;
+            auto optSize = EmptyDimension;
 
             if (maxProfitPoint.getProfit() > 0)
             {
@@ -1114,26 +1149,19 @@ namespace kb_knapsack {
 
                 pareto_point<W, T> point = maxProfitPoint;
 
-                while (true) {
-                    auto id = point.itemId;
+                while (point.hasSource()) {
+                    optItems.push_back(Dimensions[point.itemId]);
+                    optValues.push_back(Values[point.itemId]);
+                    optIndexes.push_back(Ids[point.itemId]);
+                    optSize += Dimensions[point.itemId];
 
-                    optItems.push_back(m_dimensions[id]);
-                    optValues.push_back(m_values[id]);
-                    optIndexes.push_back(m_indexes[id]);
-                    optSize += m_dimensions[id];
-
-                    if (point.hasSource()) {
-                        point = *point.source;
-                    }
-                    else{
-                        break;
-                    }
+                    point = sourcePoints[point.source];
                 }
 
                 return std::make_tuple(maxProfit, optSize, optItems, optValues, optIndexes);
             }
 
-            return std::make_tuple(zeroProfit, m_emptyDimension, optItems, optValues, optIndexes);
+            return std::make_tuple(zeroProfit, EmptyDimension, optItems, optValues, optIndexes);
         }
 
         KNAPSACK_RESULT solvePareto(
@@ -1142,14 +1170,15 @@ namespace kb_knapsack {
                 std::vector<W>& sortedValues,
                 std::vector<int>& sortedIndexes) {
 
-            W zeroValue = m_emptyValue;
-            pareto_point<W, T> maxProfitPoint(m_emptyDimension, zeroValue, 0);
-            pareto_point<W, T> emptyPoint(m_emptyDimension, zeroValue, 0);
+            W zeroValue = EmptyValue;
+            pareto_point<W, T> maxProfitPoint(EmptyDimension, zeroValue, 0);
+            pareto_point<W, T> emptyPoint(EmptyDimension, zeroValue, 0);
 
             PARETO_SET distinctPoints;
 
             PARETO_LIST oldPoints = {emptyPoint};
             PARETO_LIST newPoints;
+            PARETO_LIST sourcePoints;
 
             auto itemsCount = sortedItems.size();
 
@@ -1167,22 +1196,25 @@ namespace kb_knapsack {
                                                    oldPoints,
                                                    constraint,
                                                    distinctPoints,
-                                                   distinctPoints);
+                                                   distinctPoints,
+                                                   sourcePoints);
 
-                auto newPoints = std::get<0>(newPointResult);
+                auto newPoints      = std::get<0>(newPointResult);
                 auto maxProfitPoint = std::get<1>(newPointResult);
 
-                // Point A is dominated by point B if B achieves a larger profit with the same or less weight than A.
-                auto paretoOptimal = mergeDiscardingDominated(oldPoints, newPoints);
+                PARETO_LIST paretoOptimal;
 
-                if (m_canBackTraceWhenSizeReached and maxProfitPoint.isDimensionEquals(constraint)) {
-                    return backTraceItems(maxProfitPoint, itemsCount);
+                // Point A is dominated by point B if B achieves a larger profit with the same or less weight than A.
+                mergeDiscardingDominated(paretoOptimal, oldPoints, newPoints);
+
+                if (CanBackTraceWhenSizeReached and maxProfitPoint.dimensions == constraint) {
+                    return backTraceItems(maxProfitPoint, itemsCount, sourcePoints);
                 }
 
-                oldPoints = paretoOptimal;
+                oldPoints.swap(paretoOptimal); // oldPoints = paretoOptimal;
             }
 
-            return backTraceItems(maxProfitPoint, itemsCount);
+            return backTraceItems(maxProfitPoint, itemsCount, sourcePoints);
         }
     };
 }

@@ -16,12 +16,14 @@ std::tuple<W, T, std::vector<T>, std::vector<W>, std::vector<int>> paretoKnapsac
 
     kb_knapsack::knapsack_solver<T, W> solver;
 
-    solver.m_emptyDimension = 0;
-    solver.m_emptyValue = 0;
-    solver.m_dimensions = dimensions;
-    solver.m_values = values;
-    solver.m_indexes = indexes;
-    solver.m_constraints = constraint;
+    solver.EmptyDimension = 0;
+    solver.EmptyValue = 0;
+    solver.MinValue = -999999999;
+
+    solver.Constrains = constraint;
+    solver.Dimensions = dimensions;
+    solver.Values = values;
+    solver.Ids = indexes;
 
     std::tuple<W, T, std::vector<T>, std::vector<W>, std::vector<int>> rez = solver.Solve();
 
@@ -29,6 +31,40 @@ std::tuple<W, T, std::vector<T>, std::vector<W>, std::vector<int>> paretoKnapsac
 }
 
 bool verbose = true;
+
+void test_1_rational_numbers() {
+    if (verbose)
+    {
+        print("Rational numbers tests for 1-0 knapsack.");
+    }
+
+    std::vector<double> A = { 0.2,
+                              1.200001,
+                              2.9000001,
+                              3.30000009,
+                              4.3,
+                              5.5,
+                              6.6,
+                              7.7,
+                              8.8,
+                              9.8};
+
+    std::sort(A.begin(), A.end(), std::greater());
+
+    double s = 10.5;
+    double expectedValue = 10.20000109;
+
+    std::vector<int> indexes(A.size(), 0);
+    std::iota(indexes.begin(), indexes.end(), 0);
+
+    auto result = paretoKnapsack(s, A, A, indexes);
+
+    auto opt1 = std::get<0>(result);
+    auto optSize = std::get<1>(result);
+
+    boost::ut::expect(opt1 == expectedValue) << "Not equal ";
+    boost::ut::expect(optSize <= s) << "Greater than size ";
+}
 
 void testSilvano(std::vector<int> W, std::vector<int> V, std::vector<int> R, int c){
     std::vector<int> ws(W);
@@ -82,6 +118,10 @@ void test_6_Silvano_Paolo_1_0_knapsack(){
     testSilvano(W, V, R, c);
 }
 
+
+
 int main() {
+
+    test_1_rational_numbers();
     test_6_Silvano_Paolo_1_0_knapsack();
 }
