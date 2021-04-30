@@ -152,23 +152,25 @@ void test_2_superincreasing() {
 
     for (int i = 1; i < 3; ++i) {
 
+        std::vector<int> test(A);
+
         if (i % 2 == 1) {
-            std::reverse(A.begin(), A.end());
+            std::reverse(test.begin(), test.end());
         }
 
-        int sumA = std::accumulate(A.begin(), A.end(), 0);
+        int sumA = std::accumulate(test.begin(), test.end(), 0);
 
-        std::vector<int> indexes(A.size(), 0);
+        std::vector<int> indexes(test.size(), 0);
         std::iota(indexes.begin(), indexes.end(), 0);
 
-        for(int s = sumA/2; s < sumA; s++) {
+        for(int s = 0; s < sumA; s++) {
 
-            auto expectedResult = paretoKnapsack(s, A, A, indexes, false);
+            auto expectedResult = paretoKnapsack(s, test, test, indexes, false);
 
             auto opt1 = std::get<0>(expectedResult);
             auto expected = std::get<2>(expectedResult);
 
-            auto testResult = paretoKnapsack(s, A, A, indexes);
+            auto testResult = paretoKnapsack(s, test, test, indexes);
 
             auto optTest = std::get<0>(expectedResult);
             auto optValues = std::get<2>(expectedResult);
