@@ -12,7 +12,8 @@ template<typename T, typename W>
 std::tuple<W, T, std::vector<T>, std::vector<W>, std::vector<int>> paretoKnapsack(T constraint,
         std::vector<T>& dimensions,
         std::vector<W>& values,
-        std::vector<int>& indexes) {
+        std::vector<int>& indexes,
+        bool doSolveSuperInc = true) {
 
     kb_knapsack::knapsack_solver<T, W> solver;
 
@@ -25,9 +26,31 @@ std::tuple<W, T, std::vector<T>, std::vector<W>, std::vector<int>> paretoKnapsac
     solver.Values = values;
     solver.Ids = indexes;
 
+    solver.DoSolveSuperInc = doSolveSuperInc;
+
     std::tuple<W, T, std::vector<T>, std::vector<W>, std::vector<int>> rez = solver.Solve();
 
     return rez;
+}
+
+template<typename T>
+bool listValuesEqual(std::vector<T> &l1, std::vector<T>& l2) {
+    std::sort(l1.begin(), l1.end());
+    std::sort(l2.begin(), l2.end());
+
+    bool good = l1.size() == l2.size();
+
+    for (int i = 0; i < l1.size() && i < l2.size(); ++i) {
+
+        auto eq = l1[i] == l2[i];
+
+        if (!eq) {
+            std::cout << "Not eq" << i << " " << l1[i] << "!=" << l2[i] << std::endl;
+        }
+
+        good = eq && good;
+    }
+    return good;
 }
 
 bool verbose = true;
@@ -118,10 +141,46 @@ void test_6_Silvano_Paolo_1_0_knapsack(){
     testSilvano(W, V, R, c);
 }
 
+void test_2_superincreasing() {
 
+    if (verbose)
+    {
+        print("Superincreasing integer numbers tests.");
+    }
+
+    std::vector<int> A = {1, 2, 5, 21, 69, 189, 376, 919};
+
+    for (int i = 1; i < 3; ++i) {
+
+        if (i % 2 == 1) {
+            std::reverse(A.begin(), A.end());
+        }
+
+        int sumA = std::accumulate(A.begin(), A.end(), 0);
+
+        std::vector<int> indexes(A.size(), 0);
+        std::iota(indexes.begin(), indexes.end(), 0);
+
+        for(int s = sumA/2; s < sumA; s++) {
+
+            auto expectedResult = paretoKnapsack(s, A, A, indexes, false);
+
+            auto opt1 = std::get<0>(expectedResult);
+            auto expected = std::get<2>(expectedResult);
+
+            auto testResult = paretoKnapsack(s, A, A, indexes);
+
+            auto optTest = std::get<0>(expectedResult);
+            auto optValues = std::get<2>(expectedResult);
+
+            boost::ut::expect(listValuesEqual(expected, optValues)) << "Lists are not equal ";
+        }
+    }
+}
 
 int main() {
 
+    test_2_superincreasing();
     test_1_rational_numbers();
     test_6_Silvano_Paolo_1_0_knapsack();
 }
