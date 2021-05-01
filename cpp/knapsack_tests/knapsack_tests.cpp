@@ -1,6 +1,9 @@
 #include "ut.h"
 #include <knapsack.h>
+#include "Paths.h"
 #include <string>
+#include <fstream>
+#include <filesystem>
 
 //https://github.com/boost-ext/ut#tutorial
 
@@ -9,11 +12,11 @@ void print(std::string str){
 }
 
 template<typename T, typename W>
-std::tuple<W, T, std::vector<T>, std::vector<W>, std::vector<int>> paretoKnapsack(T constraint,
-        std::vector<T>& dimensions,
-        std::vector<W>& values,
-        std::vector<int>& indexes,
-        bool doSolveSuperInc = true) {
+std::tuple<W, T, std::vector<T>, std::vector<W>, std::vector<int>> knapsack(T constraint,
+                                                                            std::vector<T>& dimensions,
+                                                                            std::vector<W>& values,
+                                                                            std::vector<int>& indexes,
+                                                                            bool doSolveSuperInc = true) {
 
     kb_knapsack::knapsack_solver<T, W> solver;
 
@@ -80,7 +83,7 @@ void test_1_rational_numbers() {
     std::vector<int> indexes(A.size(), 0);
     std::iota(indexes.begin(), indexes.end(), 0);
 
-    auto result = paretoKnapsack(s, A, A, indexes);
+    auto result = knapsack(s, A, A, indexes);
 
     auto opt1 = std::get<0>(result);
     auto optSize = std::get<1>(result);
@@ -109,7 +112,7 @@ void testSilvano(std::vector<int> W, std::vector<int> V, std::vector<int> R, int
         ind += 1;
     }
 
-    auto result = paretoKnapsack(c, ws, vs, indexes);
+    auto result = knapsack(c, ws, vs, indexes);
 
     auto opt1 = std::get<0>(result);
 
@@ -165,12 +168,12 @@ void test_2_superincreasing() {
 
         for(int s = 0; s < sumA; s++) {
 
-            auto expectedResult = paretoKnapsack(s, test, test, indexes, false);
+            auto expectedResult = knapsack(s, test, test, indexes, false);
 
             auto opt1 = std::get<0>(expectedResult);
             auto expected = std::get<2>(expectedResult);
 
-            auto testResult = paretoKnapsack(s, test, test, indexes);
+            auto testResult = knapsack(s, test, test, indexes);
 
             auto optTest = std::get<0>(expectedResult);
             auto optValues = std::get<2>(expectedResult);
@@ -180,7 +183,143 @@ void test_2_superincreasing() {
     }
 }
 
+bool startsWith(std::string s, std::string prefix){
+    if (s.rfind(prefix, 0) == 0) {
+        return true;
+    }
+    return false;
+}
+
+std::vector<std::string> split(const std::string& s, char delimiter)
+{
+    std::vector<std::string> tokens;
+    std::string token;
+    std::istringstream tokenStream(s);
+    while (std::getline(tokenStream, token, delimiter))
+    {
+        tokens.push_back(token);
+    }
+    return tokens;
+}
+
+void test_8_equal_subset_sum_files(std::filesystem::path testDir) {
+
+    if (verbose) {
+        print("Run equal-subset-sum knapsack for hardinstances_pisinger subset sum test dataset.");
+    }
+
+    std::vector<std::string> files = {"knapPI_16_20_1000.csv", "knapPI_16_50_1000.csv", "knapPI_16_100_1000.csv", "knapPI_16_200_1000.csv", "knapPI_16_500_1000.csv"};
+
+    int fi = 0;
+
+    bool allGood = true;
+
+    for (auto f : files) {
+
+        fi += 1;
+
+        int caseNumber = 1;
+
+        std::filesystem::path file(f);
+        std::filesystem::path full_path = testDir / file;
+
+        std::fstream fin(full_path, std::fstream::in);
+        std::vector<std::string> row;
+        std::string line, word;
+
+        std::vector<int> testCase;
+        std::vector<int> testExpected;
+        int testKnapsack = 0;
+        int rowToSkip = 0;
+
+        std::string temp;
+        while (std::getline(fin, temp)) {
+
+            row.clear();
+            std::stringstream s(temp);
+
+            if(temp.empty()){
+                continue;
+            }
+
+            while (std::getline(s, word, ',')) {
+                row.push_back(word);
+            }
+
+            if (row[0] == "-----") {
+
+                std::sort(testCase.begin(), testCase.end());
+
+                if (verbose) {
+                    std::cout << f << " case " << caseNumber << std::endl;
+                }
+
+                std::vector<int> indexes(testCase.size(), 0);
+                std::iota(indexes.begin(), indexes.end(), 0);
+
+                auto testResult = knapsack(testKnapsack, testCase, testCase, indexes);
+
+                auto optVal = std::get<0>(testResult);
+                auto optItems = std::get<2>(testResult);
+
+                boost::ut::expect(optVal <= testKnapsack) << " Opt size greater than expected ";
+
+                auto expSum = std::accumulate(testExpected.begin(), testExpected.end(), 0);
+                auto testSum = std::accumulate(optItems.begin(), optItems.end(), 0);
+
+                boost::ut::expect(testSum >= expSum) << "File:" << f << ", case: " << caseNumber << ". Test values sum less than expected: " << expSum << " but was :" << testSum;
+
+                allGood = allGood && optVal <= testKnapsack && testSum >= expSum;
+
+                testCase.clear();
+                testExpected.clear();
+
+                testCase = {};
+                testExpected = {};
+                testKnapsack = 0;
+
+                caseNumber++;
+
+                continue;
+            }
+
+            std::string row0 = row[0];
+
+            if (startsWith(row0, "knapPI")) {
+                rowToSkip = 6;
+            }
+
+            if (startsWith(row0, "z ")) {
+                std::string r = split(row[0], ' ')[1];
+                testKnapsack = stoi(r);
+            }
+
+            rowToSkip -= 1;
+
+            if (rowToSkip <= 0) {
+                testCase.push_back(stoi(row[1]));
+
+                if (row[3] == "1") {
+                    testExpected.push_back(stoi(row[1]));
+                }
+            }
+        }
+
+        fin.close();
+    }
+
+    boost::ut::expect(allGood) << "Some tests failed";
+}
+
 int main() {
+
+    auto execDir = MyPaths::getExecutableDir();
+    std::filesystem::path script_dir (execDir);
+    std::filesystem::path testData_dir ("testData/hardinstances_pisinger");
+
+    auto testDir = script_dir.parent_path().parent_path().parent_path().parent_path() / testData_dir;
+
+    test_8_equal_subset_sum_files(testDir);
 
     test_2_superincreasing();
     test_1_rational_numbers();

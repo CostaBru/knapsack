@@ -1149,11 +1149,15 @@ namespace kb_knapsack {
 
                 pareto_point<W, T> point = maxProfitPoint;
 
-                while (point.hasSource()) {
+                while (true) {
                     optItems.push_back(Dimensions[point.itemId]);
                     optValues.push_back(Values[point.itemId]);
                     optIndexes.push_back(Ids[point.itemId]);
                     optSize += Dimensions[point.itemId];
+
+                    if (!point.hasSource()){
+                        break;
+                    }
 
                     point = sourcePoints[point.source];
                 }
