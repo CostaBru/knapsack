@@ -311,6 +311,122 @@ void test_8_equal_subset_sum_files(std::filesystem::path testDir) {
     boost::ut::expect(allGood) << "Some tests failed";
 }
 
+
+void test_8_knapsack_1_0_files(std::filesystem::path testDir) {
+
+    if (verbose) {
+        print("Run 1-0 knapsack for hardinstances_pisinger test dataset.");
+    }
+
+    std::vector<std::string> files = { "knapPI_11_20_1000.csv", "knapPI_11_50_1000.csv", "knapPI_11_100_1000.csv", "knapPI_11_200_1000.csv" };
+
+    int fi = 0;
+
+    bool allGood = true;
+
+    for (auto f : files) {
+
+        fi += 1;
+
+        int caseNumber = 1;
+
+        std::filesystem::path file(f);
+        std::filesystem::path full_path = testDir / file;
+
+        std::fstream fin(full_path, std::fstream::in);
+        std::vector<std::string> row;
+        std::string line, word;
+
+        std::vector<int> testCaseW;
+        std::vector<int> testCaseV;
+        std::vector<int> testExpected;
+        int testKnapsack = 0;
+        int rowToSkip = 0;
+
+        std::string temp;
+        while (std::getline(fin, temp)) {
+
+            row.clear();
+            std::stringstream s(temp);
+
+            if(temp.empty()){
+                continue;
+            }
+
+            while (std::getline(s, word, ',')) {
+                row.push_back(word);
+            }
+
+            if (row[0] == "-----") {
+
+                std::vector<int> indexes(testCaseW.size(), 0);
+                std::iota(indexes.begin(), indexes.end(), 0);
+
+                kb_knapsack::sortReverse(testCaseW, testCaseV, indexes);
+
+                if (verbose) {
+                    std::cout << f << " case " << caseNumber << std::endl;
+                }
+
+                auto testResult = knapsack(testKnapsack, testCaseW, testCaseV, indexes);
+
+                auto optVal = std::get<0>(testResult);
+                auto optSize = std::get<1>(testResult);
+                auto optItems = std::get<2>(testResult);
+                auto optValues = std::get<3>(testResult);
+
+                boost::ut::expect(optSize <= testKnapsack) << " Opt size greater than expected ";
+
+                auto expSum = std::accumulate(testExpected.begin(), testExpected.end(), 0);
+                auto testSum = std::accumulate(optValues.begin(), optValues.end(), 0);
+
+                boost::ut::expect(testSum >= expSum) << "File:" << f << ", case: " << caseNumber << ". Test values sum less than expected: " << expSum << " but was :" << testSum;
+
+                allGood = allGood && optSize <= testKnapsack && testSum >= expSum;
+
+                testCaseW.clear();
+                testCaseV.clear();
+                testExpected.clear();
+
+                testCaseW = {};
+                testCaseV = {};
+                testExpected = {};
+                testKnapsack = 0;
+
+                caseNumber++;
+
+                continue;
+            }
+
+            std::string row0 = row[0];
+
+            if (startsWith(row0, "knapPI")) {
+                rowToSkip = 6;
+            }
+
+            if (startsWith(row0, "c ")) {
+                std::string r = split(row[0], ' ')[1];
+                testKnapsack = stoi(r);
+            }
+
+            rowToSkip -= 1;
+
+            if (rowToSkip <= 0) {
+                testCaseW.push_back(stoi(row[2]));
+                testCaseV.push_back(stoi(row[1]));
+
+                if (row[3] == "1") {
+                    testExpected.push_back(stoi(row[1]));
+                }
+            }
+        }
+
+        fin.close();
+    }
+
+    boost::ut::expect(allGood) << "Some tests failed";
+}
+
 int main() {
 
     auto execDir = MyPaths::getExecutableDir();
@@ -319,6 +435,7 @@ int main() {
 
     auto testDir = script_dir.parent_path().parent_path().parent_path().parent_path() / testData_dir;
 
+    test_8_knapsack_1_0_files(testDir);
     test_8_equal_subset_sum_files(testDir);
 
     test_2_superincreasing();

@@ -133,6 +133,10 @@ namespace kb_knapsack {
             }
             return *this;
         }
+
+        friend std::ostream& operator<<(std::ostream &strm, const pareto_point<T, W> &a) {
+            return strm << "p(" << a.dimensions << "-" << a.profit << ")";
+        }
     };
 
     template<typename T, typename W>
@@ -140,9 +144,10 @@ namespace kb_knapsack {
     {
         std::size_t operator()(const pareto_point<T, W>& k) const
         {
-            using std::hash;
+            std::size_t h1 = (robin_hood::hash<T>()(k.dimensions));
+            std::size_t h2 = (std::hash<W>()(k.profit));
 
-            return ((hash<T>()(k.dimensions) ^ (hash<W>()(k.profit) << 1)) >> 1);
+            return 397 ^ h1 ^ h2;
         }
     };
 
@@ -238,7 +243,7 @@ namespace kb_knapsack {
         bool ForceUseLimits = false;
         bool DoSolveSuperInc = true;
         bool DoUseLimits= true;
-        bool UseRatioSort= true;
+        bool UseRatioSort= false;
         bool CanBackTraceWhenSizeReached = false;
         bool ForceUsePareto = false;
 
@@ -357,7 +362,14 @@ namespace kb_knapsack {
             // Sort
             std::iota(p.begin(), p.end(), 0);
             std::sort(p.begin(), p.end(),
-                      [&](size_t i, size_t j){ return (dimensions[i] < dimensions[j]); });
+                      [&](size_t i, size_t j){
+
+                if (dimensions[i] == dimensions[j]) {
+                    return values[i]/dimensions[i] < values[j]/dimensions[j];
+                }
+
+                return (dimensions[i] < dimensions[j]);
+            });
 
             applySort3<T, W, int>(dimensions, values, indexes,  p.size(), p);
         }
@@ -1101,7 +1113,7 @@ namespace kb_knapsack {
 
                 if (oldPointIndex == -1) {
                     if (newPointIndex >= 0) {
-                        for (int ind = 0; ind < newList.size(); ++ind) {
+                        for (int ind = newPointIndex; ind < newList.size(); ++ind) {
 
                             result.push_back(newList[ind]);
                         }
