@@ -75,31 +75,24 @@ namespace kb_knapsack {
     };
 
 
+
     template<typename T, typename W>
     struct pareto_point {
     public:
         T dimensions;
         W profit;
-        int itemId = -1;
-        int source = -1;
         int id = -1;
 
         pareto_point(){
         }
 
-        pareto_point(T dims, W value, int id){
+        pareto_point(T dims, W value){
             dimensions = dims;
             profit = value;
-            itemId = id;
-            source = -1;
         }
 
         W getProfit(){
             return profit;
-        }
-
-        bool hasSource(){
-            return source >= 0;
         }
 
         bool isDimensionEquals(T dim){
@@ -107,17 +100,13 @@ namespace kb_knapsack {
         }
 
         friend pareto_point operator+(pareto_point &c1, pareto_point &c2) {
-            auto p = pareto_point(c1.dimensions + c2.dimensions, c1.profit + c2.profit, c2.itemId);
-            p.source = c1.id;
-            return p;
+            return pareto_point(c1.dimensions + c2.dimensions, c1.profit + c2.profit);
         }
 
         pareto_point(const pareto_point& that)
         {
             dimensions = that.dimensions;
             profit = that.profit;
-            itemId = that.itemId;
-            source = that.source;
             id = that.id;
         }
 
@@ -127,8 +116,6 @@ namespace kb_knapsack {
             {
                 dimensions = that.dimensions;
                 profit = that.profit;
-                itemId = that.itemId;
-                source = that.source;
                 id = that.id;
             }
             return *this;
@@ -136,6 +123,20 @@ namespace kb_knapsack {
 
         friend std::ostream& operator<<(std::ostream &strm, const pareto_point<T, W> &a) {
             return strm << "p(" << a.dimensions << "-" << a.profit << ")";
+        }
+    };
+
+    struct source_link{
+        int itemId = -1;
+        int source = -1;
+
+        source_link(int _itemId, int _source){
+            itemId =_itemId;
+            source =_source;
+        }
+
+        bool hasSource(){
+            return source >= 0;
         }
     };
 
@@ -863,7 +864,7 @@ namespace kb_knapsack {
 
         std::tuple<int, PARETO_POINT> iteratePoints(
                 int& i,
-                PARETO_LIST &sourcePoints,
+                std::vector<source_link> &sourcePoints,
                 T& itemDimensions,
                 W& itemProfit,
                 int& itemId,
@@ -889,10 +890,11 @@ namespace kb_knapsack {
 
             auto skipLimitCheck = canUseLimits == false;
 
-            PARETO_POINT itemPoint(itemDimensions, itemProfit, itemId);
+            PARETO_POINT itemPoint(itemDimensions, itemProfit);
 
             itemPoint.id = sourcePoints.size();
-            sourcePoints.push_back(itemPoint);
+            source_link link(itemId, -1);
+            sourcePoints.push_back(link);
 
             auto useItemItself = true;
 
@@ -930,7 +932,8 @@ namespace kb_knapsack {
                     if (distinctPoints1.contains(newPoint) == false) {
 
                         newPoint.id = sourcePoints.size();
-                        sourcePoints.push_back(newPoint);
+                        source_link link(itemId, oldPoint.id);
+                        sourcePoints.push_back(link);
 
                         iterateOrPushBack(circularPointQueue, newPoint, greaterQu, distinctPoints2);
 
@@ -960,11 +963,11 @@ namespace kb_knapsack {
                 T& constraint,
                 PARETO_SET& prevDistinctPoints,
                 PARETO_SET& newDistinctPoints,
-                PARETO_LIST& sourcePoints) {
+                std::vector<source_link>& sourcePoints) {
 
             PARETO_LIST result;
 
-            PARETO_POINT itemPoint = pareto_point(itemDimensions, itemProfit, itemId);
+            PARETO_POINT itemPoint = pareto_point(itemDimensions, itemProfit);
 
             for(auto& oldPoint : oldPoints) {
 
@@ -973,7 +976,8 @@ namespace kb_knapsack {
                 if (newPoint.dimensions <= constraint) {
 
                     newPoint.id = sourcePoints.size();
-                    sourcePoints.push_back(newPoint);
+                    source_link link(itemId, oldPoint.id);
+                    sourcePoints.push_back(link);
 
                     if (prevDistinctPoints.contains(newPoint) == false) {
                         newDistinctPoints.insert(newPoint);
@@ -1010,10 +1014,10 @@ namespace kb_knapsack {
             int itemsCount = sortedItems.size();
 
             W zeroValue = EmptyValue;
-            pareto_point maxProfitPoint(EmptyDimension, zeroValue, 0);
+            pareto_point maxProfitPoint(EmptyDimension, zeroValue);
 
             PARETO_DEQUEUE circularPointQueue;
-            PARETO_LIST sourcePoints;
+            std::vector<source_link> sourcePoints;
 
             int prevPointCount = 0;
 
@@ -1146,7 +1150,7 @@ namespace kb_knapsack {
             }
         }
 
-        KNAPSACK_RESULT backTraceItems(pareto_point<W, T>& maxProfitPoint, int count, PARETO_LIST &sourcePoints) {
+        KNAPSACK_RESULT backTraceItems(pareto_point<W, T>& maxProfitPoint, int count, std::vector<source_link> &sourcePoints) {
 
             W zeroProfit = EmptyValue;
             std::vector<T> optItems;
@@ -1159,7 +1163,7 @@ namespace kb_knapsack {
             {
                 auto maxProfit = maxProfitPoint.getProfit();
 
-                pareto_point<W, T> point = maxProfitPoint;
+                source_link point = sourcePoints[maxProfitPoint.id];
 
                 while (true) {
                     optItems.push_back(Dimensions[point.itemId]);
@@ -1187,14 +1191,14 @@ namespace kb_knapsack {
                 std::vector<int>& sortedIndexes) {
 
             W zeroValue = EmptyValue;
-            pareto_point<W, T> maxProfitPoint(EmptyDimension, zeroValue, 0);
-            pareto_point<W, T> emptyPoint(EmptyDimension, zeroValue, 0);
+            pareto_point<W, T> maxProfitPoint(EmptyDimension, zeroValue);
+            pareto_point<W, T> emptyPoint(EmptyDimension, zeroValue);
 
             PARETO_SET distinctPoints;
 
             PARETO_LIST oldPoints = {emptyPoint};
             PARETO_LIST newPoints;
-            PARETO_LIST sourcePoints;
+            std::vector<source_link> sourcePoints;
 
             auto itemsCount = sortedItems.size();
 
