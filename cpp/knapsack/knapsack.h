@@ -931,19 +931,18 @@ namespace kb_knapsack {
             return std::make_tuple(newPointCount, maxProfitPoint);
         }
 
-        std::tuple<W_POINT_LIST, W_POINT> getNewPoints(
+         W_POINT getNewPoints(
                 int& i,
                 W_POINT& maxProfitPoint,
                 T& itemDimensions,
                 W& itemProfit,
                 int& itemId,
                 W_POINT_LIST& oldPoints,
+                W_POINT_LIST& result,
                 T& constraint,
                 W_POINT_SET& prevDistinctPoints,
                 W_POINT_SET& newDistinctPoints,
                 SOURCE_LINK_LIST& sourcePoints) {
-
-            W_POINT_LIST result;
 
             W_POINT itemPoint = W_POINT(itemDimensions, itemProfit);
 
@@ -974,7 +973,7 @@ namespace kb_knapsack {
                 }
             }
 
-            return std::make_tuple(result, maxProfitPoint);
+            return maxProfitPoint;
         }
 
         KNAPSACK_RESULT solveUsingLimitsOnly(
@@ -1195,19 +1194,19 @@ namespace kb_knapsack {
                 auto itemProfit = sortedValues[i - 1];
                 auto itemId = sortedIndexes[i - 1];
 
-                auto newPointResult = getNewPoints(i,
+                newPoints.clear();
+
+                maxProfitPoint = getNewPoints(i,
                                                    maxProfitPoint,
                                                    itemDimensions,
                                                    itemProfit,
                                                    itemId,
                                                    oldPoints,
+                                                   newPoints,
                                                    constraint,
                                                    distinctPoints,
                                                    distinctPoints,
                                                    sourcePoints);
-
-                auto newPoints      = std::get<0>(newPointResult);
-                auto maxProfitPoint = std::get<1>(newPointResult);
 
                 paretoOptimal.clear();
 
