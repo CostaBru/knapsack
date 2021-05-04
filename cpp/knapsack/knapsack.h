@@ -986,18 +986,16 @@ namespace kb_knapsack {
                 std::vector<bool> &superIncreasingItems,
                 bool canUsePartialSums) {
 
-            long n = sortedItems.size() * sortedItems.size();
+            W_POINT maxProfitPoint(EmptyDimension, EmptyValue);
 
             W_POINT_SET distinctPoints1;
+            W_POINT_DEQUEUE circularPointQueue;
+
+            SOURCE_LINK_LIST sourcePoints;
+
+            sourcePoints.reserve(sortedItems.size() * sortedItems.size());
 
             int itemsCount = sortedItems.size();
-
-            W zeroValue = EmptyValue;
-            W_POINT maxProfitPoint(EmptyDimension, zeroValue);
-
-            W_POINT_DEQUEUE circularPointQueue;
-            SOURCE_LINK_LIST sourcePoints;
-            sourcePoints.reserve(n);
 
             int prevPointCount = 0;
 
@@ -1171,20 +1169,18 @@ namespace kb_knapsack {
                 std::vector<W>& sortedValues,
                 std::vector<int>& sortedIndexes) {
 
-            W zeroValue = EmptyValue;
-            W_POINT maxProfitPoint(EmptyDimension, zeroValue);
-            W_POINT emptyPoint(EmptyDimension, zeroValue);
-
-            long n = sortedItems.size() * sortedItems.size();
+            W_POINT maxProfitPoint(EmptyDimension, EmptyValue);
+            W_POINT emptyPoint(EmptyDimension, EmptyValue);
 
             W_POINT_SET distinctPoints;
 
             W_POINT_LIST oldPoints = {emptyPoint};
             W_POINT_LIST newPoints;
-            SOURCE_LINK_LIST sourcePoints;
             W_POINT_LIST paretoOptimal;
 
-            sourcePoints.reserve(n);
+            SOURCE_LINK_LIST sourcePoints;
+
+            sourcePoints.reserve(sortedItems.size() * sortedItems.size());
 
             auto itemsCount = sortedItems.size();
 
