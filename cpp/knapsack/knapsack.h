@@ -1,15 +1,17 @@
 #ifndef knapsack_H
 #define knapsack_H
 
-#define PARETO_SET robin_hood::unordered_set<pareto_point<T, W>, pareto_point_hash<T, W>, pareto_point_key_equals<T, W>>
+#define W_POINT w_point<T, W>
 
-#define PARETO_DEQUEUE std::deque<pareto_point<T, W>>
+#define W_POINT_SET robin_hood::unordered_set<W_POINT, w_point_hash<T, W>, w_point_key_equals<T, W>>
 
-#define PARETO_POINT pareto_point<T, W>
+#define W_POINT_DEQUEUE std::deque<W_POINT>
 
-#define PARETO_LIST std::vector<pareto_point<T, W>>
+#define W_POINT_LIST std::vector<W_POINT>
 
 #define KNAPSACK_RESULT std::tuple<W, T, std::vector<T>, std::vector<W>, std::vector<int>>
+
+#define SOURCE_LINK_LIST std::vector<source_link>
 
 #include "fast_map.h"
 #include <vector>
@@ -22,95 +24,89 @@
 namespace kb_knapsack {
 
     template<typename T>
-    struct w_point {
+    struct w_point_dim {
     public:
         T value;
+
+        w_point_dim(){
+        }
+
+        w_point_dim(T dim){
+            value = dim;
+        }
+
+        w_point_dim adjustMin(w_point_dim p){
+            if (p.value < value){
+                return w_point_dim(p.value);
+            }
+
+            return w_point_dim(value);
+        }
+
+        w_point_dim divideBy(){
+            return w_point_dim(value / 2);
+        }
+
+        friend bool operator>(const w_point_dim &c1, const w_point_dim &c2) {
+            return c1.value > c2.value;
+        }
+
+        friend bool operator<=(const w_point_dim &c1, const w_point_dim &c2) {
+            return c1.value <= c2.value;
+        }
+
+        friend bool operator<(const w_point_dim &c1, const w_point_dim &c2) {
+            return c1.value < c2.value;
+        }
+
+        friend bool operator>=(const w_point_dim &c1, const w_point_dim &c2) {
+            return c1.value >= c2.value;
+        }
+
+        friend bool operator==(const w_point_dim &c1, const w_point_dim &c2) {
+            return c1.value == c2.value;
+        }
+
+        friend bool operator!=(const w_point_dim &c1, const w_point_dim &c2) {
+            return c1.value != c2.value;
+        }
+
+        friend bool operator+(const w_point_dim &c1, const w_point_dim &c2) {
+            return w_point_dim(c1.value + c2.value);
+        }
+    };
+
+    template<typename T, typename W>
+    struct w_point {
+    public:
+        T dimensions;
+        W profit;
+        long id = -1;
 
         w_point(){
         }
 
-        w_point(T dim){
-            value = dim;
-        }
-
-        w_point adjustMin(w_point p){
-            if (p.value < value){
-                return w_point(p.value);
-            }
-
-            return w_point(value);
-        }
-
-        w_point divideBy(){
-            return w_point(value/2);
-        }
-
-        friend bool operator>(const w_point &c1, const w_point &c2) {
-            return c1.value > c2.value;
-        }
-
-        friend bool operator<=(const w_point &c1, const w_point &c2) {
-            return c1.value <= c2.value;
-        }
-
-        friend bool operator<(const w_point &c1, const w_point &c2) {
-            return c1.value < c2.value;
-        }
-
-        friend bool operator>=(const w_point &c1, const w_point &c2) {
-            return c1.value >= c2.value;
-        }
-
-        friend bool operator==(const w_point &c1, const w_point &c2) {
-            return c1.value == c2.value;
-        }
-
-        friend bool operator!=(const w_point &c1, const w_point &c2) {
-            return c1.value != c2.value;
-        }
-
-        friend bool operator+(const w_point &c1, const w_point &c2) {
-            return w_point(c1.value + c2.value);
-        }
-    };
-
-
-
-    template<typename T, typename W>
-    struct pareto_point {
-    public:
-        T dimensions;
-        W profit;
-        int id = -1;
-
-        pareto_point(){
-        }
-
-        pareto_point(T dims, W value){
+        w_point(T dims, W value){
             dimensions = dims;
             profit = value;
-        }
-
-        W getProfit(){
-            return profit;
         }
 
         bool isDimensionEquals(T dim){
             return dimensions == dim;
         }
 
-        friend pareto_point operator+(pareto_point &c1, pareto_point &c2) {
-            return pareto_point(c1.dimensions + c2.dimensions, c1.profit + c2.profit);
+        friend w_point operator+(w_point &c1, w_point &c2) {
+            return w_point(c1.dimensions + c2.dimensions, c1.profit + c2.profit);
         }
 
-        pareto_point(const pareto_point& that)
+        w_point(const w_point& that)
         {
             dimensions = that.dimensions;
             profit = that.profit;
             id = that.id;
         }
 
-        pareto_point& operator=(const pareto_point& that)
+        w_point& operator=(const w_point& that)
         {
             if (this != &that)
             {
@@ -121,29 +117,29 @@ namespace kb_knapsack {
             return *this;
         }
 
-        friend std::ostream& operator<<(std::ostream &strm, const pareto_point<T, W> &a) {
+        friend std::ostream& operator<<(std::ostream &strm, const w_point<T, W> &a) {
             return strm << "p(" << a.dimensions << "-" << a.profit << ")";
         }
     };
 
     struct source_link{
         int itemId = -1;
-        int source = -1;
+        long parentId = -1;
 
-        source_link(int _itemId, int _source){
-            itemId =_itemId;
-            source =_source;
+        source_link(int _itemId, long sourceLinkId){
+            itemId = _itemId;
+            parentId = sourceLinkId;
         }
 
-        bool hasSource(){
-            return source >= 0;
+        bool hasParent(){
+            return parentId >= 0;
         }
     };
 
     template<typename T, typename W>
-    struct pareto_point_hash
+    struct w_point_hash
     {
-        std::size_t operator()(const pareto_point<T, W>& k) const
+        std::size_t operator()(const w_point<T, W>& k) const
         {
             std::size_t h1 = (robin_hood::hash<T>()(k.dimensions));
             std::size_t h2 = (std::hash<W>()(k.profit));
@@ -153,9 +149,9 @@ namespace kb_knapsack {
     };
 
     template<typename T, typename W>
-    struct pareto_point_key_equals
+    struct w_point_key_equals
     {
-        bool operator()(const pareto_point<T, W>& k1, const pareto_point<T, W>& k2) const
+        bool operator()(const w_point<T, W>& k1, const w_point<T, W>& k2) const
         {
             return k1.dimensions == k2.dimensions && k1.profit == k2.profit;
         }
@@ -249,6 +245,10 @@ namespace kb_knapsack {
         bool ForceUsePareto = false;
 
         KNAPSACK_RESULT Solve(){
+
+            if (Dimensions.size() != Values.size() || Ids.size() != Dimensions.size()) {
+                throw std::invalid_argument("Sizes of input dimensions, values and ids should be equal.");
+            }
 
             auto canTrySolveUsingDp = not ForceUsePareto and (DoUseLimits or DoSolveSuperInc or ForceUseLimits or CanBackTraceWhenSizeReached);
 
@@ -344,7 +344,7 @@ namespace kb_knapsack {
 
     private:
 
-        void sortByRatio(std::vector<T>& dimensions, std::vector<W>& values, std::vector<int>& indexes){
+        inline void sortByRatio(std::vector<T>& dimensions, std::vector<W>& values, std::vector<int>& indexes){
 
             std::vector<size_t> p(dimensions.size(), 0);
 
@@ -356,7 +356,7 @@ namespace kb_knapsack {
             applySort3<T, W, int>(dimensions, values, indexes, p.size(), p);
         }
 
-        void sortByDims(std::vector<T>& dimensions, std::vector<W>& values, std::vector<int>& indexes){
+        inline void sortByDims(std::vector<T>& dimensions, std::vector<W>& values, std::vector<int>& indexes){
 
             std::vector<size_t> p(dimensions.size(), 0);
 
@@ -432,24 +432,21 @@ namespace kb_knapsack {
 
                 for(auto i = 0; i < count; ++i) {
 
-                    auto item2 = items[i];
-                    auto itemValue2 = values[i];
+                    auto& item2 = items[i];
+                    auto& itemValue2 = values[i];
 
                     auto iBack = count - i - 1;
 
-                    auto item1 = items[iBack];
-                    auto itemValue1 = values[iBack];
+                    auto& item1 = items[iBack];
+                    auto& itemValue1 = values[iBack];
 
                     auto superIncreasingItem1 = false; auto superIncreasingItem2 = false;
 
                     if  (item1 <= constraints) {
 
-                        if (item1 < itemSum1)
-                        {
+                        if (item1 < itemSum1) {
                             isSuperIncreasing1 = false;
-                        }
-                        else
-                        {
+                        } else {
                             superIncreasingItem1 = true;
                         }
 
@@ -462,9 +459,8 @@ namespace kb_knapsack {
                     if  (item2 <= constraints) {
 
                         if (item2 < itemSum2) {
-                                    isSuperIncreasing2 = false;
-                        }
-                        else {
+                            isSuperIncreasing2 = false;
+                        } else {
                             superIncreasingItem2 = true;
                         }
 
@@ -474,14 +470,12 @@ namespace kb_knapsack {
                         }
                     }
 
-                    if (allValuesEqual && prevValue1 != itemValue2)
-                    {
+                    if (allValuesEqual && prevValue1 != itemValue2) {
                         allValuesEqual = false;
                     }
 
                     //if (allValuesEqualToConstraints && item2.firstDimensionEqual(itemValue2) == false)
-                    if (allValuesEqualToConstraints && item2 != itemValue2)
-                    {
+                    if (allValuesEqualToConstraints && item2 != itemValue2) {
                         allValuesEqualToConstraints = false;
                     }
 
@@ -505,7 +499,6 @@ namespace kb_knapsack {
                             allAsc = false;
                         }
                     }
-
 
                     if (allDescValues) {
                         if (! prevValue1 <= itemValue1) {
@@ -604,7 +597,7 @@ namespace kb_knapsack {
                                    canUsePartialSums);
         }
 
-        std::tuple<bool, KNAPSACK_RESULT> checkCornerCases(
+        inline std::tuple<bool, KNAPSACK_RESULT> checkCornerCases(
                 T& constraints,
                 std::vector<T>& lessSizeItems,
                 std::vector<W>& lessSizeValues,
@@ -633,10 +626,9 @@ namespace kb_knapsack {
             return std::make_tuple(false, std::make_tuple(zero, EmptyDimension, emptyItems, emptyValues, emptyIndexes));
         }
 
-        int indexLargestLessThanAsc(std::vector<T>& items, T item, int lo, int hi) {
+        inline int indexLargestLessThanAsc(std::vector<T>& items, T item, int lo, int hi) {
 
-            if (item == EmptyDimension)
-            {
+            if (item == EmptyDimension) {
                 return -1;
             }
 
@@ -645,35 +637,27 @@ namespace kb_knapsack {
 
                 auto val = items[mid];
 
-                if (item == val)
-                {
+                if (item == val) {
                     return mid;
                 }
 
-                if (val < item)
-                {
+                if (val < item) {
                     lo = mid + 1;
-                }
-                else
-                {
+                } else {
                     hi = mid - 1;
                 }
             }
 
-            if (hi >= 0 and item >= items[hi])
-            {
+            if (hi >= 0 and item >= items[hi]) {
                 return hi;
-            }
-            else
-            {
+            } else {
                 return -1;
             }
         }
 
-        int indexLargestLessThanDesc(std::vector<T>& items, T item, int lo, int hi) {
+        inline int indexLargestLessThanDesc(std::vector<T>& items, T item, int lo, int hi) {
 
-            if (item == EmptyDimension)
-            {
+            if (item == EmptyDimension) {
                 return -1;
             }
 
@@ -684,27 +668,20 @@ namespace kb_knapsack {
 
                 auto val = items[mid];
 
-                if (item == val)
-                {
+                if (item == val) {
                     return mid;
                 }
 
-                if (val > item)
-                {
+                if (val > item) {
                     lo = mid + 1;
-                }
-                else
-                {
+                } else {
                     hi = mid - 1;
                 }
             }
 
-            if (lo < cnt && item >= items[lo])
-            {
+            if (lo < cnt && item >= items[lo]) {
                 return lo;
-            }
-            else
-            {
+            } else {
                 return -1;
             }
         }
@@ -753,7 +730,7 @@ namespace kb_knapsack {
             return std::make_tuple(resultSum, resultItemSum, resultItems, resultValues, resultIndex);
         }
 
-        std::tuple<bool, T, T, T> getLimits(T& constraints,
+        inline std::tuple<bool, T, T, T> getLimits(T& constraints,
                                             int i,
                                             std::vector<T>& items,
                                             std::vector<T>& partialSums,
@@ -786,23 +763,22 @@ namespace kb_knapsack {
             return std::make_tuple(true, partSumForItem, oldPointLimit, newPointLimit);
         }
 
-        void iterateOrPushBack(PARETO_DEQUEUE& circularPointQueue,
-                               PARETO_POINT& newPoint,
-                               PARETO_DEQUEUE& greaterQu,
-                               PARETO_SET& distinctPoints2) {
+        inline void iterateOrPushBack(W_POINT_DEQUEUE& circularPointQueue,
+                                      W_POINT& newPoint,
+                                      W_POINT_DEQUEUE& greaterQu,
+                                      W_POINT_SET& distinctPoints2) {
 
             if (circularPointQueue.size() > 0) {
-                auto peek = circularPointQueue.front();
 
-                if (newPoint.dimensions <= peek.dimensions) {
+                if (newPoint.dimensions <= circularPointQueue.front().dimensions) {
 
                     circularPointQueue.push_back(newPoint);
                     distinctPoints2.insert(newPoint);
                 } else {
 
                     if (greaterQu.size() > 0){
-                        auto greaterQuPeek = greaterQu.front();
-                        if (newPoint.dimensions <= greaterQuPeek.dimensions)
+
+                        if (newPoint.dimensions <= greaterQu.front().dimensions)
                         {
                             greaterQu.push_front(newPoint);
                         }
@@ -823,11 +799,11 @@ namespace kb_knapsack {
             }
         }
 
-        void iterateLessThanOldPoint(PARETO_POINT& oldPoint,
-                                     PARETO_DEQUEUE& circularPointQueue,
-                                     bool canUseLimits,
-                                     PARETO_DEQUEUE& greaterQu, T oldPointLimit,
-                                     PARETO_SET& distinctPoints2) {
+        inline void iterateLessThanOldPoint(W_POINT& oldPoint,
+                                            W_POINT_DEQUEUE& circularPointQueue,
+                                            bool canUseLimits,
+                                            W_POINT_DEQUEUE& greaterQu, T oldPointLimit,
+                                            W_POINT_SET& distinctPoints2) {
 
             while (greaterQu.size() > 0 and greaterQu.front().dimensions < oldPoint.dimensions) {
 
@@ -843,9 +819,9 @@ namespace kb_knapsack {
             }
         }
 
-        void iterateGreaterPoints(PARETO_DEQUEUE& greaterQu,
-                                  PARETO_DEQUEUE& circularPointQueue,
-                                  PARETO_SET& distinctPoints2){
+        inline void iterateGreaterPoints(W_POINT_DEQUEUE& greaterQu,
+                                         W_POINT_DEQUEUE& circularPointQueue,
+                                         W_POINT_SET& distinctPoints2){
 
             while (greaterQu.size() > 0) {
 
@@ -857,27 +833,27 @@ namespace kb_knapsack {
             }
         }
 
-        int getItemIndex(int count, int i, int allAsc){
+        inline int getItemIndex(int count, int i, bool allAsc){
 
             return allAsc ? count - i : i - 1;
         }
 
-        std::tuple<int, PARETO_POINT> iteratePoints(
+        std::tuple<int, W_POINT> iteratePoints(
                 int& i,
-                std::vector<source_link> &sourcePoints,
+                SOURCE_LINK_LIST &sourcePoints,
                 T& itemDimensions,
                 W& itemProfit,
                 int& itemId,
                 T& constraintPoint,
-                PARETO_POINT& maxProfitPoint,
-                PARETO_DEQUEUE& circularPointQueue,
+                W_POINT& maxProfitPoint,
+                W_POINT_DEQUEUE& circularPointQueue,
                 int& prevCyclePointCount,
                 T& halfConstraint,
                 T& itemLimit,
                 T& oldPointLimit,
                 T& newPointLimit,
-                PARETO_SET& distinctPoints1,
-                PARETO_SET& distinctPoints2,
+                W_POINT_SET& distinctPoints1,
+                W_POINT_SET& distinctPoints2,
                 bool canUseLimits) {
 
             // merges ordered visited points with new points with keeping order in iterCounter(N) using single circular queue.
@@ -886,17 +862,17 @@ namespace kb_knapsack {
             // points if they will not contribute to optimal solution (in case of desc flow and (equal values or values equal to first dimension))
             // also skips the same weight but less profit points
 
-            PARETO_DEQUEUE greaterQu;
+            W_POINT_DEQUEUE greaterQu;
 
             auto skipLimitCheck = canUseLimits == false;
 
-            PARETO_POINT itemPoint(itemDimensions, itemProfit);
+            W_POINT itemPoint(itemDimensions, itemProfit);
 
             itemPoint.id = sourcePoints.size();
             source_link link(itemId, -1);
             sourcePoints.push_back(link);
 
-            auto useItemItself = true;
+            auto useItemItself = skipLimitCheck || itemLimit >= halfConstraint;
 
             if (useItemItself) {
 
@@ -904,14 +880,14 @@ namespace kb_knapsack {
                     iterateOrPushBack(circularPointQueue, itemPoint, greaterQu, distinctPoints2);
                 }
 
-                if (maxProfitPoint.getProfit() <= itemPoint.getProfit()) {
+                if (maxProfitPoint.profit <= itemPoint.profit) {
                     maxProfitPoint = itemPoint;
                 }
             }
 
             for (auto pi = 0; pi < prevCyclePointCount; ++pi) {
 
-                PARETO_POINT oldPoint = circularPointQueue.front();
+                W_POINT oldPoint = circularPointQueue.front();
 
                 circularPointQueue.pop_front();
 
@@ -922,13 +898,15 @@ namespace kb_knapsack {
                                         oldPointLimit,
                                         distinctPoints2);
 
-                PARETO_POINT newPoint = oldPoint + itemPoint;
 
-                if (!(skipLimitCheck) && newPoint.dimensions < newPointLimit) {
+                if (!(skipLimitCheck) && oldPoint.dimensions + itemPoint.dimensions < newPointLimit) {
                     continue;
                 }
 
-                if (newPoint.dimensions <= constraintPoint) {
+                if (oldPoint.dimensions + itemPoint.dimensions <= constraintPoint) {
+
+                    W_POINT newPoint = oldPoint + itemPoint;
+
                     if (distinctPoints1.contains(newPoint) == false) {
 
                         newPoint.id = sourcePoints.size();
@@ -937,7 +915,7 @@ namespace kb_knapsack {
 
                         iterateOrPushBack(circularPointQueue, newPoint, greaterQu, distinctPoints2);
 
-                        if (maxProfitPoint.getProfit() <= newPoint.getProfit()) {
+                        if (maxProfitPoint.profit <= newPoint.profit) {
                             if (maxProfitPoint.dimensions < newPoint.dimensions) {
                                 maxProfitPoint = newPoint;
                             }
@@ -953,27 +931,27 @@ namespace kb_knapsack {
             return std::make_tuple(newPointCount, maxProfitPoint);
         }
 
-        std::tuple<PARETO_LIST, PARETO_POINT> getNewPoints(
+        std::tuple<W_POINT_LIST, W_POINT> getNewPoints(
                 int& i,
-                PARETO_POINT& maxProfitPoint,
+                W_POINT& maxProfitPoint,
                 T& itemDimensions,
                 W& itemProfit,
                 int& itemId,
-                PARETO_LIST& oldPoints,
+                W_POINT_LIST& oldPoints,
                 T& constraint,
-                PARETO_SET& prevDistinctPoints,
-                PARETO_SET& newDistinctPoints,
-                std::vector<source_link>& sourcePoints) {
+                W_POINT_SET& prevDistinctPoints,
+                W_POINT_SET& newDistinctPoints,
+                SOURCE_LINK_LIST& sourcePoints) {
 
-            PARETO_LIST result;
+            W_POINT_LIST result;
 
-            PARETO_POINT itemPoint = pareto_point(itemDimensions, itemProfit);
+            W_POINT itemPoint = W_POINT(itemDimensions, itemProfit);
 
             for(auto& oldPoint : oldPoints) {
 
-                auto newPoint = oldPoint + itemPoint;
+                if (oldPoint.dimensions + itemPoint.dimensions <= constraint) {
 
-                if (newPoint.dimensions <= constraint) {
+                    auto newPoint = oldPoint + itemPoint;
 
                     newPoint.id = sourcePoints.size();
                     source_link link(itemId, oldPoint.id);
@@ -984,8 +962,8 @@ namespace kb_knapsack {
                         result.push_back(newPoint);
                     }
 
-                    if (maxProfitPoint.getProfit() <= newPoint.getProfit()) {
-                        if (UseRatioSort && maxProfitPoint.getProfit() == newPoint.getProfit()) {
+                    if (maxProfitPoint.profit <= newPoint.profit) {
+                        if (UseRatioSort && maxProfitPoint.profit == newPoint.profit) {
                             if (maxProfitPoint.dimensions < newPoint.dimensions) {
                                 maxProfitPoint = newPoint;
                             }
@@ -1009,15 +987,18 @@ namespace kb_knapsack {
                 std::vector<bool> &superIncreasingItems,
                 bool canUsePartialSums) {
 
-            PARETO_SET distinctPoints1;
+            long n = sortedItems.size() * sortedItems.size();
+
+            W_POINT_SET distinctPoints1;
 
             int itemsCount = sortedItems.size();
 
             W zeroValue = EmptyValue;
-            pareto_point maxProfitPoint(EmptyDimension, zeroValue);
+            W_POINT maxProfitPoint(EmptyDimension, zeroValue);
 
-            PARETO_DEQUEUE circularPointQueue;
-            std::vector<source_link> sourcePoints;
+            W_POINT_DEQUEUE circularPointQueue;
+            SOURCE_LINK_LIST sourcePoints;
+            sourcePoints.reserve(n);
 
             int prevPointCount = 0;
 
@@ -1065,16 +1046,16 @@ namespace kb_knapsack {
                 auto maxProfitPoint = std::get<1>(iterResult);
 
                 if (CanBackTraceWhenSizeReached && maxProfitPoint.dimensions == constraint) {
-                    return backTraceItems(maxProfitPoint, itemsCount, sourcePoints);
+                    return backTraceItems(maxProfitPoint, sourcePoints);
                 }
 
                 prevPointCount = newPointCount;
             }
 
-            return backTraceItems(maxProfitPoint, itemsCount, sourcePoints);
+            return backTraceItems(maxProfitPoint, sourcePoints);
         }
 
-        int indexLargestLessThan(PARETO_LIST& items, W& item, int lo, int hi){
+        inline int indexLargestLessThan(W_POINT_LIST& items, W& item, int lo, int hi){
 
             int ans = -1;
 
@@ -1083,7 +1064,7 @@ namespace kb_knapsack {
 
                 auto val = items[mid];
 
-                if (val.getProfit() > item) {
+                if (val.profit > item) {
                     hi = mid - 1;
                     ans = mid;
                 } else {
@@ -1094,11 +1075,11 @@ namespace kb_knapsack {
             return ans;
         }
 
-        int findLargerProfit(PARETO_LIST& items, W& profitMax) {
+        inline int findLargerProfit(W_POINT_LIST& items, W& profitMax) {
 
             auto index = indexLargestLessThan(items, profitMax, 0, items.size() - 1);
 
-            if (index >= 0 && items[index].getProfit() > profitMax) {
+            if (index >= 0 && items[index].profit > profitMax) {
                 return index;
             }
             else {
@@ -1106,7 +1087,7 @@ namespace kb_knapsack {
             }
         }
 
-        void mergeDiscardingDominated(PARETO_LIST& result, PARETO_LIST& oldList, PARETO_LIST& newList) {
+        void mergeDiscardingDominated(W_POINT_LIST& result, W_POINT_LIST& oldList, W_POINT_LIST& newList) {
 
             W profitMax = MinValue;
 
@@ -1135,22 +1116,23 @@ namespace kb_knapsack {
                     break;
                 }
 
-                PARETO_POINT& oldPoint = oldList[oldPointIndex];
-                PARETO_POINT& newPoint = newList[newPointIndex];
+                W_POINT& oldPoint = oldList[oldPointIndex];
+                W_POINT& newPoint = newList[newPointIndex];
 
-                if (oldPoint.dimensions < newPoint.dimensions || (oldPoint.dimensions == newPoint.dimensions && oldPoint.getProfit() > newPoint.getProfit())) {
+                if (oldPoint.dimensions < newPoint.dimensions
+                || (oldPoint.dimensions == newPoint.dimensions && oldPoint.profit > newPoint.profit)) {
 
                     result.push_back(oldPoint);
-                    profitMax = oldPoint.getProfit();
+                    profitMax = oldPoint.profit;
                 } else {
 
                     result.push_back(newPoint);
-                    profitMax = newPoint.getProfit();
+                    profitMax = newPoint.profit;
                 }
             }
         }
 
-        KNAPSACK_RESULT backTraceItems(pareto_point<W, T>& maxProfitPoint, int count, std::vector<source_link> &sourcePoints) {
+        KNAPSACK_RESULT backTraceItems(W_POINT& maxProfitPoint, SOURCE_LINK_LIST &sourcePoints) {
 
             W zeroProfit = EmptyValue;
             std::vector<T> optItems;
@@ -1159,23 +1141,23 @@ namespace kb_knapsack {
 
             auto optSize = EmptyDimension;
 
-            if (maxProfitPoint.getProfit() > 0)
+            if (maxProfitPoint.profit > 0)
             {
-                auto maxProfit = maxProfitPoint.getProfit();
+                auto maxProfit = maxProfitPoint.profit;
 
-                source_link point = sourcePoints[maxProfitPoint.id];
+                source_link pointLink = sourcePoints[maxProfitPoint.id];
 
                 while (true) {
-                    optItems.push_back(Dimensions[point.itemId]);
-                    optValues.push_back(Values[point.itemId]);
-                    optIndexes.push_back(Ids[point.itemId]);
-                    optSize += Dimensions[point.itemId];
+                    optItems.push_back(Dimensions[pointLink.itemId]);
+                    optValues.push_back(Values[pointLink.itemId]);
+                    optIndexes.push_back(Ids[pointLink.itemId]);
+                    optSize += Dimensions[pointLink.itemId];
 
-                    if (!point.hasSource()){
+                    if (!pointLink.hasParent()){
                         break;
                     }
 
-                    point = sourcePoints[point.source];
+                    pointLink = sourcePoints[pointLink.parentId];
                 }
 
                 return std::make_tuple(maxProfit, optSize, optItems, optValues, optIndexes);
@@ -1191,14 +1173,19 @@ namespace kb_knapsack {
                 std::vector<int>& sortedIndexes) {
 
             W zeroValue = EmptyValue;
-            pareto_point<W, T> maxProfitPoint(EmptyDimension, zeroValue);
-            pareto_point<W, T> emptyPoint(EmptyDimension, zeroValue);
+            W_POINT maxProfitPoint(EmptyDimension, zeroValue);
+            W_POINT emptyPoint(EmptyDimension, zeroValue);
 
-            PARETO_SET distinctPoints;
+            long n = sortedItems.size() * sortedItems.size();
 
-            PARETO_LIST oldPoints = {emptyPoint};
-            PARETO_LIST newPoints;
-            std::vector<source_link> sourcePoints;
+            W_POINT_SET distinctPoints;
+
+            W_POINT_LIST oldPoints = {emptyPoint};
+            W_POINT_LIST newPoints;
+            SOURCE_LINK_LIST sourcePoints;
+            W_POINT_LIST paretoOptimal;
+
+            sourcePoints.reserve(n);
 
             auto itemsCount = sortedItems.size();
 
@@ -1222,19 +1209,19 @@ namespace kb_knapsack {
                 auto newPoints      = std::get<0>(newPointResult);
                 auto maxProfitPoint = std::get<1>(newPointResult);
 
-                PARETO_LIST paretoOptimal;
+                paretoOptimal.clear();
 
                 // Point A is dominated by point B if B achieves a larger profit with the same or less weight than A.
                 mergeDiscardingDominated(paretoOptimal, oldPoints, newPoints);
 
                 if (CanBackTraceWhenSizeReached and maxProfitPoint.dimensions == constraint) {
-                    return backTraceItems(maxProfitPoint, itemsCount, sourcePoints);
+                    return backTraceItems(maxProfitPoint, sourcePoints);
                 }
 
                 oldPoints.swap(paretoOptimal); // oldPoints = paretoOptimal;
             }
 
-            return backTraceItems(maxProfitPoint, itemsCount, sourcePoints);
+            return backTraceItems(maxProfitPoint, sourcePoints);
         }
     };
 }
