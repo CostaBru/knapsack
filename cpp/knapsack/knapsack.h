@@ -1,15 +1,17 @@
 #ifndef knapsack_H
 #define knapsack_H
 
-#define W_POINT w_point<T, W>
+#define TD DIM<T, W, N>
 
-#define W_POINT_SET robin_hood::unordered_set<W_POINT, w_point_hash<T, W>, w_point_key_equals<T, W>>
+#define W_POINT w_point<T, W, N, DIM>
+
+#define W_POINT_SET robin_hood::unordered_set<W_POINT, w_point_hash<T, W, N, DIM>, w_point_key_equals<T, W, N, DIM>>
 
 #define W_POINT_DEQUEUE std::deque<W_POINT>
 
 #define W_POINT_LIST std::vector<W_POINT>
 
-#define KNAPSACK_RESULT std::tuple<W, T, std::vector<T>, std::vector<W>, std::vector<int>>
+#define KNAPSACK_RESULT std::tuple<W, TD, std::vector<TD>, std::vector<W>, std::vector<int>>
 
 #define SOURCE_LINK_LIST std::vector<source_link>
 
@@ -23,85 +25,294 @@
 
 namespace kb_knapsack {
 
-    template<typename T>
-    struct w_point_dim {
+    template<typename T, typename W, int N>
+    struct w_point_dim1 {
     public:
         T value;
 
-        w_point_dim(){
+        w_point_dim1(){
         }
 
-        w_point_dim(T dim){
-            value = dim;
+        w_point_dim1(const T &dim) : value(dim){
         }
 
-        w_point_dim adjustMin(w_point_dim p){
+        w_point_dim1(const w_point_dim1 &that) : value(that.value)
+        {
+        }
+
+        w_point_dim1& operator=(const w_point_dim1& that)
+        {
+            if (this != &that)
+            {
+                value = that.value;
+            }
+            return *this;
+        }
+
+        T getDimension(int index) const{
+            return value;
+        }
+
+        std::array<T, 1> getDimensions() {
+            return {value};
+        }
+
+        bool firstDimensionEqual(W &val){
+            return value == val;
+        }
+
+        w_point_dim1 adjustMin(w_point_dim1& p){
             if (p.value < value){
-                return w_point_dim(p.value);
+                return w_point_dim1(p.value);
             }
 
-            return w_point_dim(value);
+            return w_point_dim1(value);
         }
 
-        w_point_dim divideBy(){
-            return w_point_dim(value / 2);
+        w_point_dim1 half(){
+            return w_point_dim1(value / 2);
         }
 
-        friend bool operator>(const w_point_dim &c1, const w_point_dim &c2) {
+        w_point_dim1 divide(W& c){
+            return w_point_dim1(c / value);
+        }
+
+        friend bool operator>(const w_point_dim1 &c1, const w_point_dim1 &c2) {
             return c1.value > c2.value;
         }
 
-        friend bool operator<=(const w_point_dim &c1, const w_point_dim &c2) {
+        friend bool operator<=(const w_point_dim1 &c1, const w_point_dim1 &c2) {
             return c1.value <= c2.value;
         }
 
-        friend bool operator<(const w_point_dim &c1, const w_point_dim &c2) {
+        friend bool operator<(const w_point_dim1 &c1, const w_point_dim1 &c2) {
             return c1.value < c2.value;
         }
 
-        friend bool operator>=(const w_point_dim &c1, const w_point_dim &c2) {
+        friend bool operator>=(const w_point_dim1 &c1, const w_point_dim1 &c2) {
             return c1.value >= c2.value;
         }
 
-        friend bool operator==(const w_point_dim &c1, const w_point_dim &c2) {
+        friend bool operator==(const w_point_dim1 &c1, const w_point_dim1 &c2) {
             return c1.value == c2.value;
         }
 
-        friend bool operator!=(const w_point_dim &c1, const w_point_dim &c2) {
+        friend bool operator!=(const w_point_dim1 &c1, const w_point_dim1 &c2) {
             return c1.value != c2.value;
         }
 
-        friend bool operator+(const w_point_dim &c1, const w_point_dim &c2) {
-            return w_point_dim(c1.value + c2.value);
+        friend w_point_dim1 operator+(const w_point_dim1 &c1, const w_point_dim1 &c2) {
+            return w_point_dim1(c1.value + c2.value);
+        }
+
+        friend w_point_dim1 operator-(const w_point_dim1 &c1, const w_point_dim1 &c2) {
+            return w_point_dim1(c1.value - c2.value);
+        }
+
+        friend void operator+=(w_point_dim1 &c1, const w_point_dim1 &c2) {
+            c1 = w_point_dim1(c1.value + c2.value);
         }
     };
 
-    template<typename T, typename W>
+    template<typename T, typename W, int N>
+    struct w_point_dimN {
+    public:
+        std::array<T, N> value;
+
+        w_point_dimN(){
+        }
+
+        w_point_dimN(const std::array<T, N> &dim) : value(dim){
+        }
+
+        w_point_dimN(const w_point_dimN &that) : value(that.value)
+        {
+        }
+
+        w_point_dimN& operator=(const w_point_dimN &that)
+        {
+            if (this != &that)
+            {
+                value = that.value;
+            }
+            return *this;
+        }
+
+        bool firstDimensionEqual(W &val){
+            return value[0] == val;
+        }
+
+        T getDimension(int index) const {
+            return value[index];
+        }
+
+        std::array<T, N> getDimensions() {
+            return value;
+        }
+
+        w_point_dimN adjustMin(w_point_dimN& p){
+
+            std::array<T, N> result;
+
+            for(int i = 0; i < N; ++i){
+                result[i] = std::min(p.value[i], value[i]);
+            }
+
+            return w_point_dimN(result);
+        }
+
+        w_point_dimN half(){
+
+            std::array<T, N> result;
+
+            for(int i = 0; i < N; ++i){
+                result[i] = value[i] / 2;
+            }
+
+            return w_point_dimN(result);
+        }
+
+        w_point_dimN divide(W& c){
+
+            std::array<T, N> result;
+
+            for(int i = 0; i < N; ++i){
+                result[i] = c / value[i];
+            }
+
+            return w_point_dimN(result);
+        }
+
+        friend bool operator>(const w_point_dimN &c1, const w_point_dimN &c2) {
+
+            bool allGreater = false;
+
+            for(int i = 0; i < N; ++i) {
+
+                if (c2.value[i] < c1.value[i]) {
+                    allGreater = true;
+                } else {
+                    return false;
+                }
+            }
+
+            return allGreater;
+        }
+
+        friend bool operator>=(const w_point_dimN &c1, const w_point_dimN &c2) {
+            for(int i = 0; i < N; ++i) {
+
+                if (c1.value[i] < c2.value[i])  return false;
+            }
+
+            return true;
+        }
+
+        friend bool operator<=(const w_point_dimN &c1, const w_point_dimN &c2) {
+            for(int i = 0; i < N; ++i) {
+                if (c1.value[i] > c2.value[i])
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        friend bool operator<(const w_point_dimN &c1, const w_point_dimN &c2) {
+
+            bool allLess = false;
+            for(int i = 0; i < N; ++i) {
+
+                if (c1.value[i] == c2.value[i]) continue;
+
+                if (c1.value[i] < c2.value[i])
+                {
+                    allLess = true;
+                }
+                else {
+                    return false;
+                }
+            }
+
+            return allLess;
+        }
+
+        friend bool operator==(const w_point_dimN &c1, const w_point_dimN &c2) {
+            for(int i = 0; i < N; ++i) {
+
+                if (c1.value[i] != c2.value[i])
+                    return false;
+            }
+
+            return true;
+        }
+
+        friend bool operator!=(const w_point_dimN &c1, const w_point_dimN &c2) {
+            for(int i = 0; i < N; ++i) {
+
+                if (c1.value[i] == c2.value[i])
+                    return false;
+            }
+
+            return true;
+        }
+
+        friend w_point_dimN operator+(const w_point_dimN &c1, const w_point_dimN &c2) {
+            std::array<T, N> result;
+
+            for(int i = 0; i < N; ++i){
+                result[i] = c1.value[i] + c2.value[i];
+            }
+
+            return w_point_dimN(result);
+        }
+
+        friend w_point_dimN operator-(const w_point_dimN &c1, const w_point_dimN &c2) {
+            std::array<T, N> result;
+
+            for(int i = 0; i < N; ++i){
+                result[i] = c1.value[i] - c2.value[i];
+            }
+
+            return w_point_dimN(result);
+        }
+
+        friend void operator+=(w_point_dimN &c1, const w_point_dimN &c2) {
+
+            std::array<T, N> result;
+
+            for(int i = 0; i < N; ++i){
+                result[i] += c2.value[i];
+            }
+
+            c1 = w_point_dimN(result);
+        }
+    };
+
+    template<typename T, typename W, int N, template<typename DIM_TYPE, typename VALUE_TYPE, int DIM_LEN> class DIM>
     struct w_point {
     public:
-        T dimensions;
+        TD dimensions;
         W profit;
         long id = -1;
 
         w_point(){
         }
 
-        w_point(T dims, W value){
-            dimensions = dims;
-            profit = value;
+        T getDimension(int i) const {
+            return dimensions.getDimension(i);
         }
 
-        bool isDimensionEquals(T dim){
-            return dimensions == dim;
+        w_point(TD dims, W value) : dimensions(dims){
+            profit = value;
         }
 
         friend w_point operator+(w_point &c1, w_point &c2) {
             return w_point(c1.dimensions + c2.dimensions, c1.profit + c2.profit);
         }
 
-        w_point(const w_point& that)
+        w_point(const w_point& that) : dimensions(that.dimensions)
         {
-            dimensions = that.dimensions;
             profit = that.profit;
             id = that.id;
         }
@@ -117,7 +328,7 @@ namespace kb_knapsack {
             return *this;
         }
 
-        friend std::ostream& operator<<(std::ostream &strm, const w_point<T, W> &a) {
+        friend std::ostream& operator<<(std::ostream &strm, const w_point<T, W, N, DIM> &a) {
             return strm << "p(" << a.dimensions << "-" << a.profit << ")";
         }
     };
@@ -136,22 +347,27 @@ namespace kb_knapsack {
         }
     };
 
-    template<typename T, typename W>
+    template<typename T, typename W, int N, template<typename DIM_TYPE, typename VALUE_TYPE, int DIM_LEN> class DIM>
     struct w_point_hash
     {
-        std::size_t operator()(const w_point<T, W>& k) const
+        std::size_t operator()(const W_POINT& k) const
         {
-            std::size_t h1 = (robin_hood::hash<T>()(k.dimensions));
+            std::size_t hashCode = (robin_hood::hash<T>()(k.getDimension(0)));
+
+            for(int i = 1; i < N; ++i){
+                hashCode ^= (robin_hood::hash<T>()(k.getDimension(i)));
+            }
+
             std::size_t h2 = (std::hash<W>()(k.profit));
 
-            return 397 ^ h1 ^ h2;
+            return 397 ^ hashCode ^ h2;
         }
     };
 
-    template<typename T, typename W>
+    template<typename T, typename W, int N, template<typename DIM_TYPE, typename VALUE_TYPE, int DIM_LEN> class DIM>
     struct w_point_key_equals
     {
-        bool operator()(const w_point<T, W>& k1, const w_point<T, W>& k2) const
+        bool operator()(const W_POINT& k1, const W_POINT& k2) const
         {
             return k1.dimensions == k2.dimensions && k1.profit == k2.profit;
         }
@@ -224,25 +440,28 @@ namespace kb_knapsack {
         }
     }
 
-    template<typename T, typename W>
+    template<typename T, typename W, int N, template<typename DIM_TYPE, typename VALUE_TYPE, int DIM_LEN> class DIM>
     class knapsack_solver{
     public:
-        knapsack_solver(){
+        knapsack_solver() {
         }
 
-        T Constrains;
-        T EmptyDimension;
-        W EmptyValue;
-        W MinValue;
-        std::vector<T> Dimensions;
+        TD Constrains;
+
+        std::vector<TD> Dimensions;
         std::vector<W> Values;
         std::vector<int> Ids;
-        bool ForceUseLimits = false;
-        bool DoSolveSuperInc = true;
-        bool DoUseLimits= true;
-        bool UseRatioSort= false;
+
+        TD EmptyDimension;
+        W EmptyValue;
+        W MinValue;
+
+        bool ForceUseLimits   = false;
+        bool DoSolveSuperInc  = true;
+        bool DoUseLimits      = true;
+        bool UseRatioSort     = false;
+        bool ForceUsePareto   = false;
         bool CanBackTraceWhenSizeReached = false;
-        bool ForceUsePareto = false;
 
         KNAPSACK_RESULT Solve(){
 
@@ -250,17 +469,17 @@ namespace kb_knapsack {
                 throw std::invalid_argument("Sizes of input dimensions, values and ids should be equal.");
             }
 
-            auto canTrySolveUsingDp = not ForceUsePareto and (DoUseLimits or DoSolveSuperInc or ForceUseLimits or CanBackTraceWhenSizeReached);
+            auto canTrySolveUsingDp = ! ForceUsePareto && (DoUseLimits || DoSolveSuperInc || ForceUseLimits || CanBackTraceWhenSizeReached);
 
-            std::vector<T> lessSizeItems;
+            std::vector<TD> lessSizeItems;
             std::vector<W> lessSizeValues;
             std::vector<int> lessSizeItemsIndex;
 
-            T constraints = Constrains;
+            TD constraints = Constrains;
 
             if (canTrySolveUsingDp) {
 
-                std::vector<T> partialSums;
+                std::vector<TD> partialSums;
                 std::vector<bool> superIncreasingItems;
 
                 auto params = preProcess(Constrains,
@@ -323,13 +542,13 @@ namespace kb_knapsack {
                                                 superIncreasingItems,
                                                 canUsePartialSums);
                 }
-            } else{
-                auto lessSizeItems = Dimensions;
-                auto lessSizeValues = Values;
-                auto lessSizeItemsIndex = Ids;
+            } else {
+                lessSizeItems = Dimensions;
+                lessSizeValues = Values;
+                lessSizeItemsIndex = Ids;
             }
 
-            std::vector<T> sortedItems(lessSizeItems);
+            std::vector<TD> sortedItems(lessSizeItems);
             std::vector<W> sortedValues(lessSizeValues);
             std::vector<int> sortedIndexes(lessSizeItemsIndex);
 
@@ -344,19 +563,19 @@ namespace kb_knapsack {
 
     private:
 
-        inline void sortByRatio(std::vector<T>& dimensions, std::vector<W>& values, std::vector<int>& indexes){
+        inline void sortByRatio(std::vector<TD>& dimensions, std::vector<W>& values, std::vector<int>& indexes){
 
             std::vector<size_t> p(dimensions.size(), 0);
 
             // Sort
             std::iota(p.begin(), p.end(), 0);
             std::sort(p.begin(), p.end(),
-                      [&](size_t i, size_t j){ return ((values[i] / dimensions[i]) < (values[j] / dimensions[j])); });
+                      [&](size_t i, size_t j){ return dimensions[i].divide(values[i]) < dimensions[j].divide(values[j]); });
 
-            applySort3<T, W, int>(dimensions, values, indexes, p.size(), p);
+            applySort3<TD, W, int>(dimensions, values, indexes, p.size(), p);
         }
 
-        inline void sortByDims(std::vector<T>& dimensions, std::vector<W>& values, std::vector<int>& indexes){
+        inline void sortByDims(std::vector<TD>& dimensions, std::vector<W>& values, std::vector<int>& indexes){
 
             std::vector<size_t> p(dimensions.size(), 0);
 
@@ -366,20 +585,24 @@ namespace kb_knapsack {
                       [&](size_t i, size_t j){
 
                 if (dimensions[i] == dimensions[j]) {
-                    return values[i]/dimensions[i] < values[j]/dimensions[j];
+
+                    auto d1 = dimensions[i].divide(values[i]);
+                    auto d2 = dimensions[j].divide(values[j]);
+
+                    return d1 < d2;
                 }
 
                 return (dimensions[i] < dimensions[j]);
             });
 
-            applySort3<T, W, int>(dimensions, values, indexes,  p.size(), p);
+            applySort3<TD, W, int>(dimensions, values, indexes,  p.size(), p);
         }
 
         std::tuple<
-        /* 0 constraints */ T,
+        /* 0 constraints */ TD,
         /* 1 lessCount */ int,
-        /* 2 itemSum */  T,
-        /* 3 lessCountSum */  T,
+        /* 2 itemSum */  TD,
+        /* 3 lessCountSum */  TD,
         /* 4 lessCountValuesSum */  W,
         /* 5 isSuperIncreasing */  bool,
         /* 6 allAsc */  bool,
@@ -387,14 +610,14 @@ namespace kb_knapsack {
         /* 8 canUsePartialSums */  bool
         >
                 preProcess(
-                        T& constraints,
-                        std::vector<T>& items,
-                        std::vector<W>& values,
-                        bool& forceUseLimits,
-                        std::vector<T> &lessSizeItems,
+                        TD &constraints,
+                        std::vector<TD> &items,
+                        std::vector<W> &values,
+                        bool &forceUseLimits,
+                        std::vector<TD> &lessSizeItems,
                         std::vector<W> &lessSizeValues,
                         std::vector<int> &lessSizeItemsIndex,
-                        std::vector<T> &partialSums,
+                        std::vector<TD> &partialSums,
                         std::vector<bool> &superIncreasingItems
                         ){
 
@@ -408,9 +631,9 @@ namespace kb_knapsack {
             W valuesSum2;
             W lessCountValuesSum;
 
-            std::vector<T> partialSums1;
+            std::vector<TD> partialSums1;
             std::vector<bool> superIncreasingItems1 = {false};
-            std::vector<T> partialSums2;
+            std::vector<TD> partialSums2;
             std::vector<bool> superIncreasingItems2 = {false};
 
             auto isSuperIncreasing1 = true; auto isSuperIncreasing2 = true;
@@ -474,8 +697,7 @@ namespace kb_knapsack {
                         allValuesEqual = false;
                     }
 
-                    //if (allValuesEqualToConstraints && item2.firstDimensionEqual(itemValue2) == false)
-                    if (allValuesEqualToConstraints && item2 != itemValue2) {
+                    if (allValuesEqualToConstraints && item2.firstDimensionEqual(itemValue2) == false){
                         allValuesEqualToConstraints = false;
                     }
 
@@ -485,8 +707,8 @@ namespace kb_knapsack {
                     valuesSum1 += itemValue1;
                     valuesSum2 += itemValue2;
 
-                    partialSums1.push_back(itemSum2);
-                    partialSums2.push_back(itemSum1);
+                    partialSums1.emplace_back(itemSum2);
+                    partialSums2.emplace_back(itemSum1);
 
                     if (allDesc){
                         if (! (prevItem1 <= item1)) {
@@ -513,14 +735,14 @@ namespace kb_knapsack {
                     }
 
                     if (i > 0) {
-                        superIncreasingItems1.push_back(superIncreasingItem1);
-                        superIncreasingItems2.push_back(superIncreasingItem2);
+                        superIncreasingItems1.emplace_back(superIncreasingItem1);
+                        superIncreasingItems2.emplace_back(superIncreasingItem2);
                     }
 
                     if  (item2 <= constraints) {
-                        lessSizeItems.push_back(item2);
-                        lessSizeValues.push_back(itemValue2);
-                        lessSizeItemsIndex.push_back(i);
+                        lessSizeItems.emplace_back(item2);
+                        lessSizeValues.emplace_back(itemValue2);
+                        lessSizeItemsIndex.emplace_back(i);
                         lessCountValuesSum += itemValue2;
                         lessCountSum += item2;
                         lessCount += 1;
@@ -584,7 +806,7 @@ namespace kb_knapsack {
                 itemSum = itemSum2;
             }
 
-            //constraints = constraints.adjustMin(itemSum);
+            constraints = constraints.adjustMin(itemSum);
 
             return std::make_tuple(constraints,
                                    lessCount,
@@ -598,16 +820,16 @@ namespace kb_knapsack {
         }
 
         inline std::tuple<bool, KNAPSACK_RESULT> checkCornerCases(
-                T& constraints,
-                std::vector<T>& lessSizeItems,
+                TD& constraints,
+                std::vector<TD>& lessSizeItems,
                 std::vector<W>& lessSizeValues,
                 std::vector<int>& lessSizeItemsIndex,
-                T& lessCountSum,
-                T& itemSum,
+                TD& lessCountSum,
+                TD& itemSum,
                 W& lessCountValuesSum){
 
             W zero = EmptyValue;
-            std::vector<T> emptyItems;
+            std::vector<TD> emptyItems;
             std::vector<W> emptyValues;
             std::vector<int> emptyIndexes;
 
@@ -626,7 +848,7 @@ namespace kb_knapsack {
             return std::make_tuple(false, std::make_tuple(zero, EmptyDimension, emptyItems, emptyValues, emptyIndexes));
         }
 
-        inline int indexLargestLessThanAsc(std::vector<T>& items, T item, int lo, int hi) {
+        inline int indexLargestLessThanAsc(std::vector<TD>& items, TD item, int lo, int hi) {
 
             if (item == EmptyDimension) {
                 return -1;
@@ -655,7 +877,7 @@ namespace kb_knapsack {
             }
         }
 
-        inline int indexLargestLessThanDesc(std::vector<T>& items, T item, int lo, int hi) {
+        inline int indexLargestLessThanDesc(std::vector<TD>& items, TD item, int lo, int hi) {
 
             if (item == EmptyDimension) {
                 return -1;
@@ -686,19 +908,19 @@ namespace kb_knapsack {
             }
         }
 
-        KNAPSACK_RESULT  solveSuperIncreasing(T& size,
-                                     std::vector<T>& items,
+        KNAPSACK_RESULT  solveSuperIncreasing(TD& size,
+                                     std::vector<TD>& items,
                                      std::vector<W>& values,
                                      std::vector<int>& itemsIndex,
                                      int count,
                                      bool allAsc) {
 
             int starting = 1;
-            std::vector<T> resultItems;
+            std::vector<TD> resultItems;
             std::vector<W> resultValues;
             std::vector<int> resultIndex;
             W resultSum = EmptyValue;
-            T resultItemSum = EmptyDimension;
+            TD resultItemSum = EmptyDimension;
 
             auto index = -1;
 
@@ -713,9 +935,9 @@ namespace kb_knapsack {
                 auto& item = items[index];
                 auto& value = values[index];
 
-                resultItems.push_back(item);
-                resultValues.push_back(value);
-                resultIndex.push_back(itemsIndex[index]);
+                resultItems.emplace_back(item);
+                resultValues.emplace_back(value);
+                resultIndex.emplace_back(itemsIndex[index]);
 
                 resultItemSum += item;
                 resultSum += value;
@@ -730,16 +952,16 @@ namespace kb_knapsack {
             return std::make_tuple(resultSum, resultItemSum, resultItems, resultValues, resultIndex);
         }
 
-        inline std::tuple<bool, T, T, T> getLimits(T& constraints,
+        inline std::tuple<bool, TD, TD, TD> getLimits(TD& constraints,
                                             int i,
-                                            std::vector<T>& items,
-                                            std::vector<T>& partialSums,
+                                            std::vector<TD>& items,
+                                            std::vector<TD>& partialSums,
                                             std::vector<bool>& superIncreasingItems,
                                             bool canUsePartialSums) {
 
-            T partSumForItem;
-            T oldPointLimit;
-            T newPointLimit;
+            TD partSumForItem;
+            TD oldPointLimit;
+            TD newPointLimit;
 
             if (!DoUseLimits || !canUsePartialSums) {
                 return std::make_tuple(false, partSumForItem, oldPointLimit, newPointLimit);
@@ -756,7 +978,7 @@ namespace kb_knapsack {
             newPointLimit = constraints - partSumForItem;
             oldPointLimit = newPointLimit;
 
-            if (DoSolveSuperInc && newPointLimit && superIncreasingItem) {
+            if (DoSolveSuperInc && superIncreasingItem) {
                 oldPointLimit = newPointLimit + items[i];
             }
 
@@ -772,7 +994,7 @@ namespace kb_knapsack {
 
                 if (newPoint.dimensions <= circularPointQueue.front().dimensions) {
 
-                    circularPointQueue.push_back(newPoint);
+                    circularPointQueue.emplace_back(newPoint);
                     distinctPoints2.insert(newPoint);
                 } else {
 
@@ -784,17 +1006,17 @@ namespace kb_knapsack {
                         }
                         else
                         {
-                            greaterQu.push_back(newPoint);
+                            greaterQu.emplace_back(newPoint);
                         }
                     }
                     else{
 
-                        greaterQu.push_back(newPoint);
+                        greaterQu.emplace_back(newPoint);
                     }
                 }
             }
             else {
-                circularPointQueue.push_back(newPoint);
+                circularPointQueue.emplace_back(newPoint);
                 distinctPoints2.insert(newPoint);
             }
         }
@@ -802,7 +1024,8 @@ namespace kb_knapsack {
         inline void iterateLessThanOldPoint(W_POINT& oldPoint,
                                             W_POINT_DEQUEUE& circularPointQueue,
                                             bool canUseLimits,
-                                            W_POINT_DEQUEUE& greaterQu, T oldPointLimit,
+                                            W_POINT_DEQUEUE& greaterQu,
+                                            TD& oldPointLimit,
                                             W_POINT_SET& distinctPoints2) {
 
             while (greaterQu.size() > 0 and greaterQu.front().dimensions < oldPoint.dimensions) {
@@ -811,7 +1034,7 @@ namespace kb_knapsack {
                 greaterQu.pop_front();
 
                 distinctPoints2.insert(quPoint);
-                circularPointQueue.push_back(quPoint);
+                circularPointQueue.emplace_back(quPoint);
             }
 
             if ((canUseLimits == false) || (oldPoint.dimensions < oldPointLimit) == false) {
@@ -828,7 +1051,7 @@ namespace kb_knapsack {
                 auto quPoint = greaterQu.front();
                 greaterQu.pop_front();
 
-                circularPointQueue.push_back(quPoint);
+                circularPointQueue.emplace_back(quPoint);
                 distinctPoints2.insert(quPoint);
             }
         }
@@ -841,17 +1064,17 @@ namespace kb_knapsack {
         std::tuple<int, W_POINT> iteratePoints(
                 int& i,
                 SOURCE_LINK_LIST &sourcePoints,
-                T& itemDimensions,
+                TD& itemDimensions,
                 W& itemProfit,
                 int& itemId,
-                T& constraintPoint,
+                TD& constraintPoint,
                 W_POINT& maxProfitPoint,
                 W_POINT_DEQUEUE& circularPointQueue,
                 int& prevCyclePointCount,
-                T& halfConstraint,
-                T& itemLimit,
-                T& oldPointLimit,
-                T& newPointLimit,
+                TD halfConstraint,
+                TD& itemLimit,
+                TD& oldPointLimit,
+                TD& newPointLimit,
                 W_POINT_SET& distinctPoints1,
                 W_POINT_SET& distinctPoints2,
                 bool canUseLimits) {
@@ -870,7 +1093,7 @@ namespace kb_knapsack {
 
             itemPoint.id = sourcePoints.size();
             source_link link(itemId, -1);
-            sourcePoints.push_back(link);
+            sourcePoints.emplace_back(link);
 
             auto useItemItself = skipLimitCheck || itemLimit >= halfConstraint;
 
@@ -911,7 +1134,7 @@ namespace kb_knapsack {
 
                         newPoint.id = sourcePoints.size();
                         source_link link(itemId, oldPoint.id);
-                        sourcePoints.push_back(link);
+                        sourcePoints.emplace_back(link);
 
                         iterateOrPushBack(circularPointQueue, newPoint, greaterQu, distinctPoints2);
 
@@ -934,12 +1157,12 @@ namespace kb_knapsack {
          W_POINT getNewPoints(
                 int& i,
                 W_POINT& maxProfitPoint,
-                T& itemDimensions,
+                TD& itemDimensions,
                 W& itemProfit,
                 int& itemId,
                 W_POINT_LIST& oldPoints,
                 W_POINT_LIST& result,
-                T& constraint,
+                TD& constraint,
                 W_POINT_SET& prevDistinctPoints,
                 W_POINT_SET& newDistinctPoints,
                 SOURCE_LINK_LIST& sourcePoints) {
@@ -954,11 +1177,11 @@ namespace kb_knapsack {
 
                     newPoint.id = sourcePoints.size();
                     source_link link(itemId, oldPoint.id);
-                    sourcePoints.push_back(link);
+                    sourcePoints.emplace_back(link);
 
                     if (prevDistinctPoints.contains(newPoint) == false) {
                         newDistinctPoints.insert(newPoint);
-                        result.push_back(newPoint);
+                        result.emplace_back(newPoint);
                     }
 
                     if (maxProfitPoint.profit <= newPoint.profit) {
@@ -977,12 +1200,12 @@ namespace kb_knapsack {
         }
 
         KNAPSACK_RESULT solveUsingLimitsOnly(
-                T constraint,
-                std::vector<T> &sortedItems,
+                TD constraint,
+                std::vector<TD> &sortedItems,
                 std::vector<W> &sortedValues,
                 std::vector<int> &sortedIndexes,
                 bool allAsc,
-                std::vector<T> &partialSums,
+                std::vector<TD> &partialSums,
                 std::vector<bool> &superIncreasingItems,
                 bool canUsePartialSums) {
 
@@ -999,7 +1222,7 @@ namespace kb_knapsack {
 
             int prevPointCount = 0;
 
-            auto halfConstraint = constraint / 2;
+            auto halfConstraint = constraint.half();
 
             for(int i = 1; i < itemsCount + 1; ++i) {
 
@@ -1097,7 +1320,7 @@ namespace kb_knapsack {
                     if (newPointIndex >= 0) {
                         for (int ind = newPointIndex; ind < newList.size(); ++ind) {
 
-                            result.push_back(newList[ind]);
+                            result.emplace_back(newList[ind]);
                         }
                     }
                     break;
@@ -1107,7 +1330,7 @@ namespace kb_knapsack {
                     if (oldPointIndex >= 0) {
                         for (int ind = oldPointIndex; ind < oldList.size(); ++ind) {
 
-                            result.push_back(oldList[ind]);
+                            result.emplace_back(oldList[ind]);
                         }
                     }
                     break;
@@ -1119,11 +1342,11 @@ namespace kb_knapsack {
                 if (oldPoint.dimensions < newPoint.dimensions
                 || (oldPoint.dimensions == newPoint.dimensions && oldPoint.profit > newPoint.profit)) {
 
-                    result.push_back(oldPoint);
+                    result.emplace_back(oldPoint);
                     profitMax = oldPoint.profit;
                 } else {
 
-                    result.push_back(newPoint);
+                    result.emplace_back(newPoint);
                     profitMax = newPoint.profit;
                 }
             }
@@ -1132,7 +1355,7 @@ namespace kb_knapsack {
         KNAPSACK_RESULT backTraceItems(W_POINT& maxProfitPoint, SOURCE_LINK_LIST &sourcePoints) {
 
             W zeroProfit = EmptyValue;
-            std::vector<T> optItems;
+            std::vector<TD> optItems;
             std::vector<W> optValues;
             std::vector<int> optIndexes;
 
@@ -1145,9 +1368,10 @@ namespace kb_knapsack {
                 source_link pointLink = sourcePoints[maxProfitPoint.id];
 
                 while (true) {
-                    optItems.push_back(Dimensions[pointLink.itemId]);
-                    optValues.push_back(Values[pointLink.itemId]);
-                    optIndexes.push_back(Ids[pointLink.itemId]);
+
+                    optItems.emplace_back(Dimensions[pointLink.itemId]);
+                    optValues.emplace_back(Values[pointLink.itemId]);
+                    optIndexes.emplace_back(Ids[pointLink.itemId]);
                     optSize += Dimensions[pointLink.itemId];
 
                     if (!pointLink.hasParent()){
@@ -1164,8 +1388,8 @@ namespace kb_knapsack {
         }
 
         KNAPSACK_RESULT solvePareto(
-                T& constraint,
-                std::vector<T>& sortedItems,
+                TD& constraint,
+                std::vector<TD>& sortedItems,
                 std::vector<W>& sortedValues,
                 std::vector<int>& sortedIndexes) {
 

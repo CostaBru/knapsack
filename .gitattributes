@@ -1,0 +1,4 @@
+cpp/knapsack/fast_map.h linguist-vendored=true
+cpp/partition/fast_map.h linguist-vendored=true
+cpp/knapsack_tests/paths.h linguist-vendored=true
+cpp/partition_tests/ut.h linguist-vendored=true

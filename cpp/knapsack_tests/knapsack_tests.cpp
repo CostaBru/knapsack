@@ -4,36 +4,107 @@
 #include <string>
 #include <fstream>
 #include <filesystem>
+#include <experimental/array>
+#include <chrono>
 
-//https://github.com/boost-ext/ut#tutorial
+#define make_arr std::experimental::make_array
 
 void print(std::string str){
     std::cout << str << std::endl;
 }
 
 template<typename T, typename W>
-std::tuple<W, T, std::vector<T>, std::vector<W>, std::vector<int>> knapsack(T constraint,
-                                                                            std::vector<T>& dimensions,
-                                                                            std::vector<W>& values,
-                                                                            std::vector<int>& indexes,
-                                                                            bool doSolveSuperInc = true) {
+std::tuple<W, T, std::vector<T>, std::vector<W>, std::vector<int>> knapsack1(T constraint,
+                                                                             std::vector<T>& dimensions,
+                                                                             std::vector<W>& values,
+                                                                             std::vector<int>& indexes,
+                                                                             bool doSolveSuperInc = true,
+                                                                             bool doUseLimits = true) {
 
-    kb_knapsack::knapsack_solver<T, W> solver;
+    kb_knapsack::knapsack_solver<T, W, 1, kb_knapsack::w_point_dim1> solver;
 
-    solver.EmptyDimension = 0;
+    solver.EmptyDimension = kb_knapsack::w_point_dim1<T, W, 1>(0);
     solver.EmptyValue = 0;
     solver.MinValue = -999999999;
 
-    solver.Constrains = constraint;
-    solver.Dimensions = dimensions;
+    solver.Constrains = kb_knapsack::w_point_dim1<T, W, 1>(constraint);
+    solver.Dimensions = std::vector<kb_knapsack::w_point_dim1<T, W, 1>>();
     solver.Values = values;
     solver.Ids = indexes;
 
+    for(auto i = 0; i < dimensions.size(); ++i){
+        solver.Dimensions.emplace_back(kb_knapsack::w_point_dim1<T, W, 1>(dimensions[i]));
+    }
+
     solver.DoSolveSuperInc = doSolveSuperInc;
+    solver.DoUseLimits = doUseLimits;
 
-    std::tuple<W, T, std::vector<T>, std::vector<W>, std::vector<int>> rez = solver.Solve();
+    auto rez = solver.Solve();
 
-    return rez;
+    auto optValue =   std::get<0>(rez);
+    auto optSize =    std::get<1>(rez);
+    auto optDim =     std::get<2>(rez);
+    auto optValue2 =  std::get<3>(rez);
+    auto optIndexes = std::get<4>(rez);
+
+    std::vector<T> optDimRez(optDim.size());
+
+    for(auto i = 0; i < optDim.size(); ++i){
+        optDimRez[i] = optDim[i].value;
+    }
+
+    return std::make_tuple(optValue, optSize.value, optDimRez, optValue2, optIndexes);
+}
+
+template<typename T, typename W, int N>
+std::tuple<W, std::array<T, N>, std::vector<std::array<T, N>>, std::vector<W>, std::vector<int>>
+                                knapsackN(std::array<T, N>& constraint,
+                                          std::vector<std::array<T, N>>& dimensions,
+                                          std::vector<W>& values,
+                                          std::vector<int>& indexes,
+                                          bool doSolveSuperInc = true,
+                                          bool doUseLimits = true) {
+
+    kb_knapsack::knapsack_solver<T, W, N, kb_knapsack::w_point_dimN> solver;
+
+    std::array<T, N> emptyDim;
+
+    for (int i = 0; i < N; ++i) {
+        emptyDim[i] = 0;
+    }
+
+    solver.EmptyDimension = kb_knapsack::w_point_dimN<T, W, N>(emptyDim);
+    solver.EmptyValue = 0;
+    solver.MinValue = -999999999;
+
+    solver.Constrains = kb_knapsack::w_point_dimN<T, W, N>(constraint);
+    solver.Dimensions = std::vector<kb_knapsack::w_point_dimN<T, W, N>>();
+    solver.Values = values;
+    solver.Ids = indexes;
+
+    for(auto i = 0; i < dimensions.size(); ++i){
+
+        solver.Dimensions.emplace_back(kb_knapsack::w_point_dimN<T, W, N>(dimensions[i]));
+    }
+
+    solver.DoSolveSuperInc = doSolveSuperInc;
+    solver.DoUseLimits = doUseLimits;
+
+    auto rez = solver.Solve();
+
+    auto optValue =   std::get<0>(rez);
+    auto optSize =    std::get<1>(rez);
+    auto optDim =     std::get<2>(rez);
+    auto optValue2 =  std::get<3>(rez);
+    auto optIndexes = std::get<4>(rez);
+
+    std::vector<std::array<T, N>> optDimRez(optDim.size());
+
+    for(auto i = 0; i < optDim.size(); ++i){
+        optDimRez[i] = optDim[i].value;
+    }
+
+    return std::make_tuple(optValue, optSize.value, optDimRez, optValue2, optIndexes);
 }
 
 template<typename T>
@@ -61,7 +132,7 @@ bool verbose = true;
 void test_1_rational_numbers() {
     if (verbose)
     {
-        print("Rational numbers tests for 1-0 knapsack.");
+        print("Rational numbers tests for 1-0 knapsack1.");
     }
 
     std::vector<double> A = { 0.2,
@@ -83,7 +154,7 @@ void test_1_rational_numbers() {
     std::vector<int> indexes(A.size(), 0);
     std::iota(indexes.begin(), indexes.end(), 0);
 
-    auto result = knapsack(s, A, A, indexes);
+    auto result = knapsack1(s, A, A, indexes);
 
     auto opt1 = std::get<0>(result);
     auto optSize = std::get<1>(result);
@@ -112,17 +183,128 @@ void testSilvano(std::vector<int> W, std::vector<int> V, std::vector<int> R, int
         ind += 1;
     }
 
-    auto result = knapsack(c, ws, vs, indexes);
+    auto result = knapsack1(c, ws, vs, indexes);
 
     auto opt1 = std::get<0>(result);
 
     boost::ut::expect(opt1 == expectedSV) << "Not equal ";
 }
 
+template<typename T, int N, int FIELD>
+struct fieldFunctor : public std::binary_function<T, std::array<T, N> , T>
+{
+    T operator()(T total, const std::array<T, N>& elem) const
+    {
+        return total + elem[FIELD];
+    }
+};
+
+template<typename T, int N>
+bool allLessOrEqual(std::array<T, N> &arr1, std::array<T, N> &arr2){
+    for(int i = 0; i < N; ++i) {
+        if (arr1[i] > arr1[i])
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+template<typename T, int N>
+std::string printArr(std::array<T, N> &arr){
+
+    std::string s = "{ ";
+    for(int i = 0; i < N; ++i) {
+        s += arr[i];
+    }
+    s += " }";
+
+    return s;
+}
+
+void test_8_T_partition_grouping_operator() {
+
+    if (verbose){
+        print("MKS N partition 2d matching results with limits turned off");
+    }
+
+    std::vector<std::array<int, 2>> mixDimData = {
+                                                    make_arr(1702, 1),
+                                                    make_arr(1633, 1),
+                                                    make_arr(1438, 1),
+                                                    make_arr(1144, 1),
+                                                    make_arr(1086, 1),
+                                                    make_arr(976, 1),
+                                                    make_arr(821, 1),
+                                                    make_arr(718, 1),
+                                                    make_arr(701, 1),
+                                                    make_arr(634, 1),
+                                                    make_arr(291, 1),
+                                                    make_arr(124, 1),
+    };
+
+
+    std::vector<int> values(mixDimData.size());
+
+    for (int i = 0; i < mixDimData.size(); ++i) {
+        values[i] = std::get<0>(mixDimData[i]);
+    }
+
+    std::vector<int> indexes(mixDimData.size(), 0);
+    std::iota(indexes.begin(), indexes.end(), 0);
+
+    auto sumOfAll = std::accumulate(mixDimData.begin(), mixDimData.end(), 0, fieldFunctor<int, 2, 0>());
+
+    auto lambda = [](auto a, auto b) {
+        return a[0] < b[0];
+    };
+
+    auto m = std::min_element(mixDimData.begin(), mixDimData.end(), lambda);
+
+    int minItem = m[0][0] - 1;
+
+    for(auto i = 1; i < 3; ++i){
+
+        auto ascOrder = i % 2 == 0;
+
+        for(auto constraint1 = minItem; constraint1 < sumOfAll; constraint1 += int(minItem / 2)){
+
+            for(auto constraint2  = 1; constraint2 < mixDimData.size(); ++constraint2){
+
+                std::vector<std::array<int, 2>> testDescDims(mixDimData);
+                std::vector<int> testDescValues(values);
+                std::vector<int> testDescIndex(indexes);
+
+                if (ascOrder){
+                    std::reverse(testDescDims.begin(), testDescDims.end());
+                    std::reverse(testDescValues.begin(), testDescValues.end());
+                    std::reverse(testDescIndex.begin(), testDescIndex.end());
+                }
+
+                std::array<int, 2> constraint = make_arr(constraint1, constraint2);
+
+                auto noLimResult = knapsackN<int, int, 2>(constraint, testDescDims, testDescValues, testDescIndex, true, false);
+                auto testResult = knapsackN<int, int, 2>(constraint, testDescDims, testDescValues, testDescIndex);
+
+                auto optValueExpected = std::get<0>(noLimResult);
+                auto optValueTest = std::get<0>(testResult);
+
+                auto optSizeExpected = std::get<1>(noLimResult);
+                auto optSizeTest = std::get<1>(testResult);
+
+                auto goodVal = optValueExpected == optValueTest;
+                auto goodSize = allLessOrEqual<int, 2>(optSizeTest, constraint) && allLessOrEqual<int, 2>(optSizeExpected, constraint);
+
+                boost::ut::expect(goodVal) << "Not equal val. Expected: " << optValueExpected << ", but was: " << optValueTest << "; at case: ASC=" << ascOrder << " constraint1=" << constraint1 << " constraint2=" << constraint2;
+                boost::ut::expect(goodSize) << "Not equal size. Expected: " << printArr<int, 2>(optSizeExpected) << ", but was: " << printArr<int, 2>(optSizeTest) << "; at case: ASC=" << ascOrder << " constraint1=" << constraint1 << " constraint2=" << constraint2;
+            }
+        }
+    }
+}
 
 void test_6_Silvano_Paolo_1_0_knapsack(){
     if (verbose){
-        print("1-0 knapsack solver for Silvano Martello and Paolo Toth 1990 tests.");
+        print("1-0 knapsack1 solver for Silvano Martello and Paolo Toth 1990 tests.");
     }
 
     // page 42. Example 2.3
@@ -168,12 +350,12 @@ void test_2_superincreasing() {
 
         for(int s = 0; s < sumA; s++) {
 
-            auto expectedResult = knapsack(s, test, test, indexes, false);
+            auto expectedResult = knapsack1(s, test, test, indexes, false);
 
             auto opt1 = std::get<0>(expectedResult);
             auto expected = std::get<2>(expectedResult);
 
-            auto testResult = knapsack(s, test, test, indexes);
+            auto testResult = knapsack1(s, test, test, indexes);
 
             auto optTest = std::get<0>(expectedResult);
             auto optValues = std::get<2>(expectedResult);
@@ -197,7 +379,7 @@ std::vector<std::string> split(const std::string& s, char delimiter)
     std::istringstream tokenStream(s);
     while (std::getline(tokenStream, token, delimiter))
     {
-        tokens.push_back(token);
+        tokens.emplace_back(token);
     }
     return tokens;
 }
@@ -205,7 +387,7 @@ std::vector<std::string> split(const std::string& s, char delimiter)
 void test_8_equal_subset_sum_files(std::filesystem::path testDir) {
 
     if (verbose) {
-        print("Run equal-subset-sum knapsack for hardinstances_pisinger subset sum test dataset.");
+        print("Run equal-subset-sum knapsack1 for hardinstances_pisinger subset sum test dataset.");
     }
 
     std::vector<std::string> files = {"knapPI_16_20_1000.csv", "knapPI_16_50_1000.csv", "knapPI_16_100_1000.csv", "knapPI_16_200_1000.csv", "knapPI_16_500_1000.csv"};
@@ -243,7 +425,7 @@ void test_8_equal_subset_sum_files(std::filesystem::path testDir) {
             }
 
             while (std::getline(s, word, ',')) {
-                row.push_back(word);
+                row.emplace_back(word);
             }
 
             if (row[0] == "-----") {
@@ -257,7 +439,7 @@ void test_8_equal_subset_sum_files(std::filesystem::path testDir) {
                 std::vector<int> indexes(testCase.size(), 0);
                 std::iota(indexes.begin(), indexes.end(), 0);
 
-                auto testResult = knapsack(testKnapsack, testCase, testCase, indexes);
+                auto testResult = knapsack1(testKnapsack, testCase, testCase, indexes);
 
                 auto optVal = std::get<0>(testResult);
                 auto optItems = std::get<2>(testResult);
@@ -297,10 +479,10 @@ void test_8_equal_subset_sum_files(std::filesystem::path testDir) {
             rowToSkip -= 1;
 
             if (rowToSkip <= 0) {
-                testCase.push_back(stoi(row[1]));
+                testCase.emplace_back(stoi(row[1]));
 
                 if (row[3] == "1") {
-                    testExpected.push_back(stoi(row[1]));
+                    testExpected.emplace_back(stoi(row[1]));
                 }
             }
         }
@@ -315,7 +497,7 @@ void test_8_equal_subset_sum_files(std::filesystem::path testDir) {
 void test_8_knapsack_1_0_files(std::filesystem::path testDir) {
 
     if (verbose) {
-        print("Run 1-0 knapsack for hardinstances_pisinger test dataset.");
+        print("Run 1-0 knapsack1 for hardinstances_pisinger test dataset.");
     }
 
     std::vector<std::string> files = { "knapPI_11_20_1000.csv", "knapPI_11_50_1000.csv", "knapPI_11_100_1000.csv", "knapPI_11_200_1000.csv" };
@@ -354,7 +536,7 @@ void test_8_knapsack_1_0_files(std::filesystem::path testDir) {
             }
 
             while (std::getline(s, word, ',')) {
-                row.push_back(word);
+                row.emplace_back(word);
             }
 
             if (row[0] == "-----") {
@@ -368,7 +550,7 @@ void test_8_knapsack_1_0_files(std::filesystem::path testDir) {
                     std::cout << f << " case " << caseNumber << std::endl;
                 }
 
-                auto testResult = knapsack(testKnapsack, testCaseW, testCaseV, indexes);
+                auto testResult = knapsack1(testKnapsack, testCaseW, testCaseV, indexes);
 
                 auto optVal = std::get<0>(testResult);
                 auto optSize = std::get<1>(testResult);
@@ -412,11 +594,11 @@ void test_8_knapsack_1_0_files(std::filesystem::path testDir) {
             rowToSkip -= 1;
 
             if (rowToSkip <= 0) {
-                testCaseW.push_back(stoi(row[2]));
-                testCaseV.push_back(stoi(row[1]));
+                testCaseW.emplace_back(stoi(row[2]));
+                testCaseV.emplace_back(stoi(row[1]));
 
                 if (row[3] == "1") {
-                    testExpected.push_back(stoi(row[1]));
+                    testExpected.emplace_back(stoi(row[1]));
                 }
             }
         }
@@ -435,8 +617,16 @@ int main() {
 
     auto testDir = script_dir.parent_path().parent_path().parent_path().parent_path() / testData_dir;
 
+    test_8_T_partition_grouping_operator();
+
+    const auto start = std::chrono::high_resolution_clock::now();
+
     test_8_knapsack_1_0_files(testDir);
     test_8_equal_subset_sum_files(testDir);
+
+    const auto stop = std::chrono::high_resolution_clock::now();
+    const auto s = std::chrono::duration_cast<std::chrono::seconds>(stop - start);
+    std::cout << "File tests were finished using " << s.count() << " seconds." << std::endl;
 
     test_2_superincreasing();
     test_1_rational_numbers();

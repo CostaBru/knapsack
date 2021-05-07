@@ -43,7 +43,7 @@ class KnapsackTests(unittest.TestCase):
         restore_out()
 
     # NP complete: Rational numbers tests for equal-subset-sum knapsack, 1-0 knapsack, and N dimension knapsacks, where N 2-4.
-    # @unittest.skip("temp")
+    @unittest.skip("temp")
     def test_1_rational_numbers(self):
         if verbose:
             print(
@@ -85,7 +85,7 @@ class KnapsackTests(unittest.TestCase):
         self.assertEqual(expectedValue, opt)
 
     # Polynomial: Superincreasing tests for equal-subset-sum knapsack, 1-0 knapsack, and N dimension knapsacks, where N = 2.
-    # @unittest.skip("temp")
+    @unittest.skip("temp")
     def test_2_superincreasing(self):
 
         if verbose:
@@ -146,7 +146,7 @@ class KnapsackTests(unittest.TestCase):
             self.assertTrue(listValuesEqual(decOptValuesP, expected))
 
     # Polynomial: Partial superincreasing numbers tests.
-    # @unittest.skip("temp")
+    @unittest.skip("temp")
     def test_3_partial_superincreasing(self):
         if verbose:
             print("Partial superincreasing numbers tests.")
@@ -197,7 +197,7 @@ class KnapsackTests(unittest.TestCase):
                     self.assertTrue(listValuesEqual(optValues4, expected) or sum(expected) == opt4)
 
     # Polynomial: Partial geometric progression numbers tests.
-    # @unittest.skip("temp")
+    @unittest.skip("temp")
     def test_4_partial_geometric_progression(self):
 
         if verbose: print("Partial geometric progression numbers tests.")
@@ -247,7 +247,7 @@ class KnapsackTests(unittest.TestCase):
                 if verbose: print(f"Partial geometric progression test: i {i}, size {s}, subs {round(t2 - t1, 4)}, 1-0 {round(t3 - t2, 4)}, 2D {round(t4 - t3, 4)}, pareto {round(t5 - t4, 4)}.")
 
     # NP complete: 2D knapsack matching with classic DP solution results. N=13
-    # @unittest.skip("temp")
+    @unittest.skip("temp")
     def test_5_knapsack_matching_with_dp2(self):
 
         iterCounter = [0]
@@ -287,7 +287,7 @@ class KnapsackTests(unittest.TestCase):
                         self.assertTrue(False)
 
     # NP hard: Integer and Decimal mixed multidimensional knapsack problem (MKP) test
-    # @unittest.skip("temp")
+    @unittest.skip("temp")
     def test_91_MKP(self):
 
         data = [(821, Decimal("0.8"), 118),
@@ -374,7 +374,7 @@ class KnapsackTests(unittest.TestCase):
         self.assertTrue(good)
 
     # NP hard: Integer multidimensional knapsack problem (MKP) with same profit value limits tests
-    # @unittest.skip("temp")
+    @unittest.skip("temp")
     def test_7_MKP_same_profit(self):
 
         mixDimData = [(821, 976, 1),
@@ -455,7 +455,7 @@ class KnapsackTests(unittest.TestCase):
         doUseLimits = prevDoUseLimits
 
     # NP hard: Integer multidimensional knapsack problem (MKP) T partition grouping operator tests
-    # @unittest.skip("temp")
+    @unittest.skip("temp")
     def test_8_T_partition_grouping_operator(self):
 
         mixDimData = [(821, 1, 821),
@@ -533,7 +533,7 @@ class KnapsackTests(unittest.TestCase):
                     self.assertTrue(good)
 
     # NP complete: Integer 1-0 knapsack problem limits tests
-    # @unittest.skip("temp")
+    @unittest.skip("temp")
     def test_8_integer_1_0_knapsack_problem_limits(self):
 
         mixDimData = [(821, 100),
@@ -621,7 +621,7 @@ class KnapsackTests(unittest.TestCase):
                 self.assertTrue(good)
 
     # NP complete: Strict 3 and 6 partition problem tests.
-    # @unittest.skip("temp")
+    @unittest.skip("temp")
     def test_8_strict_3_and_6_partition_problem(self):
         def unionTuples(tuples):
             rez = []
@@ -877,7 +877,7 @@ class KnapsackTests(unittest.TestCase):
                     self.assertTrue(False)
 
     # NP complete: 1-0 knapsack for Silvano Martello and Paolo Toth 1990 tests.
-    # @unittest.skip("temp")
+    @unittest.skip("temp")
     def test_6_Silvano_Paolo_1_0_knapsack(self):
         if verbose:   print("1-0 knapsack solver for Silvano Martello and Paolo Toth 1990 tests.")
 
@@ -1141,8 +1141,8 @@ class KnapsackTests(unittest.TestCase):
             testKnapsack = 0
             rowToSkip = 0
 
-            files = ["knapPI_11_20_1000", "knapPI_11_50_1000"]
-            # files = ["knapPI_11_20_1000", "knapPI_11_50_1000", "knapPI_11_100_1000", "knapPI_11_200_1000"]
+            # files = ["knapPI_11_20_1000", "knapPI_11_50_1000"]
+            files = ["knapPI_11_20_1000", "knapPI_11_50_1000", "knapPI_11_100_1000", "knapPI_11_200_1000"]
 
             allGood = True
 
@@ -1377,7 +1377,7 @@ class KnapsackTests(unittest.TestCase):
             self.assertTrue(allGood)
 
     # NP hard: multidimensional  N=100
-    # @unittest.skip("temp")
+    @unittest.skip("temp")
     def test_8_multidimensional_100(self):
 
         lConstraint = 20789

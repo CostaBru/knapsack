@@ -9,7 +9,7 @@ set(SOURCE_FILES
 
 set(HEADER_FILES
         ut.h
-        Paths.h)
+        paths.h)
 
 add_executable(knapsack_tests ${SOURCE_FILES} ${HEADER_FILES})
 
