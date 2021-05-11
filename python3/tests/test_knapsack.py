@@ -43,7 +43,6 @@ class KnapsackTests(unittest.TestCase):
         restore_out()
 
     # NP complete: Rational numbers tests for equal-subset-sum knapsack, 1-0 knapsack, and N dimension knapsacks, where N 2-4.
-    @unittest.skip("temp")
     def test_1_rational_numbers(self):
         if verbose:
             print(
@@ -85,7 +84,6 @@ class KnapsackTests(unittest.TestCase):
         self.assertEqual(expectedValue, opt)
 
     # Polynomial: Superincreasing tests for equal-subset-sum knapsack, 1-0 knapsack, and N dimension knapsacks, where N = 2.
-    @unittest.skip("temp")
     def test_2_superincreasing(self):
 
         if verbose:
@@ -146,7 +144,6 @@ class KnapsackTests(unittest.TestCase):
             self.assertTrue(listValuesEqual(decOptValuesP, expected))
 
     # Polynomial: Partial superincreasing numbers tests.
-    @unittest.skip("temp")
     def test_3_partial_superincreasing(self):
         if verbose:
             print("Partial superincreasing numbers tests.")
@@ -197,7 +194,6 @@ class KnapsackTests(unittest.TestCase):
                     self.assertTrue(listValuesEqual(optValues4, expected) or sum(expected) == opt4)
 
     # Polynomial: Partial geometric progression numbers tests.
-    @unittest.skip("temp")
     def test_4_partial_geometric_progression(self):
 
         if verbose: print("Partial geometric progression numbers tests.")
@@ -247,7 +243,6 @@ class KnapsackTests(unittest.TestCase):
                 if verbose: print(f"Partial geometric progression test: i {i}, size {s}, subs {round(t2 - t1, 4)}, 1-0 {round(t3 - t2, 4)}, 2D {round(t4 - t3, 4)}, pareto {round(t5 - t4, 4)}.")
 
     # NP complete: 2D knapsack matching with classic DP solution results. N=13
-    @unittest.skip("temp")
     def test_5_knapsack_matching_with_dp2(self):
 
         iterCounter = [0]
@@ -287,7 +282,6 @@ class KnapsackTests(unittest.TestCase):
                         self.assertTrue(False)
 
     # NP hard: Integer and Decimal mixed multidimensional knapsack problem (MKP) test
-    @unittest.skip("temp")
     def test_91_MKP(self):
 
         data = [(821, Decimal("0.8"), 118),
@@ -374,7 +368,6 @@ class KnapsackTests(unittest.TestCase):
         self.assertTrue(good)
 
     # NP hard: Integer multidimensional knapsack problem (MKP) with same profit value limits tests
-    @unittest.skip("temp")
     def test_7_MKP_same_profit(self):
 
         mixDimData = [(821, 976, 1),
@@ -455,7 +448,6 @@ class KnapsackTests(unittest.TestCase):
         doUseLimits = prevDoUseLimits
 
     # NP hard: Integer multidimensional knapsack problem (MKP) T partition grouping operator tests
-    @unittest.skip("temp")
     def test_8_T_partition_grouping_operator(self):
 
         mixDimData = [(821, 1, 821),
@@ -533,7 +525,6 @@ class KnapsackTests(unittest.TestCase):
                     self.assertTrue(good)
 
     # NP complete: Integer 1-0 knapsack problem limits tests
-    @unittest.skip("temp")
     def test_8_integer_1_0_knapsack_problem_limits(self):
 
         mixDimData = [(821, 100),
@@ -621,7 +612,6 @@ class KnapsackTests(unittest.TestCase):
                 self.assertTrue(good)
 
     # NP complete: Strict 3 and 6 partition problem tests.
-    @unittest.skip("temp")
     def test_8_strict_3_and_6_partition_problem(self):
         def unionTuples(tuples):
             rez = []
@@ -877,7 +867,6 @@ class KnapsackTests(unittest.TestCase):
                     self.assertTrue(False)
 
     # NP complete: 1-0 knapsack for Silvano Martello and Paolo Toth 1990 tests.
-    @unittest.skip("temp")
     def test_6_Silvano_Paolo_1_0_knapsack(self):
         if verbose:   print("1-0 knapsack solver for Silvano Martello and Paolo Toth 1990 tests.")
 
@@ -946,8 +935,8 @@ class KnapsackTests(unittest.TestCase):
             testKnapsack = 0
             rowToSkip = 0
 
-            #files = ["knapPI_16_20_1000", "knapPI_16_50_1000"]
-            files = ["knapPI_16_20_1000", "knapPI_16_50_1000", "knapPI_16_100_1000", "knapPI_16_200_1000", "knapPI_16_500_1000"]
+            files = ["knapPI_16_20_1000", "knapPI_16_50_1000"]
+            #files = ["knapPI_16_20_1000", "knapPI_16_50_1000", "knapPI_16_100_1000", "knapPI_16_200_1000", "knapPI_16_500_1000"]
 
             fi = 0
 
@@ -1377,14 +1366,13 @@ class KnapsackTests(unittest.TestCase):
             self.assertTrue(allGood)
 
     # NP hard: multidimensional  N=100
-    @unittest.skip("temp")
     def test_8_multidimensional_100(self):
 
         lConstraint = 20789
         wConstraint = 23681
         greedyOptimumValue = 121105212
         actualOptima = 121147356
-        dimensionMultiplier = 10000
+        dimensionMultiplier = 1000
 
         lwData100 = [[436, 1490, 649640], [232, 1320, 306240], [236, 932, 219952], [822, 638, 524436],
                      [1004, 1092, 1096368], [266, 1220, 324520], [632, 892, 563744], [1110, 344, 381840],
@@ -1433,7 +1421,7 @@ class KnapsackTests(unittest.TestCase):
         solver.doSolveSuperInc = doSolveSuperInc
         solver.doUseLimits = doUseLimits
         solver.useRatioSortForPareto = True
-        solver.printDpInfo = verbose
+        solver.printDpInfo = False
         solver.printGreedyInfo = verbose
         solver.printSuperIncreasingInfo = verbose
 
@@ -1446,3 +1434,95 @@ class KnapsackTests(unittest.TestCase):
                 f"hybridKnapsackNd: total val: {opt} opt: {optDims}, testOpt: {greedyOptimumValue} iter: {round(iterCounter[0])}, time: {time.perf_counter() - t1}, items: {optItems}")
 
         self.assertTrue(opt >= greedyOptimumValue and optDims <= constraints)
+
+    def test_3_search_index(self):
+
+        if verbose:
+            print(f"test building and using max profit point index")
+
+        mixDimData = [(821, 100),
+                      (1144, 100),
+                      (634, 100),
+                      (701, 100),
+                      (291, 100),
+                      (1702, 100),
+                      (1633, 100),
+                      (1086, 100),
+                      (124, 100),
+                      (718, 100),
+                      (976, 100),
+                      (1438, 100),
+                      (822, 100),
+                      (1143, 100),
+                      (640, 100),
+                      (702, 100),
+                      (291, 100),
+                      (1702, 100),
+                      (1633, 100),
+                      (2000, 100),
+                      (100, 100),
+                      (701, 100),
+                      (1976, 100),
+                      (1638, 100),
+                      ]
+
+        dimsd = [p[0] for p in mixDimData]
+        values = [p[1] for p in mixDimData]
+
+        descDims, descValues = sortReverseBoth(dimsd, values)
+
+        sumOfAll = sum([p[0] for p in mixDimData])
+        minItem = min([p[0] for p in mixDimData])
+        iterCounter = [0]
+
+        descPoints = [wPoint1(d) for d in descDims]
+
+        indexConstraints = [ sumOfAll, sumOfAll // 2]
+
+        for indexConstr in indexConstraints:
+
+            for s in range(1, 3):
+
+                testDescValues = list(descValues)
+
+                sameProfit = s % 2 == 0
+
+                if not sameProfit:
+                    testDescValues[0] -= 1
+
+                for i in range(1, 3):
+
+                    for j in range(1, 3):
+
+                        for x in range(1, 3):
+
+                            forceUsePareto = j % 2 == 0
+                            useLimits = i % 2 == 0
+                            keepCircularPointQueueSorted = x % 2 == 0
+
+                            binSearchSolver = knapsackParetoSolver(descPoints, testDescValues, range(len(testDescValues)), wPoint1(indexConstr - 1), paretoPoint1(0, 0), wPoint1(0), iterCounter)
+
+                            binSearchSolver.prepareSearchIndex = True
+
+                            binSearchSolver.doUseLimits = useLimits
+                            binSearchSolver.forceUsePareto = forceUsePareto
+                            binSearchSolver.keepCircularPointQueueSorted = keepCircularPointQueueSorted
+
+                            binSearchSolver.solve()
+
+                            for constraint in range(minItem, indexConstr, minItem - 1):
+
+                                constraintPoint = wPoint1(constraint)
+
+                                fullSolver = knapsackParetoSolver(descPoints, testDescValues, range(len(testDescValues)), constraintPoint, paretoPoint1(0, 0), wPoint1(0), iterCounter)
+
+                                opt, optSize, optItems, optValues, optIndex = fullSolver.solve()
+
+                                testOpt, testOptSize, testOptItems, testOptValues, testOptIndex = binSearchSolver.solve(constraintPoint)
+
+                                good = opt == testOpt and testOptSize <= constraintPoint
+
+                                if verbose:
+                                    print(f"test_3_search_index: indexConstr={indexConstr}; constraint={constraint}; useLimits={useLimits}; forceUsePareto={forceUsePareto}; sameProfit={sameProfit}; keepCircularPointQueueSorted={keepCircularPointQueueSorted}; expected - optimized: {opt - testOpt}")
+
+                                self.assertTrue(good)

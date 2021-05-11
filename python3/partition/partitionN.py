@@ -20,7 +20,7 @@ from collections import defaultdict
 from decimal import Decimal
 
 from knapsack.knapsackNd import knapsackNSolver
-from knapsack.paretoKnapsack import knapsackParetoSolver
+from knapsack.knapsackPareto import knapsackParetoSolver
 from knapsack.paretoPoint import paretoPoint0, paretoPoint2
 from knapsack.subsKnapsack import subsetSumKnapsackSolver
 from knapsack.subsetSumParetoSolver import subsetSumParetoSolver
@@ -503,7 +503,7 @@ class partitionSolver:
         solver.printInfo = self.printInfo
         solver.forceUseLimits = forceUseLimits
 
-        bestValue, bestSize, bestItems, bestValues, bestIndexes = solver.solve()
+        bestValue, bestValues = solver.solve()
 
         return  bestValue, bestValues
    

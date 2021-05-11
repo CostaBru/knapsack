@@ -15,7 +15,7 @@ TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR TH
 
 from flags.flags import doUseLimits
 
-from .paretoKnapsack import *
+from .knapsackPareto import *
 from .paretoPoint import paretoPoint1
 from .wPoint import *
 

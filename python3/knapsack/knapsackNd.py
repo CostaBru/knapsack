@@ -16,7 +16,7 @@ TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR TH
 from flags.flags import doUseLimits, doSolveSuperInc
 from .knapsack import knapsackSolver
 
-from .paretoKnapsack import *
+from .knapsackPareto import *
 
 from collections import defaultdict
 from collections import deque
@@ -26,7 +26,8 @@ import time
 import math
 import sys
 
-from .paretoPoint import paretoPoint
+from .paretoPoint import paretoPoint, paretoPoint1
+from .wPoint import wPoint1
 
 
 class knapsackNSolver:
@@ -588,6 +589,8 @@ class knapsackNSolver:
         dimStairDownCursorStartings = [0] * size
         optimizeCacheItems = [None] * size
 
+        solvers = [None] * size
+
         estimatedAttemptsCount = 0
 
         _, dimensionIndexes = sortBoth(constraints.getDimensions(), range(size), reverse=False)
@@ -607,6 +610,19 @@ class knapsackNSolver:
             optimizeCacheItems[dimensionIndex] = {}
 
             estimatedAttemptsCount += dimStairDownCursors[dimensionIndex] // dimStairSteps[dimensionIndex]
+
+            solver = knapsackParetoSolver([wPoint1(item) for item in descDim],
+                                          descValues,
+                                          range(len(descValues)),
+                                          wPoint1(constraints.getDimension(dimOrderIndex)),
+                                          paretoPoint1(0, 0),
+                                          wPoint1(0),
+                                          iterCounter)
+
+            solver.forceUsePareto = True
+            solver.prepareSearchIndex = True
+
+            solvers[dimensionIndex] = solver
 
         if self.printGreedyInfo:
             print(
@@ -634,14 +650,9 @@ class knapsackNSolver:
 
                 if currentDimLimit not in optimizeCacheItems[dimensionIndex]:
 
-                    dimItem = dimDescSortedItems[dimensionIndex]
+                    _, __, ___, ____, optIndex = solvers[dimensionIndex].solve(wPoint1(currentDimLimit))
 
-                    dimItems = dimItem[0]
-                    dimValues = dimItem[1]
-                    dimIndex = dimItem[2]
-
-                    _, __, ___, ____, optIndex = knapsackSolver(currentDimLimit, dimItems, dimValues, iterCounter,
-                                                                forceUseLimits).solve()
+                    dimIndex = dimDescSortedItems[dimensionIndex][2]
 
                     dimCacheItems = []
 

@@ -1,3 +1,3 @@
-__all__ = ["knapsack", "knapsack2d_dp", "knapsackNd", "paretoKnapsack", "subsKnapsack", "wPoint", "paretoPoint"]
+__all__ = ["knapsack", "knapsack2d_dp", "knapsackNd", "knapsackPareto", "subsKnapsack", "wPoint", "paretoPoint"]
 
 from knapsack import *
