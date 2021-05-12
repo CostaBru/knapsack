@@ -9,9 +9,9 @@ set(SOURCE_FILES
 
 set(HEADER_FILES
         ut.h
-        paths.h)
+        paths.h ../knapsack/w_point_dim1.h ../knapsack/w_point_dimN.h ../knapsack/tools.h)
 
-add_executable(knapsack_tests ${SOURCE_FILES} ${HEADER_FILES})
+add_executable(knapsack_tests ${SOURCE_FILES} ${HEADER_FILES} ../knapsack/w_point_dim1.h ../knapsack/w_point_dimN.h ../knapsack/tools.h)
 
 target_link_libraries(knapsack_tests knapsack)
 

@@ -1,5 +1,5 @@
 #include "ut.h"
-#include <knapsack.h>
+#include <knapsack_solver.h>
 #include "Paths.h"
 #include <string>
 #include <fstream>
@@ -21,20 +21,19 @@ std::tuple<W, T, std::vector<T>, std::vector<W>, std::vector<int>> knapsack1(T c
                                                                              bool doSolveSuperInc = true,
                                                                              bool doUseLimits = true) {
 
-    kb_knapsack::knapsack_solver<T, W, 1, kb_knapsack::w_point_dim1> solver;
+    auto dims = std::vector<kb_knapsack::w_point_dim1<T, W, 1>>();
+
+    for(auto i = 0; i < dimensions.size(); ++i){
+        dims.emplace_back(kb_knapsack::w_point_dim1<T, W, 1>(dimensions[i]));
+    }
+
+    kb_knapsack::knapsack_solver<T, W, 1, kb_knapsack::w_point_dim1> solver(dims, values, indexes);
 
     solver.EmptyDimension = kb_knapsack::w_point_dim1<T, W, 1>(0);
     solver.EmptyValue = 0;
     solver.MinValue = -999999999;
 
     solver.Constrains = kb_knapsack::w_point_dim1<T, W, 1>(constraint);
-    solver.Dimensions = std::vector<kb_knapsack::w_point_dim1<T, W, 1>>();
-    solver.Values = values;
-    solver.Ids = indexes;
-
-    for(auto i = 0; i < dimensions.size(); ++i){
-        solver.Dimensions.emplace_back(kb_knapsack::w_point_dim1<T, W, 1>(dimensions[i]));
-    }
 
     solver.DoSolveSuperInc = doSolveSuperInc;
     solver.DoUseLimits = doUseLimits;
@@ -65,7 +64,14 @@ std::tuple<W, std::array<T, N>, std::vector<std::array<T, N>>, std::vector<W>, s
                                           bool doSolveSuperInc = true,
                                           bool doUseLimits = true) {
 
-    kb_knapsack::knapsack_solver<T, W, N, kb_knapsack::w_point_dimN> solver;
+    auto dims = std::vector<kb_knapsack::w_point_dimN<T, W, N>>();
+
+    for(auto i = 0; i < dimensions.size(); ++i){
+
+        dims.emplace_back(kb_knapsack::w_point_dimN<T, W, N>(dimensions[i]));
+    }
+
+    kb_knapsack::knapsack_solver<T, W, N, kb_knapsack::w_point_dimN> solver(dims, values, indexes);
 
     std::array<T, N> emptyDim;
 
@@ -78,14 +84,6 @@ std::tuple<W, std::array<T, N>, std::vector<std::array<T, N>>, std::vector<W>, s
     solver.MinValue = -999999999;
 
     solver.Constrains = kb_knapsack::w_point_dimN<T, W, N>(constraint);
-    solver.Dimensions = std::vector<kb_knapsack::w_point_dimN<T, W, N>>();
-    solver.Values = values;
-    solver.Ids = indexes;
-
-    for(auto i = 0; i < dimensions.size(); ++i){
-
-        solver.Dimensions.emplace_back(kb_knapsack::w_point_dimN<T, W, N>(dimensions[i]));
-    }
 
     solver.DoSolveSuperInc = doSolveSuperInc;
     solver.DoUseLimits = doUseLimits;
@@ -292,7 +290,7 @@ void test_8_T_partition_grouping_operator() {
                 auto optSizeExpected = std::get<1>(noLimResult);
                 auto optSizeTest = std::get<1>(testResult);
 
-                auto goodVal = optValueExpected == optValueTest;
+                auto goodVal = optValueTest >= optValueExpected;
                 auto goodSize = allLessOrEqual<int, 2>(optSizeTest, constraint) && allLessOrEqual<int, 2>(optSizeExpected, constraint);
 
                 boost::ut::expect(goodVal) << "Not equal val. Expected: " << optValueExpected << ", but was: " << optValueTest << "; at case: ASC=" << ascOrder << " constraint1=" << constraint1 << " constraint2=" << constraint2;
@@ -617,6 +615,9 @@ int main() {
 
     auto testDir = script_dir.parent_path().parent_path().parent_path().parent_path() / testData_dir;
 
+    test_2_superincreasing();
+    test_1_rational_numbers();
+    test_6_Silvano_Paolo_1_0_knapsack();
     test_8_T_partition_grouping_operator();
 
     const auto start = std::chrono::high_resolution_clock::now();
@@ -627,8 +628,4 @@ int main() {
     const auto stop = std::chrono::high_resolution_clock::now();
     const auto s = std::chrono::duration_cast<std::chrono::seconds>(stop - start);
     std::cout << "File tests were finished using " << s.count() << " seconds." << std::endl;
-
-    test_2_superincreasing();
-    test_1_rational_numbers();
-    test_6_Silvano_Paolo_1_0_knapsack();
 }
