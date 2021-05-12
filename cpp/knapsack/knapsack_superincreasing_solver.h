@@ -1,7 +1,3 @@
-//
-// Created by kooltew on 5/11/2021.
-//
-
 #ifndef KB_KNAPSACK_PARTITION_SOLUTION_KNAPSACK_SUPERINCREASING_SOLVER_H
 #define KB_KNAPSACK_PARTITION_SOLUTION_KNAPSACK_SUPERINCREASING_SOLVER_H
 
@@ -29,7 +25,7 @@ namespace kb_knapsack {
         }
 
         TD EmptyDimension;
-        W EmptyValue;
+        W  EmptyValue;
 
         KNAPSACK_RESULT Solve(TD &size,
                               std::vector<TD > &items,
@@ -40,20 +36,24 @@ namespace kb_knapsack {
 
             int starting = 1;
             std::vector<TD > resultItems;
-            std::vector<W> resultValues;
+            std::vector<W>   resultValues;
             std::vector<int> resultIndex;
-            W resultSum = EmptyValue;
+
+            W  resultSum = EmptyValue;
             TD resultItemSum = EmptyDimension;
 
             auto index = -1;
 
             if (allAsc) {
+
                 index = indexLargestLessThanAsc(items, size, starting - 1, count - 1);
             } else {
+
                 index = indexLargestLessThanDesc(items, size, starting - 1, count - 1);
             }
 
             while (index >= 0) {
+
                 auto &item = items[index];
                 auto &value = values[index];
 
@@ -65,8 +65,10 @@ namespace kb_knapsack {
                 resultSum += value;
 
                 if (allAsc) {
+
                     index = indexLargestLessThanAsc(items, size - resultItemSum, starting - 1, index - 1);
                 } else {
+
                     index = indexLargestLessThanDesc(items, size - resultItemSum, index + 1, count - 1);
                 }
             }
@@ -79,19 +81,18 @@ namespace kb_knapsack {
         inline int indexLargestLessThanAsc(std::vector<TD > &items, TD item, int lo, int hi) {
 
             if (item == EmptyDimension) {
+
                 return -1;
             }
 
             while (lo <= hi) {
                 int mid = (lo + hi) / 2;
 
-                auto val = items[mid];
-
-                if (item == val) {
+                if (item == items[mid]) {
                     return mid;
                 }
 
-                if (val < item) {
+                if (items[mid] < item) {
                     lo = mid + 1;
                 } else {
                     hi = mid - 1;
@@ -99,8 +100,10 @@ namespace kb_knapsack {
             }
 
             if (hi >= 0 and item >= items[hi]) {
+
                 return hi;
             } else {
+
                 return -1;
             }
         }
@@ -114,24 +117,28 @@ namespace kb_knapsack {
             auto cnt = items.size();
 
             while (lo <= hi) {
+
                 int mid = (lo + hi) / 2;
 
-                auto val = items[mid];
+                if (item == items[mid]) {
 
-                if (item == val) {
                     return mid;
                 }
 
-                if (val > item) {
+                if (items[mid] > item) {
+
                     lo = mid + 1;
                 } else {
+
                     hi = mid - 1;
                 }
             }
 
             if (lo < cnt && item >= items[lo]) {
+
                 return lo;
             } else {
+
                 return -1;
             }
         }

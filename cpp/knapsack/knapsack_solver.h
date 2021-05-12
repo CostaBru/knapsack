@@ -34,12 +34,13 @@ namespace kb_knapsack {
 
         TD Constrains;
 
-        std::vector<TD> Dimensions;
-        std::vector<W> Values;
+        std::vector<TD>  Dimensions;
+        std::vector<W>   Values;
         std::vector<int> Ids;
 
         TD EmptyDimension;
-        W EmptyValue;
+        W  EmptyValue;
+
         W MinValue;
 
         bool ForceUseLimits   = false;
@@ -47,11 +48,13 @@ namespace kb_knapsack {
         bool DoUseLimits      = true;
         bool UseRatioSort     = false;
         bool ForceUsePareto   = false;
+
         bool CanBackTraceWhenSizeReached = false;
 
         KNAPSACK_RESULT Solve(){
 
             if (Dimensions.size() != Values.size() || Ids.size() != Dimensions.size()) {
+
                 throw std::invalid_argument("Sizes of input dimensions, values and ids should be equal.");
             }
 
@@ -140,6 +143,7 @@ namespace kb_knapsack {
                                              canUsePartialSums);
                 }
             } else {
+
                 lessSizeItems = Dimensions;
                 lessSizeValues = Values;
                 lessSizeItemsIndex = Ids;
@@ -208,24 +212,25 @@ namespace kb_knapsack {
             auto itemSum = EmptyDimension;
             bool isSuperIncreasing = false;
 
-            if (count > 0)
-            {
+            if (count > 0) {
+
                 auto prevItem1 = items[count - 1];
                 auto prevValue1 = values[count - 1];
 
-                for(auto i = 0; i < count; ++i) {
+                for (auto i = 0; i < count; ++i) {
 
-                    auto& item2 = items[i];
-                    auto& itemValue2 = values[i];
+                    auto &item2 = items[i];
+                    auto &itemValue2 = values[i];
 
                     auto iBack = count - i - 1;
 
-                    auto& item1 = items[iBack];
-                    auto& itemValue1 = values[iBack];
+                    auto &item1 = items[iBack];
+                    auto &itemValue1 = values[iBack];
 
-                    auto superIncreasingItem1 = false; auto superIncreasingItem2 = false;
+                    auto superIncreasingItem1 = false;
+                    auto superIncreasingItem2 = false;
 
-                    if  (item1 <= constraints) {
+                    if (item1 <= constraints) {
 
                         if (item1 < itemSum1) {
                             isSuperIncreasing1 = false;
@@ -239,7 +244,7 @@ namespace kb_knapsack {
                         }
                     }
 
-                    if  (item2 <= constraints) {
+                    if (item2 <= constraints) {
 
                         if (item2 < itemSum2) {
                             isSuperIncreasing2 = false;
@@ -257,7 +262,7 @@ namespace kb_knapsack {
                         allValuesEqual = false;
                     }
 
-                    if (allValuesEqualToConstraints && item2.firstDimensionEqual(itemValue2) == false){
+                    if (allValuesEqualToConstraints && item2.firstDimensionEqual(itemValue2) == false) {
                         allValuesEqualToConstraints = false;
                     }
 
@@ -270,8 +275,8 @@ namespace kb_knapsack {
                     partialSums1.emplace_back(itemSum2);
                     partialSums2.emplace_back(itemSum1);
 
-                    if (allDesc){
-                        if (! (prevItem1 <= item1)) {
+                    if (allDesc) {
+                        if (!(prevItem1 <= item1)) {
                             allDesc = false;
                         }
                     }
@@ -283,7 +288,7 @@ namespace kb_knapsack {
                     }
 
                     if (allDescValues) {
-                        if (! prevValue1 <= itemValue1) {
+                        if (!prevValue1 <= itemValue1) {
                             allDescValues = false;
                         }
                     }
@@ -299,7 +304,7 @@ namespace kb_knapsack {
                         superIncreasingItems2.emplace_back(superIncreasingItem2);
                     }
 
-                    if  (item2 <= constraints) {
+                    if (item2 <= constraints) {
                         lessSizeItems.emplace_back(item2);
                         lessSizeValues.emplace_back(itemValue2);
                         lessSizeItemsIndex.emplace_back(i);
@@ -321,8 +326,7 @@ namespace kb_knapsack {
                     superIncreasingItems.swap(superIncreasingItems2);
                     isSuperIncreasing = isSuperIncreasing2;
                     itemSum = itemSum2;
-                }
-                else if  ((allDesc && canUsePartialSums) || forceUseLimits) {
+                } else if ((allDesc && canUsePartialSums) || forceUseLimits) {
                     partialSums.swap(partialSums1);
                     superIncreasingItems.swap(superIncreasingItems1);
                     isSuperIncreasing = isSuperIncreasing1;
@@ -330,8 +334,7 @@ namespace kb_knapsack {
 
                     std::reverse(partialSums.begin(), partialSums.end());
                     std::reverse(superIncreasingItems.begin(), superIncreasingItems.end());
-                }
-                else {
+                } else {
                     if (allAsc and allAscValues) {
                         itemSum = itemSum2;
                         partialSums.swap(partialSums2);
@@ -360,6 +363,7 @@ namespace kb_knapsack {
                 }
             }
             else{
+
                 partialSums = {};
                 superIncreasingItems = {};
                 isSuperIncreasing = false;
@@ -394,14 +398,17 @@ namespace kb_knapsack {
             std::vector<int> emptyIndexes;
 
             if  (lessCountSum == EmptyDimension) {
+
                 return std::make_tuple(true, std::make_tuple(zero, EmptyDimension, emptyItems, emptyValues, emptyIndexes));
             }
 
             if  (lessCountSum <= constraints) {
+
                 return std::make_tuple(true, std::make_tuple(lessCountValuesSum, lessCountSum, lessSizeItems, lessSizeValues, lessSizeItemsIndex));
             }
 
             if  (itemSum <= constraints) {
+
                 return std::make_tuple(true, std::make_tuple(lessCountValuesSum, itemSum, lessSizeItems, lessSizeValues, lessSizeItemsIndex));
             }
 

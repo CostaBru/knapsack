@@ -1,10 +1,5 @@
-//
-// Created by kooltew on 5/11/2021.
-//
-
 #ifndef KB_KNAPSACK_PARTITION_SOLUTION_KNAPSACK_LIMITS_SOLVER_H
 #define KB_KNAPSACK_PARTITION_SOLUTION_KNAPSACK_LIMITS_SOLVER_H
-
 
 #include "fast_map.h"
 #include "defines.h"
@@ -13,7 +8,6 @@
 #include "w_point.h"
 #include "source_link.h"
 #include "tools.h"
-
 
 #include <vector>
 #include <tuple>
@@ -34,15 +28,16 @@ namespace kb_knapsack {
             Ids(Ids) {
         }
 
-        std::vector<TD> Dimensions;
-        std::vector<W> Values;
+        std::vector<TD>  Dimensions;
+        std::vector<W>   Values;
         std::vector<int> Ids;
 
         TD EmptyDimension;
-        W EmptyValue;
+        W  EmptyValue;
 
         bool DoSolveSuperInc  = true;
         bool DoUseLimits      = true;
+
         bool CanBackTraceWhenSizeReached = false;
 
         KNAPSACK_RESULT Solve(
@@ -140,6 +135,7 @@ namespace kb_knapsack {
             TD newPointLimit;
 
             if (!DoUseLimits || !canUsePartialSums) {
+
                 return std::make_tuple(false, partSumForItem, oldPointLimit, newPointLimit);
             }
 
@@ -148,6 +144,7 @@ namespace kb_knapsack {
             bool superIncreasingItem;
 
             if (superIncreasingItems.size() > 0) {
+
                 superIncreasingItem = superIncreasingItems[i];
             }
 
@@ -155,6 +152,7 @@ namespace kb_knapsack {
             oldPointLimit = newPointLimit;
 
             if (DoSolveSuperInc && superIncreasingItem) {
+
                 oldPointLimit = newPointLimit + items[i];
             }
 
@@ -214,6 +212,7 @@ namespace kb_knapsack {
             }
 
             if ((canUseLimits == false) || (oldPoint.dimensions < oldPointLimit) == false) {
+
                 iterateOrPushBack(circularPointQueue, oldPoint, greaterQu, distinctPoints2);
             }
         }
@@ -259,7 +258,6 @@ namespace kb_knapsack {
             // getPoints method call starts fetching visited points from qu start, pops visited point and pushes new point and visited to the end of qu in ASC order.
             // skip new point if it in list already
             // points if they will not contribute to optimal solution (in case of desc flow and (equal values or values equal to first dimension))
-            // also skips the same weight but less profit points
 
             W_POINT_DEQUEUE greaterQu;
 
@@ -276,10 +274,12 @@ namespace kb_knapsack {
             if (useItemItself) {
 
                 if  (distinctPoints1.contains(itemPoint) == false) {
+
                     iterateOrPushBack(circularPointQueue, itemPoint, greaterQu, distinctPoints2);
                 }
 
                 if (maxProfitPoint.profit <= itemPoint.profit) {
+
                     maxProfitPoint = itemPoint;
                 }
             }
@@ -299,6 +299,7 @@ namespace kb_knapsack {
 
 
                 if (!(skipLimitCheck) && oldPoint.dimensions + itemPoint.dimensions < newPointLimit) {
+
                     continue;
                 }
 
@@ -315,7 +316,9 @@ namespace kb_knapsack {
                         iterateOrPushBack(circularPointQueue, newPoint, greaterQu, distinctPoints2);
 
                         if (maxProfitPoint.profit <= newPoint.profit) {
+
                             if (maxProfitPoint.dimensions < newPoint.dimensions) {
+
                                 maxProfitPoint = newPoint;
                             }
                         }

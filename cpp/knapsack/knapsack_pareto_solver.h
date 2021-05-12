@@ -1,7 +1,3 @@
-//
-// Created by kooltew on 5/11/2021.
-//
-
 #ifndef KB_KNAPSACK_PARTITION_SOLUTION_KNAPSACK_PARETO_SOLVER_H
 #define KB_KNAPSACK_PARTITION_SOLUTION_KNAPSACK_PARETO_SOLVER_H
 
@@ -50,13 +46,15 @@ namespace kb_knapsack {
                 std::vector<W>& values,
                 std::vector<int>& itemsIndex) {
 
-            std::vector<TD> sortedItems(items);
-            std::vector<W> sortedValues(values);
+            std::vector<TD>  sortedItems(items);
+            std::vector<W>   sortedValues(values);
             std::vector<int> sortedIndexes(itemsIndex);
 
             if (UseRatioSort){
+
                 sortByRatio(sortedItems, sortedValues, sortedIndexes);
             } else {
+
                 sortByDims(sortedItems, sortedValues, sortedIndexes);
             }
 
@@ -133,11 +131,7 @@ namespace kb_knapsack {
                       [&](size_t i, size_t j){
 
                           if (dimensions[i] == dimensions[j]) {
-
-                              auto d1 = dimensions[i].divide(values[i]);
-                              auto d2 = dimensions[j].divide(values[j]);
-
-                              return d1 < d2;
+                              return dimensions[i].divide(values[i]) < dimensions[j].divide(values[j]);
                           }
 
                           return (dimensions[i] < dimensions[j]);
@@ -172,13 +166,17 @@ namespace kb_knapsack {
                     sourcePoints.emplace_back(link);
 
                     if (prevDistinctPoints.contains(newPoint) == false) {
+
                         newDistinctPoints.insert(newPoint);
                         result.emplace_back(newPoint);
                     }
 
                     if (maxProfitPoint.profit <= newPoint.profit) {
+
                         if (UseRatioSort && maxProfitPoint.profit == newPoint.profit) {
+
                             if (maxProfitPoint.dimensions < newPoint.dimensions) {
+
                                 maxProfitPoint = newPoint;
                             }
                         } else {
@@ -196,14 +194,15 @@ namespace kb_knapsack {
             int ans = -1;
 
             while (lo <= hi) {
+
                 int mid = (lo + hi) / 2;
 
-                auto val = items[mid];
+                if (items[mid].profit > item) {
 
-                if (val.profit > item) {
                     hi = mid - 1;
                     ans = mid;
                 } else {
+
                     lo = mid + 1;
                 }
             }
@@ -233,7 +232,9 @@ namespace kb_knapsack {
                 auto newPointIndex = findLargerProfit(newList, profitMax);
 
                 if (oldPointIndex == -1) {
+
                     if (newPointIndex >= 0) {
+
                         for (int ind = newPointIndex; ind < newList.size(); ++ind) {
 
                             result.emplace_back(newList[ind]);
@@ -243,7 +244,9 @@ namespace kb_knapsack {
                 }
 
                 if (newPointIndex == -1) {
+
                     if (oldPointIndex >= 0) {
+
                         for (int ind = oldPointIndex; ind < oldList.size(); ++ind) {
 
                             result.emplace_back(oldList[ind]);
