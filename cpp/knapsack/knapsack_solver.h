@@ -25,6 +25,7 @@ namespace kb_knapsack {
 
     template<typename T, typename W, int N, template<typename DIM_TYPE, typename VALUE_TYPE, int DIM_LEN> class DIM>
     class knapsack_solver {
+
     public:
         knapsack_solver(std::vector<TD> & Dimensions, std::vector<W> & Values,  std::vector<int> & Ids) :
             Dimensions(Dimensions),
@@ -189,6 +190,7 @@ namespace kb_knapsack {
                                                          canUsePartialSums);
 
                     if (PrepareSearchIndex){
+
                         buildSearchIndexLimit(limitSolver.CircularPointQueue, limitSolver.SourcePoints);
 
                     }
@@ -216,6 +218,7 @@ namespace kb_knapsack {
             auto paretoResult = paretoSolver.Solve(constraints, lessSizeItems, lessSizeValues, lessSizeItemsIndex);
 
             if (PrepareSearchIndex){
+
                 buildSearchIndexPareto(paretoSolver.ParetoOptimal, paretoSolver.SourcePoints);
             }
 
@@ -235,6 +238,7 @@ namespace kb_knapsack {
             pointList.reserve(pointDequeue.size());
 
             for(auto & p : pointDequeue){
+
                 pointList.emplace_back(p);
             }
 
@@ -268,6 +272,7 @@ namespace kb_knapsack {
         int indexLargestLessThanAsc(W_POINT_LIST & items, TD & item, int lo, int hi) {
 
             if (item == EmptyDimension) {
+
                 return -1;
             }
 
@@ -276,12 +281,15 @@ namespace kb_knapsack {
                 auto mid = int((lo + hi) / 2);
 
                 if (item == items[mid].dimensions) {
+
                     return mid;
                 }
 
                 if (items[mid].dimensions < item) {
+
                     lo = mid + 1;
                 } else {
+
                     hi = mid - 1;
                 }
             }
@@ -350,15 +358,15 @@ namespace kb_knapsack {
         /* 8 canUsePartialSums */  bool
         >
                 preProcess(
-                        TD &constraints,
-                        std::vector<TD> &items,
-                        std::vector<W> &values,
+                        TD & constraints,
+                        std::vector<TD> & items,
+                        std::vector<W> & values,
                         bool &forceUseLimits,
-                        std::vector<TD> &lessSizeItems,
-                        std::vector<W> &lessSizeValues,
-                        std::vector<int> &lessSizeItemsIndex,
-                        std::vector<TD> &partialSums,
-                        std::vector<bool> &superIncreasingItems
+                        std::vector<TD> & lessSizeItems,
+                        std::vector<W> & lessSizeValues,
+                        std::vector<int> & lessSizeItemsIndex,
+                        std::vector<TD> & partialSums,
+                        std::vector<bool> & superIncreasingItems
                         ){
 
             auto count = items.size();
@@ -560,13 +568,13 @@ namespace kb_knapsack {
         }
 
         inline std::tuple<bool, KNAPSACK_RESULT> checkCornerCases(
-                TD& constraints,
-                std::vector<TD>& lessSizeItems,
-                std::vector<W>& lessSizeValues,
-                std::vector<int>& lessSizeItemsIndex,
-                TD& lessCountSum,
-                TD& itemSum,
-                W& lessCountValuesSum){
+                TD & constraints,
+                std::vector<TD> & lessSizeItems,
+                std::vector<W> & lessSizeValues,
+                std::vector<int> & lessSizeItemsIndex,
+                TD & lessCountSum,
+                TD & itemSum,
+                W & lessCountValuesSum){
 
             W zero = EmptyValue;
             std::vector<TD> emptyItems;
