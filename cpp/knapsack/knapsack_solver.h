@@ -32,7 +32,7 @@ namespace kb_knapsack {
             Ids(Ids) {
         }
 
-        TD Constrains;
+        TD Constraints;
 
         std::vector<TD>  Dimensions;
         std::vector<W>   Values;
@@ -43,35 +43,70 @@ namespace kb_knapsack {
 
         W MinValue;
 
-        bool ForceUseLimits   = false;
         bool DoSolveSuperInc  = true;
         bool DoUseLimits      = true;
         bool UseRatioSort     = false;
-        bool ForceUsePareto   = false;
 
-        bool CanBackTraceWhenSizeReached = false;
+        bool ForceUsePareto   = false;
+        bool ForceUseLimits   = false;
+
+        bool CanBackTraceWhenSizeReached  = false;
+
+        bool PrepareSearchIndex = false;
+
+        bool SolvedBySuperIncreasingSolverAsc  = false;
+        bool SolvedBySuperIncreasingSolverDesc = false;
+        bool SolvedByCornerCaseCheck = false;
+        TD   SolvedByConstraint;
+
+        W_POINT_LIST MaxProfitPointIndex;
+        SOURCE_LINK_LIST SourcePoints;
 
         KNAPSACK_RESULT Solve(){
 
+            SolvedByConstraint = EmptyDimension;
+
+            return Solve(Constraints);
+        }
+
+        KNAPSACK_RESULT Solve(TD searchConstraint){
+
             if (Dimensions.size() != Values.size() || Ids.size() != Dimensions.size()) {
 
-                throw std::invalid_argument("Sizes of input dimensions, values and ids should be equal.");
+                throw std::invalid_argument("Sizes of dimensions, values and ids given should be equal.");
             }
 
-            auto canTrySolveUsingDp = ! ForceUsePareto && (DoUseLimits || DoSolveSuperInc || ForceUseLimits || CanBackTraceWhenSizeReached);
+            if (searchConstraint == EmptyDimension) {
 
-            std::vector<TD> lessSizeItems;
-            std::vector<W> lessSizeValues;
+                searchConstraint = SolvedByConstraint;
+
+                if (searchConstraint == EmptyDimension) {
+
+                    searchConstraint = Constraints;
+                }
+            }
+
+            auto canTryBinarySearch = not MaxProfitPointIndex.empty() || SolvedBySuperIncreasingSolverAsc || SolvedBySuperIncreasingSolverDesc;
+
+            if (canTryBinarySearch and searchConstraint <= SolvedByConstraint) {
+
+                return binarySearchMaxProfit(searchConstraint);
+            }
+
+            auto canTrySolveUsingDp = not ForceUsePareto && (DoUseLimits || DoSolveSuperInc || ForceUseLimits || CanBackTraceWhenSizeReached);
+
+            std::vector<TD>  lessSizeItems;
+            std::vector<W>   lessSizeValues;
             std::vector<int> lessSizeItemsIndex;
 
-            TD constraints = Constrains;
+            TD constraints = Constraints;
 
             if (canTrySolveUsingDp) {
 
                 std::vector<TD> partialSums;
                 std::vector<bool> superIncreasingItems;
 
-                auto params = preProcess(Constrains,
+                auto params = preProcess(Constraints,
                                          Dimensions,
                                          Values,
                                          ForceUseLimits,
@@ -82,6 +117,7 @@ namespace kb_knapsack {
                                          superIncreasingItems);
 
                 constraints = std::get<0>(params);
+
                 auto count = std::get<1>(params);
                 auto itemSum = std::get<2>(params);
                 auto lessCountSum = std::get<3>(params);
@@ -104,6 +140,9 @@ namespace kb_knapsack {
 
                 if (isCornerCase) {
 
+                    SolvedByCornerCaseCheck = true;
+                    SolvedByConstraint = Constraints;
+
                     auto cornerCaseResult = std::get<1>(cornerCasesCheck);
                     return cornerCaseResult;
                 }
@@ -111,6 +150,13 @@ namespace kb_knapsack {
                 if (DoSolveSuperInc && isSuperIncreasing) {
 
                     auto superIncSolver = knapsack_superincreasing_solver<T, W, N, DIM>();
+
+                    SolvedBySuperIncreasingSolverAsc  =  allAsc;
+                    SolvedBySuperIncreasingSolverDesc = !allAsc;
+                    SolvedByConstraint = Constraints;
+
+                    superIncSolver.EmptyDimension = EmptyDimension;
+                    superIncSolver.EmptyValue = EmptyValue;
 
                     return superIncSolver.Solve(constraints,
                                                 lessSizeItems,
@@ -120,7 +166,7 @@ namespace kb_knapsack {
                                                 allAsc);
                 }
 
-                bool canSolveUsingDp = ! ForceUsePareto && (ForceUseLimits || CanBackTraceWhenSizeReached || canUsePartialSums);
+                bool canSolveUsingDp = not ForceUsePareto && (ForceUseLimits || CanBackTraceWhenSizeReached || canUsePartialSums);
 
                 if (canSolveUsingDp) {
 
@@ -129,18 +175,27 @@ namespace kb_knapsack {
                     limitSolver.EmptyDimension = EmptyDimension;
                     limitSolver.EmptyValue = EmptyValue;
 
-                    limitSolver.DoUseLimits = DoUseLimits;
+                    limitSolver.DoUseLimits = DoUseLimits and not PrepareSearchIndex;
                     limitSolver.DoSolveSuperInc = DoSolveSuperInc;
                     limitSolver.CanBackTraceWhenSizeReached = CanBackTraceWhenSizeReached;
 
-                    return limitSolver.Solve(constraints,
-                                             lessSizeItems,
-                                             lessSizeValues,
-                                             lessSizeItemsIndex,
-                                             allAsc,
-                                             partialSums,
-                                             superIncreasingItems,
-                                             canUsePartialSums);
+                    auto limitResult = limitSolver.Solve(constraints,
+                                                         lessSizeItems,
+                                                         lessSizeValues,
+                                                         lessSizeItemsIndex,
+                                                         allAsc,
+                                                         partialSums,
+                                                         superIncreasingItems,
+                                                         canUsePartialSums);
+
+                    if (PrepareSearchIndex){
+                        buildSearchIndexLimit(limitSolver.CircularPointQueue, limitSolver.SourcePoints);
+
+                    }
+
+                    SolvedByConstraint = Constraints;
+
+                    return limitResult;
                 }
             } else {
 
@@ -152,25 +207,146 @@ namespace kb_knapsack {
             auto paretoSolver = knapsack_pareto_solver<T, W, N, DIM>(Dimensions, Values, Ids);
 
             paretoSolver.EmptyDimension = EmptyDimension;
-            paretoSolver.UseRatioSort = UseRatioSort;
-            paretoSolver.EmptyDimension = EmptyDimension;
             paretoSolver.EmptyValue = EmptyValue;
             paretoSolver.MinValue = MinValue;
 
-            return paretoSolver.Solve(constraints, lessSizeItems, lessSizeValues, lessSizeItemsIndex);
+            paretoSolver.UseRatioSort = UseRatioSort;
+            paretoSolver.CanBackTraceWhenSizeReached = CanBackTraceWhenSizeReached;
+
+            auto paretoResult = paretoSolver.Solve(constraints, lessSizeItems, lessSizeValues, lessSizeItemsIndex);
+
+            if (PrepareSearchIndex){
+                buildSearchIndexPareto(paretoSolver.ParetoOptimal, paretoSolver.SourcePoints);
+            }
+
+            SolvedByConstraint = Constraints;
+
+            return paretoResult;
         }
 
     private:
 
+        void buildSearchIndexLimit(W_POINT_DEQUEUE & pointDequeue, SOURCE_LINK_LIST & sourcePoints){
+
+            SourcePoints.swap(sourcePoints);
+
+            W_POINT_LIST pointList;
+
+            pointList.reserve(pointDequeue.size());
+
+            for(auto & p : pointDequeue){
+                pointList.emplace_back(p);
+            }
+
+            fillSearchIndex(pointList);
+        }
+
+        void buildSearchIndexPareto(W_POINT_LIST & pointList, SOURCE_LINK_LIST & sourcePoints){
+
+            SourcePoints.swap(sourcePoints);
+
+            fillSearchIndex(pointList);
+        }
+
+        void fillSearchIndex(W_POINT_LIST & pointList){
+
+            std::sort(pointList.begin(), pointList.end(), [&](W_POINT x, W_POINT y) { return x.dimensions < y.dimensions;});
+
+            MaxProfitPointIndex.clear();
+            W_POINT nextMaxProfitPoint(EmptyDimension, EmptyValue);
+
+            for(auto & p: pointList) {
+
+                if(p.profit > nextMaxProfitPoint.profit) {
+
+                    nextMaxProfitPoint = p;
+                    MaxProfitPointIndex.emplace_back(nextMaxProfitPoint);
+                }
+            }
+        }
+
+        int indexLargestLessThanAsc(W_POINT_LIST & items, TD & item, int lo, int hi) {
+
+            if (item == EmptyDimension) {
+                return -1;
+            }
+
+            while (lo <= hi) {
+
+                auto mid = int((lo + hi) / 2);
+
+                if (item == items[mid].dimensions) {
+                    return mid;
+                }
+
+                if (items[mid].dimensions < item) {
+                    lo = mid + 1;
+                } else {
+                    hi = mid - 1;
+                }
+            }
+
+            if (hi >= 0 && item >= items[hi].dimensions) {
+
+                return hi;
+            }
+            else{
+
+                return -1;
+            }
+        }
+
+        KNAPSACK_RESULT binarySearchMaxProfit(TD & constraint) {
+
+            if (SolvedBySuperIncreasingSolverAsc || SolvedBySuperIncreasingSolverDesc){
+
+                auto superIncSolver = knapsack_superincreasing_solver<T, W, N, DIM>();
+
+                return superIncSolver.Solve(constraint,
+                                            Dimensions,
+                                            Values,
+                                            Ids,
+                                            Values.size(),
+                                            SolvedBySuperIncreasingSolverAsc);
+            }
+
+            if (constraint > SolvedByConstraint)
+            {
+                std::invalid_argument("The constraint given should be less or equal than index built constraint.");
+            }
+
+            auto count = MaxProfitPointIndex.size();
+
+            if (count == 0) {
+                std::invalid_argument("The binary search using given constraint is not possible.");
+            }
+
+            auto index = indexLargestLessThanAsc(MaxProfitPointIndex, constraint, 0, count - 1);
+
+            W_POINT maxProfitPoint(EmptyDimension, EmptyValue);
+
+            if (index >= 0) {
+                maxProfitPoint = MaxProfitPointIndex[index];
+            }
+
+            return tools::backTraceItems(EmptyValue,
+                                  EmptyDimension,
+                                  maxProfitPoint,
+                                  SourcePoints,
+                                  Dimensions,
+                                  Values,
+                                  Ids);
+        }
+
         std::tuple<
-        /* 0 constraints */ TD,
-        /* 1 lessCount */ int,
-        /* 2 itemSum */  TD,
-        /* 3 lessCountSum */  TD,
-        /* 4 lessCountValuesSum */  W,
+        /* 0 constraints */         TD,
+        /* 1 lessCount */          int,
+        /* 2 itemSum */             TD,
+        /* 3 lessCountSum */        TD,
+        /* 4 lessCountValuesSum */   W,
         /* 5 isSuperIncreasing */  bool,
-        /* 6 allAsc */  bool,
-        /* 7 allDesc */  bool,
+        /* 6 allAsc */             bool,
+        /* 7 allDesc */            bool,
         /* 8 canUsePartialSums */  bool
         >
                 preProcess(

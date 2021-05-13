@@ -40,6 +40,9 @@ namespace kb_knapsack {
 
         bool CanBackTraceWhenSizeReached = false;
 
+        W_POINT_DEQUEUE CircularPointQueue;
+        SOURCE_LINK_LIST SourcePoints;
+
         KNAPSACK_RESULT Solve(
                 TD constraint,
                 std::vector<TD> & sortedItems,
@@ -53,11 +56,8 @@ namespace kb_knapsack {
             W_POINT maxProfitPoint(EmptyDimension, EmptyValue);
 
             W_POINT_SET distinctPoints1;
-            W_POINT_DEQUEUE circularPointQueue;
 
-            SOURCE_LINK_LIST sourcePoints;
-
-            sourcePoints.reserve(sortedItems.size() * sortedItems.size());
+            SourcePoints.reserve(sortedItems.size() * sortedItems.size());
 
             int itemsCount = sortedItems.size();
 
@@ -70,8 +70,8 @@ namespace kb_knapsack {
                 auto itemIndex = getItemIndex(itemsCount, i, allAsc);
 
                 auto itemDimensions = sortedItems[itemIndex];
-                auto itemProfit = sortedValues[itemIndex];
-                auto itemId = sortedIndexes[itemIndex];
+                auto itemProfit     = sortedValues[itemIndex];
+                auto itemId         = sortedIndexes[itemIndex];
 
                 auto limitParams = getLimits(constraint,
                                              itemIndex,
@@ -80,51 +80,47 @@ namespace kb_knapsack {
                                              superIncreasingItems,
                                              canUsePartialSums);
 
-                auto canUseLimits = std::get<0>(limitParams);
-                auto itemLimit = std::get<1>(limitParams);
+                auto canUseLimits  = std::get<0>(limitParams);
+                auto itemLimit     = std::get<1>(limitParams);
                 auto oldPointLimit = std::get<2>(limitParams);
                 auto newPointLimit = std::get<3>(limitParams);
 
-                auto iterResult = iteratePoints(i,
-                                                sourcePoints,
-                                                itemDimensions,
-                                                itemProfit,
-                                                itemId,
-                                                constraint,
-                                                maxProfitPoint,
-                                                circularPointQueue,
-                                                prevPointCount,
-                                                halfConstraint,
-                                                itemLimit,
-                                                oldPointLimit,
-                                                newPointLimit,
-                                                distinctPoints1,
-                                                distinctPoints1,
-                                                canUsePartialSums && canUseLimits
+               iteratePoints(i,
+                            itemDimensions,
+                            itemProfit,
+                            itemId,
+                            constraint,
+                            maxProfitPoint,
+                            prevPointCount,
+                            halfConstraint,
+                            itemLimit,
+                            oldPointLimit,
+                            newPointLimit,
+                            distinctPoints1,
+                            distinctPoints1,
+                            canUsePartialSums && canUseLimits
                 );
 
-                auto newPointCount = std::get<0>(iterResult);
-                auto maxProfitPoint = std::get<1>(iterResult);
-
                 if (CanBackTraceWhenSizeReached && maxProfitPoint.dimensions == constraint) {
-                    return backTraceItems(EmptyValue,
+
+                    return tools::backTraceItems(EmptyValue,
                                           EmptyDimension,
                                           maxProfitPoint,
-                                          sourcePoints,
+                                          SourcePoints,
                                           Dimensions,
                                           Values,
                                           Ids);
                 }
 
-                prevPointCount = newPointCount;
+                prevPointCount = CircularPointQueue.size();
             }
 
-            return backTraceItems(EmptyValue, EmptyDimension, maxProfitPoint, sourcePoints, Dimensions, Values, Ids);
+            return tools::backTraceItems(EmptyValue, EmptyDimension, maxProfitPoint, SourcePoints, Dimensions, Values, Ids);
         }
 
     private:
         inline std::tuple<bool, TD, TD, TD> getLimits(TD & constraints,
-                                                      int i,
+                                                      int currentItemIndex,
                                                       std::vector<TD> & items,
                                                       std::vector<TD> & partialSums,
                                                       std::vector<bool> & superIncreasingItems,
@@ -134,18 +130,18 @@ namespace kb_knapsack {
             TD oldPointLimit;
             TD newPointLimit;
 
-            if (!DoUseLimits || !canUsePartialSums) {
+            if (not DoUseLimits || not canUsePartialSums) {
 
                 return std::make_tuple(false, partSumForItem, oldPointLimit, newPointLimit);
             }
 
-            partSumForItem = partialSums[i];
+            partSumForItem = partialSums[currentItemIndex];
 
             bool superIncreasingItem;
 
-            if (superIncreasingItems.size() > 0) {
+            if (not superIncreasingItems.empty()) {
 
-                superIncreasingItem = superIncreasingItems[i];
+                superIncreasingItem = superIncreasingItems[currentItemIndex];
             }
 
             newPointLimit = constraints - partSumForItem;
@@ -153,33 +149,32 @@ namespace kb_knapsack {
 
             if (DoSolveSuperInc && superIncreasingItem) {
 
-                oldPointLimit = newPointLimit + items[i];
+                oldPointLimit = newPointLimit + items[currentItemIndex];
             }
 
             return std::make_tuple(true, partSumForItem, oldPointLimit, newPointLimit);
         }
 
-        inline void iterateOrPushBack(W_POINT_DEQUEUE & circularPointQueue,
-                                      W_POINT & newPoint,
-                                      W_POINT_DEQUEUE & greaterQu,
-                                      W_POINT_SET & distinctPoints2) {
+        inline void iterateOrPushBack(W_POINT & newPoint,
+                               W_POINT_DEQUEUE & greaterQu,
+                               W_POINT_SET & distinctPoints2) {
 
-            if (circularPointQueue.size() > 0) {
+            if (not CircularPointQueue.empty()) {
 
-                if (newPoint.dimensions <= circularPointQueue.front().dimensions) {
+                if (newPoint.dimensions <= CircularPointQueue.front().dimensions) {
 
-                    circularPointQueue.emplace_back(newPoint);
+                    CircularPointQueue.emplace_back(newPoint);
                     distinctPoints2.insert(newPoint);
                 } else {
 
-                    if (greaterQu.size() > 0){
+                    if (not greaterQu.empty()){
 
-                        if (newPoint.dimensions <= greaterQu.front().dimensions)
-                        {
+                        if (newPoint.dimensions <= greaterQu.front().dimensions) {
+
                             greaterQu.emplace_front(newPoint);
                         }
-                        else
-                        {
+                        else {
+
                             greaterQu.emplace_back(newPoint);
                         }
                     }
@@ -190,44 +185,40 @@ namespace kb_knapsack {
                 }
             }
             else {
-                circularPointQueue.emplace_back(newPoint);
+                CircularPointQueue.emplace_back(newPoint);
                 distinctPoints2.insert(newPoint);
             }
         }
 
         inline void iterateLessThanOldPoint(W_POINT & oldPoint,
-                                            W_POINT_DEQUEUE & circularPointQueue,
                                             bool canUseLimits,
                                             W_POINT_DEQUEUE & greaterQu,
                                             TD & oldPointLimit,
                                             W_POINT_SET & distinctPoints2) {
 
-            while (greaterQu.size() > 0 and greaterQu.front().dimensions < oldPoint.dimensions) {
+            while (not greaterQu.empty() and greaterQu.front().dimensions < oldPoint.dimensions) {
 
-                auto quPoint = greaterQu.front();
+                distinctPoints2.insert(greaterQu.front());
+                CircularPointQueue.emplace_back(greaterQu.front());
+
                 greaterQu.pop_front();
-
-                distinctPoints2.insert(quPoint);
-                circularPointQueue.emplace_back(quPoint);
             }
 
             if ((canUseLimits == false) || (oldPoint.dimensions < oldPointLimit) == false) {
 
-                iterateOrPushBack(circularPointQueue, oldPoint, greaterQu, distinctPoints2);
+                iterateOrPushBack(oldPoint, greaterQu, distinctPoints2);
             }
         }
 
         inline void iterateGreaterPoints(W_POINT_DEQUEUE & greaterQu,
-                                         W_POINT_DEQUEUE & circularPointQueue,
                                          W_POINT_SET & distinctPoints2){
 
-            while (greaterQu.size() > 0) {
+            while (not greaterQu.empty()) {
 
-                auto quPoint = greaterQu.front();
+                CircularPointQueue.emplace_back(greaterQu.front());
+                distinctPoints2.insert(greaterQu.front());
+
                 greaterQu.pop_front();
-
-                circularPointQueue.emplace_back(quPoint);
-                distinctPoints2.insert(quPoint);
             }
         }
 
@@ -236,15 +227,13 @@ namespace kb_knapsack {
             return allAsc ? count - i : i - 1;
         }
 
-        std::tuple<int, W_POINT> iteratePoints(
+        void iteratePoints(
                 int & i,
-                SOURCE_LINK_LIST & sourcePoints,
                 TD & itemDimensions,
                 W & itemProfit,
                 int & itemId,
                 TD & constraintPoint,
                 W_POINT & maxProfitPoint,
-                W_POINT_DEQUEUE & circularPointQueue,
                 int & prevCyclePointCount,
                 TD halfConstraint,
                 TD & itemLimit,
@@ -265,9 +254,8 @@ namespace kb_knapsack {
 
             W_POINT itemPoint(itemDimensions, itemProfit);
 
-            itemPoint.id = sourcePoints.size();
-            source_link link(itemId, -1);
-            sourcePoints.emplace_back(link);
+            itemPoint.id = SourcePoints.size();
+            SourcePoints.emplace_back(source_link(itemId, -1));
 
             auto useItemItself = skipLimitCheck || itemLimit >= halfConstraint;
 
@@ -275,7 +263,7 @@ namespace kb_knapsack {
 
                 if  (distinctPoints1.contains(itemPoint) == false) {
 
-                    iterateOrPushBack(circularPointQueue, itemPoint, greaterQu, distinctPoints2);
+                    iterateOrPushBack(itemPoint, greaterQu, distinctPoints2);
                 }
 
                 if (maxProfitPoint.profit <= itemPoint.profit) {
@@ -286,19 +274,17 @@ namespace kb_knapsack {
 
             for (auto pi = 0; pi < prevCyclePointCount; ++pi) {
 
-                W_POINT oldPoint = circularPointQueue.front();
-
-                circularPointQueue.pop_front();
+                W_POINT oldPoint = CircularPointQueue.front();
+                CircularPointQueue.pop_front();
 
                 iterateLessThanOldPoint(oldPoint,
-                                        circularPointQueue,
                                         canUseLimits,
                                         greaterQu,
                                         oldPointLimit,
                                         distinctPoints2);
 
 
-                if (!(skipLimitCheck) && oldPoint.dimensions + itemPoint.dimensions < newPointLimit) {
+                if (not skipLimitCheck && oldPoint.dimensions + itemPoint.dimensions < newPointLimit) {
 
                     continue;
                 }
@@ -309,28 +295,20 @@ namespace kb_knapsack {
 
                     if (distinctPoints1.contains(newPoint) == false) {
 
-                        newPoint.id = sourcePoints.size();
-                        source_link link(itemId, oldPoint.id);
-                        sourcePoints.emplace_back(link);
+                        newPoint.id = SourcePoints.size();
+                        SourcePoints.emplace_back(source_link(itemId, oldPoint.id));
 
-                        iterateOrPushBack(circularPointQueue, newPoint, greaterQu, distinctPoints2);
+                        iterateOrPushBack(newPoint, greaterQu, distinctPoints2);
 
                         if (maxProfitPoint.profit <= newPoint.profit) {
 
-                            if (maxProfitPoint.dimensions < newPoint.dimensions) {
-
-                                maxProfitPoint = newPoint;
-                            }
+                            maxProfitPoint = newPoint;
                         }
                     }
                 }
             }
 
-            iterateGreaterPoints(greaterQu, circularPointQueue, distinctPoints2);
-
-            auto newPointCount = circularPointQueue.size();
-
-            return std::make_tuple(newPointCount, maxProfitPoint);
+            iterateGreaterPoints(greaterQu, distinctPoints2);
         }
     };
 }

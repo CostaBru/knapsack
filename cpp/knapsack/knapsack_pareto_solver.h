@@ -27,12 +27,15 @@ namespace kb_knapsack {
 
         W  MinValue;
 
-        bool UseRatioSort               = false;
-        bool CanBackTraceWhenSizeReached = false;
+        bool UseRatioSort                = true;
+        bool CanBackTraceWhenSizeReached = true;
 
         std::vector<TD>  Dimensions;
         std::vector<W>   Values;
         std::vector<int> Ids;
+
+        W_POINT_LIST ParetoOptimal;
+        SOURCE_LINK_LIST SourcePoints;
 
         knapsack_pareto_solver(std::vector<TD> & Dimensions, std::vector<W> & Values, std::vector<int> & Ids) :
             Dimensions(Dimensions),
@@ -61,15 +64,17 @@ namespace kb_knapsack {
             W_POINT maxProfitPoint(EmptyDimension, EmptyValue);
             W_POINT emptyPoint(EmptyDimension, EmptyValue);
 
+            ParetoOptimal = {emptyPoint};
+
             W_POINT_SET distinctPoints;
 
-            W_POINT_LIST oldPoints = {emptyPoint};
             W_POINT_LIST newPoints;
-            W_POINT_LIST paretoOptimal;
+            W_POINT_LIST newParetoOptimal;
 
-            SOURCE_LINK_LIST sourcePoints;
+            auto expectedN = sortedItems.size() * sortedItems.size();
 
-            sourcePoints.reserve(sortedItems.size() * sortedItems.size());
+            SourcePoints.reserve(expectedN);
+            ParetoOptimal.reserve(expectedN);
 
             auto itemsCount = sortedItems.size();
 
@@ -81,31 +86,31 @@ namespace kb_knapsack {
 
                 newPoints.clear();
 
-                maxProfitPoint = getNewPoints(i,
-                                              maxProfitPoint,
-                                              itemDimensions,
-                                              itemProfit,
-                                              itemId,
-                                              oldPoints,
-                                              newPoints,
-                                              constraint,
-                                              distinctPoints,
-                                              distinctPoints,
-                                              sourcePoints);
+                getNewPoints(i,
+                              maxProfitPoint,
+                              itemDimensions,
+                              itemProfit,
+                              itemId,
+                             ParetoOptimal,
+                              newPoints,
+                              constraint,
+                              distinctPoints,
+                              distinctPoints);
 
-                paretoOptimal.clear();
+                newParetoOptimal.clear();
 
                 // Point A is dominated by point B if B achieves a larger profit with the same or less weight than A.
-                mergeDiscardingDominated(paretoOptimal, oldPoints, newPoints);
+                mergeDiscardingDominated(newParetoOptimal, ParetoOptimal, newPoints);
 
                 if (CanBackTraceWhenSizeReached and maxProfitPoint.dimensions == constraint) {
-                    return backTraceItems(EmptyValue, EmptyDimension, maxProfitPoint, sourcePoints, Dimensions, Values, Ids);
+
+                    return tools::backTraceItems(EmptyValue, EmptyDimension, maxProfitPoint, SourcePoints, Dimensions, Values, Ids);
                 }
 
-                oldPoints.swap(paretoOptimal); // oldPoints = paretoOptimal;
+                ParetoOptimal.swap(newParetoOptimal); // oldPoints = newParetoOptimal;
             }
 
-            return backTraceItems(EmptyValue, EmptyDimension, maxProfitPoint, sourcePoints, Dimensions, Values, Ids);
+            return tools::backTraceItems(EmptyValue, EmptyDimension, maxProfitPoint, SourcePoints, Dimensions, Values, Ids);
         }
     private:
 
@@ -118,7 +123,7 @@ namespace kb_knapsack {
             std::sort(p.begin(), p.end(),
                       [&](size_t i, size_t j){ return dimensions[i].divide(values[i]) < dimensions[j].divide(values[j]); });
 
-            applySort3<TD, W, int>(dimensions, values, indexes, p.size(), p);
+            tools::applySort3<TD, W, int>(dimensions, values, indexes, p.size(), p);
         }
 
         inline void sortByDims(std::vector<TD> & dimensions, std::vector<W> & values, std::vector<int> & indexes){
@@ -131,16 +136,17 @@ namespace kb_knapsack {
                       [&](size_t i, size_t j){
 
                           if (dimensions[i] == dimensions[j]) {
+
                               return dimensions[i].divide(values[i]) < dimensions[j].divide(values[j]);
                           }
 
                           return (dimensions[i] < dimensions[j]);
                       });
 
-            applySort3<TD, W, int>(dimensions, values, indexes,  p.size(), p);
+            tools::applySort3<TD, W, int>(dimensions, values, indexes,  p.size(), p);
         }
 
-        W_POINT getNewPoints(
+        void getNewPoints(
                 int & i,
                 W_POINT & maxProfitPoint,
                 TD & itemDimensions,
@@ -150,8 +156,7 @@ namespace kb_knapsack {
                 W_POINT_LIST & result,
                 TD & constraint,
                 W_POINT_SET & prevDistinctPoints,
-                W_POINT_SET & newDistinctPoints,
-                SOURCE_LINK_LIST & sourcePoints) {
+                W_POINT_SET & newDistinctPoints) {
 
             W_POINT itemPoint = W_POINT(itemDimensions, itemProfit);
 
@@ -161,9 +166,9 @@ namespace kb_knapsack {
 
                     auto newPoint = oldPoint + itemPoint;
 
-                    newPoint.id = sourcePoints.size();
+                    newPoint.id = SourcePoints.size();
                     source_link link(itemId, oldPoint.id);
-                    sourcePoints.emplace_back(link);
+                    SourcePoints.emplace_back(link);
 
                     if (prevDistinctPoints.contains(newPoint) == false) {
 
@@ -180,13 +185,12 @@ namespace kb_knapsack {
                                 maxProfitPoint = newPoint;
                             }
                         } else {
+
                             maxProfitPoint = newPoint;
                         }
                     }
                 }
             }
-
-            return maxProfitPoint;
         }
 
         inline int indexLargestLessThan(W_POINT_LIST & items, W & item, int lo, int hi){

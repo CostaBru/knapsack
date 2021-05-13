@@ -21,9 +21,9 @@ namespace kb_knapsack {
         int itemId = -1;
         long parentId = -1;
 
-        source_link(int _itemId, long sourceLinkId){
-            itemId = _itemId;
-            parentId = sourceLinkId;
+        source_link(int itemId, long parentId) :
+            itemId(itemId),
+            parentId(parentId) {
         }
 
         bool hasParent(){

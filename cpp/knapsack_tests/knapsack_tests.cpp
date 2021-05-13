@@ -19,7 +19,8 @@ std::tuple<W, T, std::vector<T>, std::vector<W>, std::vector<int>> knapsack1(T c
                                                                              std::vector<W>& values,
                                                                              std::vector<int>& indexes,
                                                                              bool doSolveSuperInc = true,
-                                                                             bool doUseLimits = true) {
+                                                                             bool doUseLimits = true,
+                                                                             bool canBackTraceWhenSizeReached = false) {
 
     auto dims = std::vector<kb_knapsack::w_point_dim1<T, W, 1>>();
 
@@ -33,10 +34,11 @@ std::tuple<W, T, std::vector<T>, std::vector<W>, std::vector<int>> knapsack1(T c
     solver.EmptyValue = 0;
     solver.MinValue = -999999999;
 
-    solver.Constrains = kb_knapsack::w_point_dim1<T, W, 1>(constraint);
+    solver.Constraints = kb_knapsack::w_point_dim1<T, W, 1>(constraint);
 
     solver.DoSolveSuperInc = doSolveSuperInc;
     solver.DoUseLimits = doUseLimits;
+    solver.CanBackTraceWhenSizeReached = canBackTraceWhenSizeReached;
 
     auto rez = solver.Solve();
 
@@ -62,7 +64,8 @@ std::tuple<W, std::array<T, N>, std::vector<std::array<T, N>>, std::vector<W>, s
                                           std::vector<W>& values,
                                           std::vector<int>& indexes,
                                           bool doSolveSuperInc = true,
-                                          bool doUseLimits = true) {
+                                          bool doUseLimits = true,
+                                          bool canBackTraceWhenSizeReached = false) {
 
     auto dims = std::vector<kb_knapsack::w_point_dimN<T, W, N>>();
 
@@ -83,10 +86,11 @@ std::tuple<W, std::array<T, N>, std::vector<std::array<T, N>>, std::vector<W>, s
     solver.EmptyValue = 0;
     solver.MinValue = -999999999;
 
-    solver.Constrains = kb_knapsack::w_point_dimN<T, W, N>(constraint);
+    solver.Constraints = kb_knapsack::w_point_dimN<T, W, N>(constraint);
 
     solver.DoSolveSuperInc = doSolveSuperInc;
     solver.DoUseLimits = doUseLimits;
+    solver.CanBackTraceWhenSizeReached = canBackTraceWhenSizeReached;
 
     auto rez = solver.Solve();
 
@@ -167,7 +171,7 @@ void testSilvano(std::vector<int> W, std::vector<int> V, std::vector<int> R, int
     std::vector<int> indexes(W.size(), 0);
     std::iota(indexes.begin(), indexes.end(), 0);
 
-    kb_knapsack::sortReverse(ws, vs, indexes);
+    kb_knapsack::tools::sortReverse(ws, vs, indexes);
 
     int expectedSV = 0;
     int expectedSW = 0;
@@ -218,6 +222,128 @@ std::string printArr(std::array<T, N> &arr){
     s += " }";
 
     return s;
+}
+
+void test_3_search_index() {
+
+    if (verbose) {
+        print("test building and using max profit point index");
+    }
+
+    std::vector<std::array<int, 2>> mixDimData =
+            {
+                    make_arr(2000, 100),
+                    make_arr(1976, 100),
+                    make_arr(1702, 100),
+                    make_arr(1702, 100),
+                    make_arr(1638, 100),
+                    make_arr(1633, 100),
+                    make_arr(1633, 100),
+                    make_arr(1144, 100),
+                    make_arr(1143, 100),
+                    make_arr(1086, 100),
+                    make_arr(976, 100),
+                    make_arr(822, 100),
+                    make_arr(821, 100),
+                    make_arr(718, 100),
+                    make_arr(702, 100),
+                    make_arr(701, 100),
+                    make_arr(701, 100),
+                    make_arr(640, 100),
+                    make_arr(634, 100),
+                    make_arr(291, 100),
+                    make_arr(291, 100),
+                    make_arr(124, 100),
+                    make_arr(100, 100),
+            };
+
+    std::vector<int> values(mixDimData.size());
+
+    for (int i = 0; i < mixDimData.size(); ++i) {
+        values[i] = std::get<1>(mixDimData[i]);
+    }
+
+    std::vector<int> dimensions(mixDimData.size());
+
+    for (int i = 0; i < mixDimData.size(); ++i) {
+        dimensions[i] = std::get<0>(mixDimData[i]);
+    }
+
+    std::vector<int> indexes(mixDimData.size(), 0);
+    std::iota(indexes.begin(), indexes.end(), 0);
+
+    auto sumOfAll = std::accumulate(mixDimData.begin(), mixDimData.end(), 0, fieldFunctor<int, 2, 0>());
+
+    auto lambda = [](auto a, auto b) {
+        return a[0] < b[0];
+    };
+
+    auto m = std::min_element(mixDimData.begin(), mixDimData.end(), lambda);
+
+    int minItem = m[0][0] - 1;
+
+    std::vector<int> indexConstraints = {sumOfAll, sumOfAll / 2};
+
+    for (auto indexConstr : indexConstraints) {
+
+        for (auto s = 1; s < 3; ++s) {
+
+            auto testDescValues = std::vector<int>(values);
+
+            auto sameProfit = s % 2 == 0;
+
+            if (not sameProfit) {
+                testDescValues[0] -= 1;
+            }
+
+            for (auto j = 1; j < 3; ++j) {
+
+                auto forceUsePareto = j % 2 == 0;
+
+                auto dims = std::vector<kb_knapsack::w_point_dim1<int, int, 1>>();
+
+                for (auto i = 0; i < dimensions.size(); ++i) {
+                    dims.emplace_back(kb_knapsack::w_point_dim1<int, int, 1>(dimensions[i]));
+                }
+
+                kb_knapsack::knapsack_solver<int, int, 1, kb_knapsack::w_point_dim1> binSearchSolver(
+                        dims, values,indexes);
+
+                binSearchSolver.PrepareSearchIndex = true;
+
+                binSearchSolver.Constraints = kb_knapsack::w_point_dim1<int, int, 1>(indexConstr - 1);
+
+                binSearchSolver.ForceUsePareto = forceUsePareto;
+
+                binSearchSolver.EmptyDimension = kb_knapsack::w_point_dim1<int, int, 1>(0);
+                binSearchSolver.EmptyValue = 0;
+                binSearchSolver.MinValue = -999999999;
+
+                binSearchSolver.Solve();
+
+                for (auto constraint = minItem; constraint < indexConstr; constraint = constraint + minItem - 1) {
+
+                    auto constraintPoint = kb_knapsack::w_point_dim1<int, int, 1>(constraint);
+
+                    auto fullResult = knapsack1(constraint, dimensions, values, indexes);
+
+                    auto testResult = binSearchSolver.Solve(constraintPoint);
+
+                    auto opt = std::get<0>(fullResult);
+                    auto testOpt = std::get<0>(testResult);
+
+                    auto testOptSize = std::get<1>(testResult);
+
+                    auto good = opt == testOpt and testOptSize <= constraint;
+
+                    boost::ut::expect(good) << "test_3_search_index: indexConstr=" << indexConstr << "; constraint="
+                                            << constraint << "; forceUsePareto="
+                                            << forceUsePareto << "; sameProfit=" << sameProfit
+                                            << "; expected - optimized: " << opt - testOpt;
+                }
+            }
+        }
+    }
 }
 
 void test_8_T_partition_grouping_operator() {
@@ -437,7 +563,7 @@ void test_8_equal_subset_sum_files(std::filesystem::path testDir) {
                 std::vector<int> indexes(testCase.size(), 0);
                 std::iota(indexes.begin(), indexes.end(), 0);
 
-                auto testResult = knapsack1(testKnapsack, testCase, testCase, indexes);
+                auto testResult = knapsack1(testKnapsack, testCase, testCase, indexes, true, true, true);
 
                 auto optVal = std::get<0>(testResult);
                 auto optItems = std::get<2>(testResult);
@@ -542,7 +668,7 @@ void test_8_knapsack_1_0_files(std::filesystem::path testDir) {
                 std::vector<int> indexes(testCaseW.size(), 0);
                 std::iota(indexes.begin(), indexes.end(), 0);
 
-                kb_knapsack::sortReverse(testCaseW, testCaseV, indexes);
+                kb_knapsack::tools::sortReverse(testCaseW, testCaseV, indexes);
 
                 if (verbose) {
                     std::cout << f << " case " << caseNumber << std::endl;
@@ -615,10 +741,11 @@ int main() {
 
     auto testDir = script_dir.parent_path().parent_path().parent_path().parent_path() / testData_dir;
 
+    test_3_search_index();
+
     test_2_superincreasing();
     test_1_rational_numbers();
     test_6_Silvano_Paolo_1_0_knapsack();
-    test_8_T_partition_grouping_operator();
 
     const auto start = std::chrono::high_resolution_clock::now();
 
@@ -628,4 +755,6 @@ int main() {
     const auto stop = std::chrono::high_resolution_clock::now();
     const auto s = std::chrono::duration_cast<std::chrono::seconds>(stop - start);
     std::cout << "File tests were finished using " << s.count() << " seconds." << std::endl;
+
+    test_8_T_partition_grouping_operator();
 }
