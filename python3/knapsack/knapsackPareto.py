@@ -465,7 +465,7 @@ class knapsackParetoSolver:
 
     def getLimits(self, constraints, i, items, partialSums, superIncreasingItems, canUsePartialSums):
 
-        if not self.doUseLimits or not canUsePartialSums:
+        if not self.doUseLimits or not canUsePartialSums or self.prepareSearchIndex:
             return None, None, None, 0
 
         skipCount = 2 ** (len(items) - (i + 1)) if self.printInfo else 0
@@ -554,13 +554,11 @@ class knapsackParetoSolver:
 
             oldPoint = circularPointQueue.popleft()
 
-            canSkipOldPoints = canUseLimits and not self.prepareSearchIndex
-
-            self.iterateLessThanOldPoint(oldPoint, circularPointQueue, canSkipOldPoints, greaterQu, oldPointLimit, skipCount, distinctPoints2)
+            self.iterateLessThanOldPoint(oldPoint, circularPointQueue, canUseLimits, greaterQu, oldPointLimit, skipCount, distinctPoints2)
 
             newPoint = oldPoint + itemPoint
 
-            if skipLimitCheck and (newPointLimit and  newPoint < newPointLimit):
+            if not skipLimitCheck and (newPointLimit and  newPoint < newPointLimit):
                 self.skippedPointsByLimits += skipCount
                 continue
 
@@ -754,7 +752,7 @@ class knapsackParetoSolver:
         Solves current instance using given search or the init constraint value.
 
         If the prepareSearchIndex property is set then it will build the index for fast seek the max profit point
-        that less than constraint used to build the index.
+        that less than constraint used to build the index. Limits checking feature would be turned off in this case.
         It will use O(N) to prepare the index, where N is number of points generated during solving the problem.
 
         :param searchConstraint: searchConstraint

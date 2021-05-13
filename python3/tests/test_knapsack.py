@@ -1490,39 +1490,31 @@ class KnapsackTests(unittest.TestCase):
                 if not sameProfit:
                     testDescValues[0] -= 1
 
-                for i in range(1, 3):
+                for j in range(1, 3):
 
-                    for j in range(1, 3):
+                    forceUsePareto = j % 2 == 0
 
-                        for x in range(1, 3):
+                    binSearchSolver = knapsackParetoSolver(descPoints, testDescValues, range(len(testDescValues)), wPoint1(indexConstr - 1), paretoPoint1(0, 0), wPoint1(0), iterCounter)
 
-                            forceUsePareto = j % 2 == 0
-                            useLimits = i % 2 == 0
-                            keepCircularPointQueueSorted = x % 2 == 0
+                    binSearchSolver.prepareSearchIndex = True
 
-                            binSearchSolver = knapsackParetoSolver(descPoints, testDescValues, range(len(testDescValues)), wPoint1(indexConstr - 1), paretoPoint1(0, 0), wPoint1(0), iterCounter)
+                    binSearchSolver.forceUsePareto = forceUsePareto
 
-                            binSearchSolver.prepareSearchIndex = True
+                    binSearchSolver.solve()
 
-                            binSearchSolver.doUseLimits = useLimits
-                            binSearchSolver.forceUsePareto = forceUsePareto
-                            binSearchSolver.keepCircularPointQueueSorted = keepCircularPointQueueSorted
+                    for constraint in range(minItem, indexConstr, minItem - 1):
 
-                            binSearchSolver.solve()
+                        constraintPoint = wPoint1(constraint)
 
-                            for constraint in range(minItem, indexConstr, minItem - 1):
+                        fullSolver = knapsackParetoSolver(descPoints, testDescValues, range(len(testDescValues)), constraintPoint, paretoPoint1(0, 0), wPoint1(0), iterCounter)
 
-                                constraintPoint = wPoint1(constraint)
+                        opt, optSize, optItems, optValues, optIndex = fullSolver.solve()
 
-                                fullSolver = knapsackParetoSolver(descPoints, testDescValues, range(len(testDescValues)), constraintPoint, paretoPoint1(0, 0), wPoint1(0), iterCounter)
+                        testOpt, testOptSize, testOptItems, testOptValues, testOptIndex = binSearchSolver.solve(constraintPoint)
 
-                                opt, optSize, optItems, optValues, optIndex = fullSolver.solve()
+                        good = opt == testOpt and testOptSize <= constraintPoint
 
-                                testOpt, testOptSize, testOptItems, testOptValues, testOptIndex = binSearchSolver.solve(constraintPoint)
+                        if verbose:
+                            print(f"test_3_search_index: indexConstr={indexConstr}; constraint={constraint}; forceUsePareto={forceUsePareto}; sameProfit={sameProfit}; expected - optimized: {opt - testOpt}")
 
-                                good = opt == testOpt and testOptSize <= constraintPoint
-
-                                if verbose:
-                                    print(f"test_3_search_index: indexConstr={indexConstr}; constraint={constraint}; useLimits={useLimits}; forceUsePareto={forceUsePareto}; sameProfit={sameProfit}; keepCircularPointQueueSorted={keepCircularPointQueueSorted}; expected - optimized: {opt - testOpt}")
-
-                                self.assertTrue(good)
+                        self.assertTrue(good)
