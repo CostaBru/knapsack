@@ -9,7 +9,6 @@
 #include "tools.h"
 #include "source_link.h"
 
-#include "knapsack_greedy_top_down_solver.h"
 #include "knapsack_limits_solver.h"
 #include "knapsack_pareto_solver.h"
 #include "knapsack_superincreasing_solver.h"

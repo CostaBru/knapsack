@@ -1,6 +1,6 @@
 #include "ut.h"
-#include <knapsack_solver.h>
-#include "Paths.h"
+#include <API.h>
+#include "paths.h"
 #include <string>
 #include <fstream>
 #include <filesystem>
@@ -13,49 +13,6 @@ void print(std::string str){
     std::cout << str << std::endl;
 }
 
-template<typename T, typename W>
-std::tuple<W, T, std::vector<T>, std::vector<W>, std::vector<int>> knapsack1(T constraint,
-                                                                             std::vector<T>& dimensions,
-                                                                             std::vector<W>& values,
-                                                                             std::vector<int>& indexes,
-                                                                             bool doSolveSuperInc = true,
-                                                                             bool doUseLimits = true,
-                                                                             bool canBackTraceWhenSizeReached = false) {
-
-    auto dims = std::vector<kb_knapsack::w_point_dim1<T, W, 1>>();
-
-    for(auto i = 0; i < dimensions.size(); ++i){
-        dims.emplace_back(kb_knapsack::w_point_dim1<T, W, 1>(dimensions[i]));
-    }
-
-    kb_knapsack::knapsack_solver<T, W, 1, kb_knapsack::w_point_dim1> solver(dims, values, indexes);
-
-    solver.EmptyDimension = kb_knapsack::w_point_dim1<T, W, 1>(0);
-    solver.EmptyValue = 0;
-    solver.MinValue = -999999999;
-
-    solver.Constraints = kb_knapsack::w_point_dim1<T, W, 1>(constraint);
-
-    solver.DoSolveSuperInc = doSolveSuperInc;
-    solver.DoUseLimits = doUseLimits;
-    solver.CanBackTraceWhenSizeReached = canBackTraceWhenSizeReached;
-
-    auto rez = solver.Solve();
-
-    auto optValue =   std::get<0>(rez);
-    auto optSize =    std::get<1>(rez);
-    auto optDim =     std::get<2>(rez);
-    auto optValue2 =  std::get<3>(rez);
-    auto optIndexes = std::get<4>(rez);
-
-    std::vector<T> optDimRez(optDim.size());
-
-    for(auto i = 0; i < optDim.size(); ++i){
-        optDimRez[i] = optDim[i].value;
-    }
-
-    return std::make_tuple(optValue, optSize.value, optDimRez, optValue2, optIndexes);
-}
 
 template<typename T, typename W, int N>
 std::tuple<W, std::array<T, N>, std::vector<std::array<T, N>>, std::vector<W>, std::vector<int>>
@@ -156,7 +113,7 @@ void test_1_rational_numbers() {
     std::vector<int> indexes(A.size(), 0);
     std::iota(indexes.begin(), indexes.end(), 0);
 
-    auto result = knapsack1(s, A, A, indexes);
+    auto result = kb_knapsack::knapsack1(s, A, A, indexes);
 
     auto opt1 = std::get<0>(result);
     auto optSize = std::get<1>(result);
@@ -185,7 +142,7 @@ void testSilvano(std::vector<int> W, std::vector<int> V, std::vector<int> R, int
         ind += 1;
     }
 
-    auto result = knapsack1(c, ws, vs, indexes);
+    auto result = kb_knapsack::knapsack1(c, ws, vs, indexes);
 
     auto opt1 = std::get<0>(result);
 
@@ -325,7 +282,7 @@ void test_3_search_index() {
 
                     auto constraintPoint = kb_knapsack::w_point_dim1<int, int, 1>(constraint);
 
-                    auto fullResult = knapsack1(constraint, dimensions, values, indexes);
+                    auto fullResult = kb_knapsack::knapsack1(constraint, dimensions, values, indexes);
 
                     auto testResult = binSearchSolver.Solve(constraintPoint);
 
@@ -474,12 +431,12 @@ void test_2_superincreasing() {
 
         for(int s = 0; s < sumA; s++) {
 
-            auto expectedResult = knapsack1(s, test, test, indexes, false);
+            auto expectedResult = kb_knapsack::knapsack1(s, test, test, indexes, false);
 
             auto opt1 = std::get<0>(expectedResult);
             auto expected = std::get<2>(expectedResult);
 
-            auto testResult = knapsack1(s, test, test, indexes);
+            auto testResult = kb_knapsack::knapsack1(s, test, test, indexes);
 
             auto optTest = std::get<0>(expectedResult);
             auto optValues = std::get<2>(expectedResult);
@@ -563,7 +520,7 @@ void test_8_equal_subset_sum_files(std::filesystem::path testDir) {
                 std::vector<int> indexes(testCase.size(), 0);
                 std::iota(indexes.begin(), indexes.end(), 0);
 
-                auto testResult = knapsack1(testKnapsack, testCase, testCase, indexes, true, true, true);
+                auto testResult = kb_knapsack::knapsack1(testKnapsack, testCase, testCase, indexes, true, true, true);
 
                 auto optVal = std::get<0>(testResult);
                 auto optItems = std::get<2>(testResult);
@@ -674,7 +631,7 @@ void test_8_knapsack_1_0_files(std::filesystem::path testDir) {
                     std::cout << f << " case " << caseNumber << std::endl;
                 }
 
-                auto testResult = knapsack1(testKnapsack, testCaseW, testCaseV, indexes);
+                auto testResult = kb_knapsack::knapsack1(testKnapsack, testCaseW, testCaseV, indexes);
 
                 auto optVal = std::get<0>(testResult);
                 auto optSize = std::get<1>(testResult);

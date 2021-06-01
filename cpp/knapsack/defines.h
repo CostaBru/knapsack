@@ -1,7 +1,3 @@
-//
-// Created by kooltew on 5/11/2021.
-//
-
 #ifndef KB_KNAPSACK_PARTITION_SOLUTION_DEFINES_H
 #define KB_KNAPSACK_PARTITION_SOLUTION_DEFINES_H
 
