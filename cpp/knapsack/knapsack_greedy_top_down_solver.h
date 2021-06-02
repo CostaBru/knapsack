@@ -13,6 +13,7 @@ namespace kb_knapsack {
     class knapsack_greedy_top_down_solver {
 
     public:
+
         knapsack_greedy_top_down_solver(std::vector<TD> & Dimensions, std::vector<W> & Values,  std::vector<int> & Ids) :
                 Dimensions(Dimensions),
                 Values(Values),
@@ -47,11 +48,13 @@ namespace kb_knapsack {
             }
 
             int size = N;
-            auto maxN = MinValue;
-            auto maxDimN = EmptyDimension;
+
+            W maxN = MinValue;
+            TD maxDimN = EmptyDimension;
 
             std::vector<TD> maxNItems;
             std::vector<W> maxNValues;
+            std::vector<int> maxNIds;
 
             std::vector<std::vector<int>> dimDescSortedIndex(size);
 
@@ -66,11 +69,10 @@ namespace kb_knapsack {
 
             for(int i = 0; i < size; ++i) {
 
-                auto dimensionIndex = dimensionIndexes[i];
+                int dimensionIndex = dimensionIndexes[i];
+                int dimOrderIndex = dimensionIndexes[dimensionIndex];
 
-                auto dimOrderIndex = dimensionIndexes[dimensionIndex];
-
-                std::vector<TD> descDim(Dimensions.size());
+                std::vector<T> descDim(Dimensions.size());
                 std::vector<W> descValues(Values);
                 std::vector<int> descIndex(Dimensions.size(), 0);
 
@@ -89,11 +91,11 @@ namespace kb_knapsack {
                 dimStairDownCursors[dimensionIndex] = Constraints.getDimension(dimOrderIndex);
                 dimStairDownCursorStartings[dimensionIndex] = Constraints.getDimension(dimOrderIndex);
 
-                auto dims = std::vector<kb_knapsack::w_point_dim1<T, W, 1>>();
+                auto dims = std::vector<kb_knapsack::w_point_dim1<T, W, 1>>(descDim.size());
 
                 for(auto i = 0; i < descDim.size(); ++i){
 
-                    dims.emplace_back(kb_knapsack::w_point_dim1<T, W, 1>(descDim[i]));
+                    dims[i] = kb_knapsack::w_point_dim1<T, W, 1>(descDim[i]);
                 }
 
                 KNAPSACK solver = KNAPSACK(dims, descValues, descIndex);
@@ -107,7 +109,7 @@ namespace kb_knapsack {
                 solver.ForceUsePareto = true;
                 solver.PrepareSearchIndex = true;
 
-                solvers[dimensionIndex] = solver;
+                solvers.push_back(solver);
             }
 
             auto optimizeIterIndex = 0;
@@ -134,9 +136,7 @@ namespace kb_knapsack {
 
                 std::vector<TD> descNewDims;
                 std::vector<W> descNewVals;
-                std::vector<int> descNewIndex(optimizedIndexes.size(), 0);
-
-                std::iota(descNewIndex.begin(), descNewIndex.end(), 0);
+                std::vector<int> descNewIndex;
 
                 W sumOfNewValues = EmptyValue;
 
@@ -144,6 +144,7 @@ namespace kb_knapsack {
 
                     descNewDims.emplace_back(Dimensions[itemIndex]);
                     descNewVals.emplace_back(Values[itemIndex]);
+                    descNewIndex.emplace_back(itemIndex);
 
                     sumOfNewValues += Values[itemIndex];
                 }
@@ -160,8 +161,9 @@ namespace kb_knapsack {
 
                         maxN = optN;
                         maxDimN = std::get<1>(fullResult);
-                        maxNValues.swap(std::get<2>(fullResult));
-                        maxNItems.swap(std::get<3>(fullResult));
+                        maxNItems = std::get<2>(fullResult);
+                        maxNValues = std::get<3>(fullResult);
+                        maxNIds =std::get<4>(fullResult);
                     }
                 }
                 else {
@@ -191,28 +193,18 @@ namespace kb_knapsack {
 
             SolvedByConstraint = Constraints;
 
-            return std::make_tuple(maxN, maxDimN, maxNItems, maxNValues);
+            return std::make_tuple(maxN, maxDimN, maxNItems, maxNValues, maxNIds);
         }
 
     private:
 
-        std::tuple<W, std::array<T, N>, std::vector<std::array<T, N>>, std::vector<W>, std::vector<int>>
-        solveKnapsackNd(std::array<T, N>& constraint,
-                  std::vector<std::array<T, N>>& dimensions,
-                  std::vector<W>& values,
-                  std::vector<int>& indexes,
-                  bool doSolveSuperInc = true,
-                  bool doUseLimits = true,
-                  bool canBackTraceWhenSizeReached = false) {
+        std::tuple<W, TD, std::vector<TD>, std::vector<W>, std::vector<int>>
+        solveKnapsackNd(TD         & constraint,
+                  std::vector<TD>  & dimensions,
+                  std::vector<W>   & values,
+                  std::vector<int> & indexes) {
 
-            auto dims = std::vector<kb_knapsack::w_point_dimN<T, W, N>>();
-
-            for(auto i = 0; i < dimensions.size(); ++i){
-
-                dims.emplace_back(kb_knapsack::w_point_dimN<T, W, N>(dimensions[i]));
-            }
-
-            kb_knapsack::knapsack_solver<T, W, N, kb_knapsack::w_point_dimN> solver(dims, values, indexes);
+            kb_knapsack::knapsack_solver<T, W, N, kb_knapsack::w_point_dimN> solver(dimensions, values, indexes);
 
             std::array<T, N> emptyDim;
 
@@ -226,25 +218,7 @@ namespace kb_knapsack {
 
             solver.Constraints = kb_knapsack::w_point_dimN<T, W, N>(constraint);
 
-            solver.DoSolveSuperInc = doSolveSuperInc;
-            solver.DoUseLimits = doUseLimits;
-            solver.CanBackTraceWhenSizeReached = canBackTraceWhenSizeReached;
-
-            auto rez = solver.Solve();
-
-            auto optValue =   std::get<0>(rez);
-            auto optSize =    std::get<1>(rez);
-            auto optDim =     std::get<2>(rez);
-            auto optValue2 =  std::get<3>(rez);
-            auto optIndexes = std::get<4>(rez);
-
-            std::vector<std::array<T, N>> optDimRez(optDim.size());
-
-            for(auto i = 0; i < optDim.size(); ++i){
-                optDimRez[i] = optDim[i].value;
-            }
-
-            return std::make_tuple(optValue, optSize.value, optDimRez, optValue2, optIndexes);
+            return solver.Solve();
         }
     };
 }

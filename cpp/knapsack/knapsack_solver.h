@@ -26,11 +26,6 @@ namespace kb_knapsack {
     class knapsack_solver {
 
     public:
-        knapsack_solver(std::vector<TD> & Dimensions, std::vector<W> & Values,  std::vector<int> & Ids) :
-            Dimensions(Dimensions),
-            Values(Values),
-            Ids(Ids) {
-        }
 
         TD Constraints;
 
@@ -61,6 +56,122 @@ namespace kb_knapsack {
 
         W_POINT_LIST MaxProfitPointIndex;
         SOURCE_LINK_LIST SourcePoints;
+
+    public:
+
+        knapsack_solver& operator=(const knapsack_solver &that)
+        {
+            if (this != &that)
+            {
+                Constraints = that.Constraints;
+
+                Dimensions = that.Dimensions;
+                Values = that.Values;
+                Ids = that.Ids;
+
+                EmptyDimension = that.EmptyDimension;
+                EmptyValue = that.EmptyValue;
+
+                MinValue = that.MinValue;
+
+                DoSolveSuperInc = that.DoSolveSuperInc;
+                DoUseLimits     = that.DoUseLimits;
+                UseRatioSort   = that.UseRatioSort;
+
+                ForceUsePareto = that.ForceUsePareto;
+                ForceUseLimits = that.ForceUseLimits;
+
+                CanBackTraceWhenSizeReached  = that.CanBackTraceWhenSizeReached;
+
+                PrepareSearchIndex = that.PrepareSearchIndex;
+
+                SolvedBySuperIncreasingSolverAsc = that.SolvedBySuperIncreasingSolverAsc;
+                SolvedBySuperIncreasingSolverDesc = that.SolvedBySuperIncreasingSolverDesc;
+                SolvedByCornerCaseCheck = that.SolvedByCornerCaseCheck;
+                SolvedByConstraint = that.SolvedByConstraint;
+
+                MaxProfitPointIndex = that.MaxProfitPointIndex;
+                SourcePoints = that.SourcePoints;
+            }
+            return *this;
+        }
+
+        knapsack_solver(knapsack_solver&& move) noexcept {
+
+            Constraints = move.Constraints;
+
+            Dimensions.swap(move.Dimensions);
+            Values.swap(move.Values);
+            Ids.swap(move.Ids);
+
+            EmptyDimension = move.EmptyDimension;
+            EmptyValue = move.EmptyValue;
+
+            MinValue = move.MinValue;
+
+            DoSolveSuperInc = move.DoSolveSuperInc;
+            DoUseLimits     = move.DoUseLimits;
+            UseRatioSort    = move.UseRatioSort;
+
+            ForceUsePareto = move.ForceUsePareto;
+            ForceUseLimits = move.ForceUseLimits;
+
+            CanBackTraceWhenSizeReached  = move.CanBackTraceWhenSizeReached;
+
+            PrepareSearchIndex = move.PrepareSearchIndex;
+
+            SolvedBySuperIncreasingSolverAsc = move.SolvedBySuperIncreasingSolverAsc;
+            SolvedBySuperIncreasingSolverDesc = move.SolvedBySuperIncreasingSolverDesc;
+            SolvedByCornerCaseCheck = move.SolvedByCornerCaseCheck;
+            SolvedByConstraint = move.SolvedByConstraint;
+
+            MaxProfitPointIndex.swap(move.MaxProfitPointIndex);
+            SourcePoints.swap(move.SourcePoints);
+        }
+
+        knapsack_solver(knapsack_solver const& copy) {
+
+            Constraints = copy.Constraints;
+
+            Dimensions = copy.Dimensions;
+            Values = copy.Values;
+            Ids = copy.Ids;
+
+            EmptyDimension = copy.EmptyDimension;
+            EmptyValue = copy.EmptyValue;
+
+            MinValue = copy.MinValue;
+
+            DoSolveSuperInc = copy.DoSolveSuperInc;
+            DoUseLimits     = copy.DoUseLimits;
+            UseRatioSort   = copy.UseRatioSort;
+
+            ForceUsePareto = copy.ForceUsePareto;
+            ForceUseLimits = copy.ForceUseLimits;
+
+            CanBackTraceWhenSizeReached  = copy.CanBackTraceWhenSizeReached;
+
+            PrepareSearchIndex = copy.PrepareSearchIndex;
+
+            SolvedBySuperIncreasingSolverAsc = copy.SolvedBySuperIncreasingSolverAsc;
+            SolvedBySuperIncreasingSolverDesc = copy.SolvedBySuperIncreasingSolverDesc;
+            SolvedByCornerCaseCheck = copy.SolvedByCornerCaseCheck;
+            SolvedByConstraint = copy.SolvedByConstraint;
+
+            MaxProfitPointIndex = copy.MaxProfitPointIndex;
+            SourcePoints = copy.SourcePoints;
+        }
+
+    public:
+
+        knapsack_solver(){
+        }
+
+        knapsack_solver(std::vector<TD> & Dimensions, std::vector<W> & Values,  std::vector<int> & Ids) :
+            Dimensions(Dimensions),
+            Values(Values),
+            Ids(Ids) {
+        }
 
         KNAPSACK_RESULT Solve(){
 
