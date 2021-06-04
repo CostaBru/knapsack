@@ -598,9 +598,10 @@ class knapsackNSolver:
         for dimensionIndex in range(size):
             dimOrderIndex = dimensionIndexes[dimensionIndex]
 
-            dim = [p.getDimension(dimOrderIndex) for p in points]
+            descDim = [p.getDimension(dimOrderIndex) for p in points]
+            descValues = values
+            descIndex = list(range(len(values)))
 
-            descDim, descValues, descIndex = sortReverse3Both(dim, values, list(range(len(values))))
             iterCounter[0] += (len(descDim) * math.log2(len(descDim)))
 
             dimDescSortedItems[dimensionIndex] = (descDim, descValues, descIndex)

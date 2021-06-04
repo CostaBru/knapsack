@@ -450,24 +450,24 @@ class KnapsackTests(unittest.TestCase):
     # NP hard: Integer multidimensional knapsack problem (MKP) T partition grouping operator tests
     def test_8_T_partition_grouping_operator(self):
 
-        mixDimData = [(821, 1, 821),
-                      (1144, 1, 1144),
-                      (634, 1, 634),
-                      (701, 1, 701),
-                      (291, 1, 291),
-                      (1702, 1, 1702),
-                      (1633, 1, 1633),
-                      (1086, 1, 1086),
-                      (124, 1, 124),
-                      (718, 1, 718),
-                      (976, 1, 976),
-                      (1438, 1, 1438),
+        mixDimData = [(1702, 1),
+                      (1633, 1),
+                      (1438, 1),
+                      (1144, 1),
+                      (1086, 1),
+                      (976, 1),
+                      (821, 1),
+                      (718, 1),
+                      (701, 1),
+                      (634, 1),
+                      (291, 1),
+                      (124, 1),
                       ]
 
         cnt = len(mixDimData)
 
         dimsMix2d = [wPoint((p[0], p[1])) for i, p in enumerate(mixDimData)]
-        mixValues2d = [p[2] for p in mixDimData]
+        mixValues2d = [p[0] for p in mixDimData]
 
         descDims2d, descValues2d = sortReverseBoth(dimsMix2d, mixValues2d)
 
@@ -485,10 +485,6 @@ class KnapsackTests(unittest.TestCase):
             for constaint1 in range(minItem, sumOfAll, minItem // 2):
 
                 for constaint2 in range(1, len(mixDimData)):
-
-                    #ascOrder = True
-                    #constaint1 = 6711
-                    #constaint2 = 6
 
                     testDescDims = list(descDims2d)
                     testDescValues = list(descValues2d)
@@ -1372,7 +1368,7 @@ class KnapsackTests(unittest.TestCase):
         wConstraint = 23681
         greedyOptimumValue = 121105212
         actualOptima = 121147356
-        dimensionMultiplier = 1000
+        dimensionMultiplier = 1
 
         lwData100 = [[436, 1490, 649640], [232, 1320, 306240], [236, 932, 219952], [822, 638, 524436],
                      [1004, 1092, 1096368], [266, 1220, 324520], [632, 892, 563744], [1110, 344, 381840],
