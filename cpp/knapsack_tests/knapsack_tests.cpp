@@ -295,6 +295,7 @@ void test_8_T_partition_grouping_operator() {
 
         auto ascOrder = i % 2 == 0;
 
+
         for(auto constraint1 = minItem; constraint1 < sumOfAll; constraint1 += int(minItem / 2)){
 
             for(auto constraint2  = 1; constraint2 < mixDimData.size(); ++constraint2){
@@ -324,8 +325,8 @@ void test_8_T_partition_grouping_operator() {
                 auto goodVal = optValueTest >= optValueExpected;
                 auto goodSize = allLessOrEqual<int, 2>(optSizeTest, constraint) && allLessOrEqual<int, 2>(optSizeExpected, constraint);
 
-                boost::ut::expect(goodVal) << "Not equal val. Expected: " << optValueExpected << ", but was: " << optValueTest << "; at case: ASC=" << ascOrder << " constraint1=" << constraint1 << " constraint2=" << constraint2;
-                boost::ut::expect(goodSize) << "Not equal size. Expected: " << printArr<int, 2>(optSizeExpected) << ", but was: " << printArr<int, 2>(optSizeTest) << "; at case: ASC=" << ascOrder << " constraint1=" << constraint1 << " constraint2=" << constraint2;
+                boost::ut::expect(goodVal) << "Not equal val. Expected: " << optValueExpected << ", but was: " << optValueTest << "; at case: ascOrder=" << ascOrder << "; constraint1=" << constraint1 << "; constraint2=" << constraint2 << ";";
+                boost::ut::expect(goodSize) << "Not equal size. Expected: " << printArr<int, 2>(optSizeExpected) << ", but was: " << printArr<int, 2>(optSizeTest) << "; at case: ascOrder=" << ascOrder << "; constraint1=" << constraint1 << "; constraint2=" << constraint2 <<";";
             }
         }
     }
@@ -472,10 +473,18 @@ void test_8_multidimensional_100() {
                                                                 indexes);
 
     auto greedyResult = std::get<0>(testResult);
+    auto greedySize =   std::get<1>(testResult);
 
     auto goodVal = greedyResult >= greedyOptimumValue;
 
     boost::ut::expect(goodVal) << "Not equal val. Expected: " << greedyOptimumValue << ", but was: " << greedyResult;
+
+    for (int i = 0; i < 2; ++i) {
+
+        boost::ut::expect(greedySize[i] <= constraint[i]) << "Result size at " << i << " dimension " << greedySize[i] << " greater than " << constraint[i];
+
+        boost::ut::expect( greedySize[i] > 0) << "Result size at " << i << " dimension " << greedySize[i] << " is not greater than 0";
+    }
 }
 
 void test_6_Silvano_Paolo_1_0_knapsack(){
@@ -803,8 +812,8 @@ int main() {
 
     const auto start = std::chrono::high_resolution_clock::now();
 
-    //test_8_knapsack_1_0_files(testDir);
-   // test_8_equal_subset_sum_files(testDir);
+    test_8_knapsack_1_0_files(testDir);
+    test_8_equal_subset_sum_files(testDir);
 
     const auto stop = std::chrono::high_resolution_clock::now();
     const auto s = std::chrono::duration_cast<std::chrono::seconds>(stop - start);

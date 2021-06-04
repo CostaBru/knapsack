@@ -67,12 +67,15 @@ namespace kb_knapsack {
             std::vector<int> dimensionIndexes(size, 0);
             std::iota(dimensionIndexes.begin(), dimensionIndexes.end(), 0);
 
+            std::sort(dimensionIndexes.begin(), dimensionIndexes.end(),
+                      [&](size_t i, size_t j) { return Constraints.getDimension(i) < Constraints.getDimension(j); });
+
             for(int i = 0; i < size; ++i) {
 
                 int dimensionIndex = dimensionIndexes[i];
                 int dimOrderIndex = dimensionIndexes[dimensionIndex];
 
-                std::vector<T> descDim(Dimensions.size());
+                std::vector<kb_knapsack::w_point_dim1<T, W, 1>> descDim;
                 std::vector<W> descValues(Values);
                 std::vector<int> descIndex(Dimensions.size(), 0);
 
@@ -80,25 +83,16 @@ namespace kb_knapsack {
 
                 for (int j = 0; j < Dimensions.size(); ++j) {
 
-                    descDim[j] = Dimensions[j].getDimension(dimOrderIndex);
+                    descDim.emplace_back(kb_knapsack::w_point_dim1<T, W, 1>(Dimensions[j].getDimension(dimOrderIndex)));
                 }
-
-                tools::sortReverse(descDim, descValues, descIndex);
 
                 dimDescSortedIndex[dimensionIndex] = descIndex;
 
-                dimStairSteps[dimensionIndex] = descDim[descDim.size() - 1];
+                dimStairSteps[dimensionIndex] = Dimensions[Dimensions.size() - 1].getDimension(dimOrderIndex);
                 dimStairDownCursors[dimensionIndex] = Constraints.getDimension(dimOrderIndex);
                 dimStairDownCursorStartings[dimensionIndex] = Constraints.getDimension(dimOrderIndex);
 
-                auto dims = std::vector<kb_knapsack::w_point_dim1<T, W, 1>>(descDim.size());
-
-                for(auto i = 0; i < descDim.size(); ++i){
-
-                    dims[i] = kb_knapsack::w_point_dim1<T, W, 1>(descDim[i]);
-                }
-
-                KNAPSACK solver = KNAPSACK(dims, descValues, descIndex);
+                KNAPSACK solver = KNAPSACK(descDim, descValues, descIndex);
 
                 solver.EmptyDimension = kb_knapsack::w_point_dim1<T, W, 1>(0);
                 solver.EmptyValue = EmptyValue;
@@ -215,6 +209,7 @@ namespace kb_knapsack {
             solver.EmptyDimension = kb_knapsack::w_point_dimN<T, W, N>(emptyDim);
             solver.EmptyValue = EmptyValue;
             solver.MinValue = MinValue;
+            solver.ForceUseLimits = true;
 
             solver.Constraints = kb_knapsack::w_point_dimN<T, W, N>(constraint);
 

@@ -44,10 +44,10 @@ namespace kb_knapsack {
         }
 
         KNAPSACK_RESULT Solve(
-                TD& constraint,
-                std::vector<TD>& items,
-                std::vector<W>& values,
-                std::vector<int>& itemsIndex) {
+                TD               & constraint,
+                std::vector<TD>  & items,
+                std::vector<W>   & values,
+                std::vector<int> & itemsIndex) {
 
             std::vector<TD>  sortedItems(items);
             std::vector<W>   sortedValues(values);

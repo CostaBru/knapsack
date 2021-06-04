@@ -257,19 +257,14 @@ namespace kb_knapsack {
             itemPoint.id = SourcePoints.size();
             SourcePoints.emplace_back(source_link(itemId, -1));
 
-            auto useItemItself = skipLimitCheck || itemLimit >= halfConstraint;
+            if  (distinctPoints1.contains(itemPoint) == false) {
 
-            if (useItemItself) {
+                iterateOrPushBack(itemPoint, greaterQu, distinctPoints2);
+            }
 
-                if  (distinctPoints1.contains(itemPoint) == false) {
+            if (maxProfitPoint.profit <= itemPoint.profit) {
 
-                    iterateOrPushBack(itemPoint, greaterQu, distinctPoints2);
-                }
-
-                if (maxProfitPoint.profit <= itemPoint.profit) {
-
-                    maxProfitPoint = itemPoint;
-                }
+                maxProfitPoint = itemPoint;
             }
 
             for (auto pi = 0; pi < prevCyclePointCount; ++pi) {

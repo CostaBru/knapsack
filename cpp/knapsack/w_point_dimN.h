@@ -30,22 +30,25 @@ namespace kb_knapsack {
 
         w_point_dimN& operator=(const w_point_dimN &that)
         {
-            if (this != &that)
-            {
+            if (this != &that) {
+
                 value = that.value;
             }
             return *this;
         }
 
         bool firstDimensionEqual(W &val){
+
             return value[0] == val;
         }
 
         T getDimension(int index) const {
+
             return value[index];
         }
 
         std::array<T, N> getDimensions() {
+
             return value;
         }
 
@@ -54,6 +57,7 @@ namespace kb_knapsack {
             std::array<T, N> result;
 
             for(int i = 0; i < N; ++i){
+
                 result[i] = std::min(p.value[i], value[i]);
             }
 
@@ -65,6 +69,7 @@ namespace kb_knapsack {
             std::array<T, N> result;
 
             for(int i = 0; i < N; ++i){
+
                 result[i] = value[i] / 2;
             }
 
@@ -76,6 +81,7 @@ namespace kb_knapsack {
             std::array<T, N> result;
 
             for(int i = 0; i < N; ++i){
+
                 result[i] = c / value[i];
             }
 
@@ -88,6 +94,8 @@ namespace kb_knapsack {
 
             for(int i = 0; i < N; ++i) {
 
+                if (c1.value[i] == c2.value[i]) continue;
+
                 if (c2.value[i] < c1.value[i]) {
                     allGreater = true;
                 } else {
@@ -99,18 +107,22 @@ namespace kb_knapsack {
         }
 
         friend bool operator>=(const w_point_dimN &c1, const w_point_dimN &c2) {
+
             for(int i = 0; i < N; ++i) {
 
-                if (c1.value[i] < c2.value[i])  return false;
+                if (c1.value[i] < c2.value[i])
+                    return false;
             }
 
             return true;
         }
 
         friend bool operator<=(const w_point_dimN &c1, const w_point_dimN &c2) {
-            for(int i = 0; i < N; ++i) {
-                if (c1.value[i] > c2.value[i])
-                {
+
+            for (int i = 0; i < N; ++i) {
+
+                if (c1.value[i] > c2.value[i]) {
+
                     return false;
                 }
             }
@@ -120,15 +132,17 @@ namespace kb_knapsack {
         friend bool operator<(const w_point_dimN &c1, const w_point_dimN &c2) {
 
             bool allLess = false;
+
             for(int i = 0; i < N; ++i) {
 
                 if (c1.value[i] == c2.value[i]) continue;
 
-                if (c1.value[i] < c2.value[i])
-                {
+                if (c1.value[i] < c2.value[i]) {
+
                     allLess = true;
                 }
                 else {
+
                     return false;
                 }
             }
@@ -137,6 +151,7 @@ namespace kb_knapsack {
         }
 
         friend bool operator==(const w_point_dimN &c1, const w_point_dimN &c2) {
+
             for(int i = 0; i < N; ++i) {
 
                 if (c1.value[i] != c2.value[i])
@@ -147,6 +162,7 @@ namespace kb_knapsack {
         }
 
         friend bool operator!=(const w_point_dimN &c1, const w_point_dimN &c2) {
+
             for(int i = 0; i < N; ++i) {
 
                 if (c1.value[i] == c2.value[i])
@@ -157,9 +173,11 @@ namespace kb_knapsack {
         }
 
         friend w_point_dimN operator+(const w_point_dimN &c1, const w_point_dimN &c2) {
+
             std::array<T, N> result;
 
             for(int i = 0; i < N; ++i){
+
                 result[i] = c1.value[i] + c2.value[i];
             }
 
@@ -167,9 +185,11 @@ namespace kb_knapsack {
         }
 
         friend w_point_dimN operator-(const w_point_dimN &c1, const w_point_dimN &c2) {
+
             std::array<T, N> result;
 
             for(int i = 0; i < N; ++i){
+
                 result[i] = c1.value[i] - c2.value[i];
             }
 
@@ -181,7 +201,8 @@ namespace kb_knapsack {
             std::array<T, N> result;
 
             for(int i = 0; i < N; ++i){
-                result[i] += c2.value[i];
+
+                result[i] = c1.value[i] + c2.value[i];
             }
 
             c1 = w_point_dimN(result);

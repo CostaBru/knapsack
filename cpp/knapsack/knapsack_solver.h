@@ -254,8 +254,7 @@ namespace kb_knapsack {
                     SolvedByCornerCaseCheck = true;
                     SolvedByConstraint = Constraints;
 
-                    auto cornerCaseResult = std::get<1>(cornerCasesCheck);
-                    return cornerCaseResult;
+                    return std::get<1>(cornerCasesCheck);
                 }
 
                 if (DoSolveSuperInc && isSuperIncreasing) {
@@ -297,7 +296,7 @@ namespace kb_knapsack {
                                                          allAsc,
                                                          partialSums,
                                                          superIncreasingItems,
-                                                         canUsePartialSums);
+                                                         canUsePartialSums && DoUseLimits);
 
                     if (PrepareSearchIndex){
 
@@ -468,10 +467,10 @@ namespace kb_knapsack {
         /* 8 canUsePartialSums */  bool
         >
                 preProcess(
-                        TD & constraints,
+                        TD constraints,
                         std::vector<TD> & items,
                         std::vector<W> & values,
-                        bool &forceUseLimits,
+                        bool forceUseLimits,
                         std::vector<TD> & lessSizeItems,
                         std::vector<W> & lessSizeValues,
                         std::vector<int> & lessSizeItemsIndex,
@@ -698,12 +697,28 @@ namespace kb_knapsack {
 
             if  (lessCountSum <= constraints) {
 
-                return std::make_tuple(true, std::make_tuple(lessCountValuesSum, lessCountSum, lessSizeItems, lessSizeValues, lessSizeItemsIndex));
+                auto lessCountSumCopy = lessCountSum;
+
+                W sum = EmptyValue;
+
+                for (int i = 0; i < lessSizeValues.size(); ++i) {
+                    sum += lessSizeValues[i];
+                }
+
+                return std::make_tuple(true, std::make_tuple(sum, lessCountSumCopy, lessSizeItems, lessSizeValues,  lessSizeItemsIndex));
             }
 
             if  (itemSum <= constraints) {
 
-                return std::make_tuple(true, std::make_tuple(lessCountValuesSum, itemSum, lessSizeItems, lessSizeValues, lessSizeItemsIndex));
+                auto itemSumCopy = itemSum;
+
+                W sum = EmptyValue;
+
+                for (int i = 0; i < lessSizeValues.size(); ++i) {
+                    sum += lessSizeValues[i];
+                }
+
+                return std::make_tuple(true, std::make_tuple(sum, itemSumCopy, lessSizeItems, lessSizeValues, lessSizeItemsIndex));
             }
 
             return std::make_tuple(false, std::make_tuple(zero, EmptyDimension, emptyItems, emptyValues, emptyIndexes));

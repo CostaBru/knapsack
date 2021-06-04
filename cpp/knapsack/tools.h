@@ -90,35 +90,34 @@ namespace kb_knapsack {
 
         template<typename T, typename W, int N, template<typename DIM_TYPE, typename VALUE_TYPE, int DIM_LEN> class DIM>
         KNAPSACK_RESULT backTraceItems(
-                W &EmptyValue,
-                TD &EmptyDimension,
-                W_POINT &maxProfitPoint,
-                SOURCE_LINK_LIST &sourcePoints,
-                std::vector<TD > &Dimensions,
-                std::vector<W> &Values,
-                std::vector<int> &Ids) {
+                W                & emptyValue,
+                TD               & emptyDimension,
+                W_POINT          & maxProfitPoint,
+                SOURCE_LINK_LIST & sourcePoints,
+                std::vector<TD > & dimensions,
+                std::vector<W>   & values,
+                std::vector<int> & ids) {
 
-            W zeroProfit = EmptyValue;
+            W zeroProfit = emptyValue;
             std::vector<TD > optItems;
             std::vector<W> optValues;
             std::vector<int> optIndexes;
 
-            auto optSize = EmptyDimension;
+            auto optSize = emptyDimension;
 
             if (maxProfitPoint.profit > 0) {
 
-                W maxProfit = EmptyValue;
+                W maxProfit = maxProfitPoint.profit;
 
                 source_link pointLink = sourcePoints[maxProfitPoint.id];
 
                 while (true) {
 
-                    optItems.emplace_back(Dimensions[pointLink.itemId]);
-                    optValues.emplace_back(Values[pointLink.itemId]);
-                    optIndexes.emplace_back(Ids[pointLink.itemId]);
+                    optItems  .emplace_back(dimensions[pointLink.itemId]);
+                    optValues .emplace_back(values[pointLink.itemId]);
+                    optIndexes.emplace_back(ids[pointLink.itemId]);
 
-                    optSize += Dimensions[pointLink.itemId];
-                    maxProfit += Values[pointLink.itemId];
+                    optSize +=   dimensions[pointLink.itemId];
 
                     if (!pointLink.hasParent()) {
                         break;
@@ -130,7 +129,7 @@ namespace kb_knapsack {
                 return std::make_tuple(maxProfit, optSize, optItems, optValues, optIndexes);
             }
 
-            return std::make_tuple(zeroProfit, EmptyDimension, optItems, optValues, optIndexes);
+            return std::make_tuple(zeroProfit, emptyDimension, optItems, optValues, optIndexes);
         }
     }
 }
