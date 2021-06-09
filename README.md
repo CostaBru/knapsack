@@ -26,7 +26,7 @@ This work contains the source code of algorithms, performance analysis and repor
 
 - Test cases and iteration reports.
 
-# Implementations and usage
+# Python implementation and usage 
 
 The ``API/main.py`` file has API for described algorithms. 
 
@@ -94,6 +94,50 @@ There are 8 python methods to use:
 	</details>
 	
 	Please see more test cases for examples of usage.
+
+# C++ port
+
+There are super-increasing, kb limit, pareto, and N dimension greedy knapsack solvers ported. Lib was built using CLion, mingw64(9.0) and g++ (Rev9, Built by MSYS2 project) 10.2.0.
+
+It performs up to 10x faster than python implementation.
+
+<details>
+		<summary> Subset sum example </summary>
+
+  ```cpp
+
+    std::vector<double> A = { 0.2,
+                              1.200001,
+                              2.9000001,
+                              3.30000009,
+                              4.3,
+                              5.5,
+                              6.6,
+                              7.7,
+                              8.8,
+                              9.8};
+
+    std::sort(A.begin(), A.end(), std::greater());
+
+    double s = 10.5;
+    double expectedValue = 10.20000109;
+
+    std::vector<int> indexes(A.size(), 0);
+    std::iota(indexes.begin(), indexes.end(), 0);
+
+    auto result = kb_knapsack::knapsack1(s, A, A, indexes);
+
+    auto opt1    = std::get<0>(result);
+    auto optSize = std::get<1>(result);
+
+    boost::ut::expect(opt1 == expectedValue) << "Not equal ";
+    boost::ut::expect(optSize <= s) << "Greater than size ";
+
+   ```
+
+</details>	
+
+Please see more test cases for examples of usage in cpp/knapsack_tests.
 
 # Introduction
 
@@ -796,6 +840,34 @@ Summarizing those results reported, we can assert that ``KB`` knapsack algorithm
 
 From observation of result, we would note that the hybrid ``KB-NU`` algorithm can solve unbounded 1-0 knapsack in polynomial time and space. 
 
+# Hybrid KB-NU knapsack
+
+To determine which algorithm is better use, we can check input data:
+
+- Do we have the same values.
+
+- Is it counting case.
+
+- Do we have full or partial super increasing weights.
+
+After that check, we call super increasing solver, kb limit or pareto solver depends on data given. 
+
+Please refer to human readable ./cpp/knapsack/knapsack_solver.h source.
+
+# Greedy N independant dimension knapsack algorithm
+
+In case of abstract ``M`` independant dimension knapsack, the ``pareto`` solver doesn't work, becuase we cannot sort items in appreciate way. However to get an exact result, we can use ``KB`` knapsack, and it is going to be exponential in ``N`` of items given, since we are required to check ``all combinations``. 
+
+New greedy approach gives an efficent, but not complete optimal solution. 
+
+We can reduce the ``N`` in exponential expression by performing ``pareto`` solver for each ``M`` independent dimension, then combining the resulting items and performing ``KB`` limit solver over those new ``reduced N`` of items. 
+
+On each step of greedy aglorithm we decrease the ``Mth`` dimension contraint, solve the problem by calling pareto solver, repeat that for each ``M``. If the sum of all pareto result values lesser than that one we have for previous steps we exit, otherwise we solve problem by ``KB`` limit solver and repeat that optimization loop. 
+
+Each greedy step will be safe, because we reducing the size from top constraint value by substracting minimal dimension we have in given set, all optimal items found will be in result optimal.
+
+Once we have ability to build an index on the first step of solving single dimension problem, next calls for decreased constraint take ``LOG N`` only. And the main complexity driver is not the actual ``N``, but the constraint. If its value includes almost all ``N `` items, this algorithm takes an exponential time anyway.
+
 # New equal subset sum algorithm
 
 In computer science the subset sum problem is that:
@@ -907,6 +979,19 @@ The complete list of tests:
 - N equal-subset-sum using integer partition generator.
 - Integer partition optimization tests. randomTestCount * 200
 - Multidimensional  N=100 non exact greedy algorithm test
+- Building max profit point index for kb and pareto solvers.
+
+c++ tests:
+
+- Rational numbers tests for equal-subset-sum knapsack, 1-0 knapsack.
+- Super-increasing integer tests for equal-subset-sum knapsack, 1-0 knapsack, and N dimension knapsacks, where N = 2.
+- Partial super-increasing numbers tests.
+- 1-0 knapsack for Silvano Martello and Paolo Toth 1990 tests.
+- Equal-subset-sum knapsack for hardinstances_pisinger subset sum test dataset.
+- 1-0 knapsack for hardinstances_pisinger test dataset.
+- Multidimensional  N=100 non exact greedy algorithm test
+- Couning 2 dimensional case.
+- Building max profit point index for kb and pareto solvers.
 
 # References
 
