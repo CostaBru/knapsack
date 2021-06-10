@@ -62,7 +62,7 @@ namespace kb_knapsack {
             std::vector<int> dimStairDownCursors(size);
             std::vector<int> dimStairDownCursorStartings(size);
 
-            std::vector<KNAPSACK> solvers;
+            std::vector<KNAPSACK> solvers(size);
 
             std::vector<int> dimensionIndexes(size, 0);
             std::iota(dimensionIndexes.begin(), dimensionIndexes.end(), 0);
@@ -103,7 +103,7 @@ namespace kb_knapsack {
                 solver.ForceUsePareto = true;
                 solver.PrepareSearchIndex = true;
 
-                solvers.push_back(solver);
+                solvers[dimOrderIndex] = solver;
             }
 
             auto optimizeIterIndex = 0;
