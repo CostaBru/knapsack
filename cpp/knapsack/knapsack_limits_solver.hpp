@@ -1,13 +1,13 @@
-#ifndef KB_KNAPSACK_PARTITION_SOLUTION_KNAPSACK_LIMITS_SOLVER_H
-#define KB_KNAPSACK_PARTITION_SOLUTION_KNAPSACK_LIMITS_SOLVER_H
+#ifndef KB_KNAPSACK_PARTITION_SOLUTION_KNAPSACK_LIMITS_SOLVER_HPP
+#define KB_KNAPSACK_PARTITION_SOLUTION_KNAPSACK_LIMITS_SOLVER_HPP
 
 #include "fast_map.h"
 #include "defines.h"
-#include "w_point_dim1.h"
-#include "w_point_dimN.h"
-#include "w_point.h"
-#include "source_link.h"
-#include "tools.h"
+#include "w_point_dim1.hpp"
+#include "w_point_dimN.hpp"
+#include "w_point.hpp"
+#include "source_link.hpp"
+#include "tools.hpp"
 
 #include <vector>
 #include <tuple>
@@ -308,4 +308,4 @@ namespace kb_knapsack {
     };
 }
 
-#endif //KB_KNAPSACK_PARTITION_SOLUTION_KNAPSACK_LIMITS_SOLVER_H
+#endif //KB_KNAPSACK_PARTITION_SOLUTION_KNAPSACK_LIMITS_SOLVER_HPP

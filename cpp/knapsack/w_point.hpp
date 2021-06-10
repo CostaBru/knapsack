@@ -1,11 +1,11 @@
-#ifndef KB_KNAPSACK_PARTITION_SOLUTION_W_POINT_H
-#define KB_KNAPSACK_PARTITION_SOLUTION_W_POINT_H
+#ifndef KB_KNAPSACK_PARTITION_SOLUTION_W_POINT_HPP
+#define KB_KNAPSACK_PARTITION_SOLUTION_W_POINT_HPP
 
 #include "fast_map.h"
 #include "defines.h"
-#include "w_point_dim1.h"
-#include "w_point_dimN.h"
-#include "w_point.h"
+#include "w_point_dim1.hpp"
+#include "w_point_dimN.hpp"
+#include "w_point.hpp"
 
 #include <vector>
 #include <tuple>
@@ -89,4 +89,4 @@ namespace kb_knapsack {
 
 }
 
-#endif //KB_KNAPSACK_PARTITION_SOLUTION_W_POINT_H
+#endif //KB_KNAPSACK_PARTITION_SOLUTION_W_POINT_HPP

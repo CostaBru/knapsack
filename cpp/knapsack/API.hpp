@@ -1,8 +1,8 @@
-#ifndef KB_KNAPSACK_PARTITION_SOLUTION_API_H
-#define KB_KNAPSACK_PARTITION_SOLUTION_API_H
+#ifndef KB_KNAPSACK_PARTITION_SOLUTION_API_HPP
+#define KB_KNAPSACK_PARTITION_SOLUTION_API_HPP
 
-#include <knapsack_solver.h>
-#include <knapsack_greedy_top_down_solver.h>
+#include <knapsack_solver.hpp>
+#include <knapsack_greedy_top_down_solver.hpp>
 
 namespace kb_knapsack {
 
@@ -155,4 +155,4 @@ namespace kb_knapsack {
     }
 }
 
-#endif //KB_KNAPSACK_PARTITION_SOLUTION_API_H
+#endif //KB_KNAPSACK_PARTITION_SOLUTION_API_HPP

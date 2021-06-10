@@ -3,15 +3,15 @@
 
 #include "fast_map.h"
 #include "defines.h"
-#include "w_point_dim1.h"
-#include "w_point_dimN.h"
-#include "w_point.h"
-#include "tools.h"
-#include "source_link.h"
+#include "w_point_dim1.hpp"
+#include "w_point_dimN.hpp"
+#include "w_point.hpp"
+#include "tools.hpp"
+#include "source_link.hpp"
 
-#include "knapsack_limits_solver.h"
-#include "knapsack_pareto_solver.h"
-#include "knapsack_superincreasing_solver.h"
+#include "knapsack_limits_solver.hpp"
+#include "knapsack_pareto_solver.hpp"
+#include "knapsack_superincreasing_solver.hpp"
 
 #include <vector>
 #include <tuple>
