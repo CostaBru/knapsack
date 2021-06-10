@@ -741,7 +741,7 @@ class knapsackParetoSolver:
 
         maxProfitPoint = None
 
-        if index >= 0:
+        if index is not None:
             maxProfitPoint = self.maxProfitPointIndex[index]
 
         return self.backTraceItemsCore(maxProfitPoint, count, self.iterCounter)

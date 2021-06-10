@@ -1,3 +1,4 @@
+from knapsack.greedyNdKnapsack import greedyKnapsackNdSolver
 from knapsack.knapsack import knapsackSolver, knapsackParetoSolver
 from knapsack.knapsackNd import knapsackNSolver
 from knapsack.paretoPoint import paretoPoint1, paretoPoint0
@@ -126,11 +127,22 @@ def hybridKnapsackNd(constraints, items, values, iterCounter,
                              forceUseLimits=False)
 
     solver.forceUseDpSolver = False
-    solver.useParetoAsNGreedySolver = True
     solver.printInfo = printPct
     solver.printSuperIncreasingInfo = True
     solver.doSolveSuperInc = doSolveSuperInc
     solver.doUseLimits = doUseLimits
+
+    bestValue, bestSize, bestItems, bestValues = solver.solve()
+    return bestValue, bestSize, bestItems, bestValues
+
+def greedyKnapsackNd(constraints, items, values, iterCounter,  printPct=False):
+
+    solver = greedyKnapsackNdSolver(constraints, items, values, iterCounter, wPoint([0] * constraints.getSize()))
+
+    solver.printInfo = printPct
+    solver.printSuperIncreasingInfo = printPct
+    solver.doSolveSuperInc = True
+    solver.doUseLimits = True
 
     bestValue, bestSize, bestItems, bestValues = solver.solve()
     return bestValue, bestSize, bestItems, bestValues

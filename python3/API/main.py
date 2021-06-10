@@ -12,7 +12,7 @@ INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PA
 IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
 TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
-
+from knapsack.greedyNdKnapsack import greedyKnapsackNdSolver
 from knapsack.paretoPoint import paretoPoint0
 from knapsack.subsKnapsack import *
 from knapsack.knapsack import *
@@ -261,6 +261,35 @@ def hybridKnapsackNd(constraints, items, values, iterCounter):
 
     solver.forceUseDpSolver = False
     solver.useParetoAsNGreedySolver = True
+    solver.printInfo = printPct
+    solver.printSuperIncreasingInfo = verbose
+    solver.doSolveSuperInc = doSolveSuperInc
+    solver.doUseLimits = doUseLimits
+
+    bestValue, bestSize, bestItems, bestValues = solver.solve()
+    return bestValue, bestSize, bestItems, bestValues
+
+def greedyKnapsackNd(constraints, items, values, iterCounter):
+    """
+    The N dimensional greedy knapsack solver API.
+
+    :param constraints: size of N dim knapsack
+    :type constraints: wPoint
+
+    :param items: knapsack items
+    :type items: array of wPoint
+
+    :param values: N dim knapsack values
+    :type values: items int or decimal
+
+    :param iterCounter: iteration counter
+    :type iterCounter: array
+
+    :return: bestValue, bestSize, bestItems, bestValues
+    """
+
+    solver = greedyKnapsackNdSolver(constraints, items, values, iterCounter, wPoint([0] * constraints.getSize()))
+
     solver.printInfo = printPct
     solver.printSuperIncreasingInfo = verbose
     solver.doSolveSuperInc = doSolveSuperInc

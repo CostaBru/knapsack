@@ -22,6 +22,7 @@ import math
 import csv
 import os
 
+from knapsack.greedyNdKnapsack import greedyKnapsackNdSolver
 from tAPI import *
 from tests.helpers import *
 
@@ -1404,24 +1405,9 @@ class KnapsackTests(unittest.TestCase):
 
         iterCounter = [0]
 
-        from flags.flags import printPct, doUseLimits, doSolveSuperInc
-
         t1 = time.perf_counter()
 
-        solver = knapsackNSolver(constraints, items, values, iterCounter, wPoint([0] * constraints.getSize()),
-                                 forceUseLimits=False)
-
-        solver.forceUseDpSolver = False
-        solver.useParetoAsNGreedySolver = True
-        solver.printInfo = printPct
-        solver.doSolveSuperInc = doSolveSuperInc
-        solver.doUseLimits = doUseLimits
-        solver.useRatioSortForPareto = True
-        solver.printDpInfo = False
-        solver.printGreedyInfo = verbose
-        solver.printSuperIncreasingInfo = verbose
-
-        bestValue, bestSize, bestItems, bestValues = solver.solve()
+        bestValue, bestSize, bestItems, bestValues = greedyKnapsackNd(constraints, items, values, iterCounter)
 
         opt, optDims, optItems, optValues = bestValue, bestSize, bestItems, bestValues
 

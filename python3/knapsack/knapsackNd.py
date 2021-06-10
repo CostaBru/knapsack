@@ -42,10 +42,6 @@ class knapsackNSolver:
         self.emptyPoint = emptyPoint
         self.worstCaseExpLimit = 25
         self.size = constraints.getSize()
-        # NON exact pareto greedy works much faster than greedy optimizer but gives less optimal result
-        self.useParetoGreedy = False
-        # If true uses pareto greedy as N solver for merging different dimension optimization else uses DP solver which gives optmal but works much slowly.
-        self.useParetoAsNGreedySolver = True
         self.DP = None
         # inner stat for DP solver
         self.skippedPointsByMap = 0
@@ -53,7 +49,6 @@ class knapsackNSolver:
         self.skippedPointsBySize = 0
         self.totalPointCount = 0
         self.printDpInfo = False
-        self.printGreedyInfo = False
         self.printSuperIncreasingInfo = False
         self.doSolveSuperInc = True
         self.doUseLimits = True
@@ -539,212 +534,6 @@ class knapsackNSolver:
 
         return self.backTraceItems(DP, resultI, resultP, lessSizeItems, lessSizeValues, allAsc, iterCounter)
 
-    def solveByGreedyTopDown(self, constraints, points, values, doSolveSuperInc, forceUseLimits, iterCounter):
-
-        def sortBoth(w, v, reverse=True):
-            sorted_pairs = sorted(zip(w, v), reverse=reverse, key=lambda t: (t[0], t[1]))
-            tuples = zip(*sorted_pairs)
-            return [list(tuple) for tuple in tuples]
-
-        def sortReverse3Both(w, v, x):
-            sorted_pairs = sorted(zip(w, v, x), reverse=True, key=lambda t: (t[0], t[1]))
-            tuples = zip(*sorted_pairs)
-            return [list(tuple) for tuple in tuples]
-
-        def solveKnapsackNd(constraints, descNewDims, descNewVals, doSolveSuperInc, forceUseLimits, iterCounter):
-
-            constraints, count, lessSizeItems, lessSizeValues, itemSum, lessCountSum, partialSums, superIncreasing, superIncreasingItems, allAsc, allDesc, canUsePartialSums = self.preProcess(
-                constraints, descNewDims, descNewVals, forceUseLimits, iterCounter)
-
-            cornerCasesCheck = self.checkCornerCases(constraints, lessSizeItems, lessSizeValues, lessCountSum, itemSum)
-
-            if cornerCasesCheck:
-                return cornerCasesCheck
-
-            if doSolveSuperInc and superIncreasing:
-                return self.solveSuperIncreasing(constraints, lessSizeItems, lessSizeValues, count, allAsc, iterCounter)
-
-            if allAsc:
-                lessSizeItems = list(reversed(lessSizeItems))
-                lessSizeValues = list(reversed(lessSizeValues))
-                iterCounter[0] += len(lessSizeItems) * 2
-
-            if self.useParetoAsNGreedySolver:
-                return self.solveByPareto(constraints, lessSizeItems, lessSizeValues, iterCounter)
-
-            return self.solveByDynamicPrograming(constraints, count, lessSizeItems, lessSizeValues, partialSums,
-                                                 superIncreasingItems, allAsc, allDesc, forceUseLimits,
-                                                 canUsePartialSums, iterCounter)
-
-        size = constraints.getSize()
-
-        maxN = -sys.maxsize
-        maxDimN = self.emptyPoint
-        maxNItems = []
-        maxNValues = []
-
-        dimDescSortedItems = [None] * size
-        dimStairSteps = [None] * size
-        dimStairDownCursors = [0] * size
-        dimStairDownCursorStartings = [0] * size
-        optimizeCacheItems = [None] * size
-
-        solvers = [None] * size
-
-        estimatedAttemptsCount = 0
-
-        _, dimensionIndexes = sortBoth(constraints.getDimensions(), range(size), reverse=False)
-
-        for dimensionIndex in range(size):
-            dimOrderIndex = dimensionIndexes[dimensionIndex]
-
-            descDim = [p.getDimension(dimOrderIndex) for p in points]
-            descValues = values
-            descIndex = list(range(len(values)))
-
-            iterCounter[0] += (len(descDim) * math.log2(len(descDim)))
-
-            dimDescSortedItems[dimensionIndex] = (descDim, descValues, descIndex)
-            dimStairSteps[dimensionIndex] = descDim[-1]
-            dimStairDownCursors[dimensionIndex] = constraints.getDimension(dimOrderIndex)
-            dimStairDownCursorStartings[dimensionIndex] = constraints.getDimension(dimOrderIndex)
-            optimizeCacheItems[dimensionIndex] = {}
-
-            estimatedAttemptsCount += dimStairDownCursors[dimensionIndex] // dimStairSteps[dimensionIndex]
-
-            solver = knapsackParetoSolver([wPoint1(item) for item in descDim],
-                                          descValues,
-                                          range(len(descValues)),
-                                          wPoint1(constraints.getDimension(dimOrderIndex)),
-                                          paretoPoint1(0, 0),
-                                          wPoint1(0),
-                                          iterCounter)
-
-            solver.forceUsePareto = True
-            solver.prepareSearchIndex = True
-
-            solvers[dimensionIndex] = solver
-
-        if self.printGreedyInfo:
-            print(
-                f"The NON exact {size}D greedyTopDown knapsack solver called for N = {len(points)}. Estimated attempts: {estimatedAttemptsCount}.")
-
-        iterCounter[0] += size
-
-        t0 = time.perf_counter()
-
-        optimizeIterIndex = 0
-
-        anyGreaterThanStep = True
-
-        prevOptimizedIndexes = set()
-
-        while anyGreaterThanStep:
-
-            t1 = time.perf_counter()
-
-            optimizedIndexes = set()
-
-            for dimensionIndex in range(size):
-
-                currentDimLimit = dimStairDownCursors[dimensionIndex]
-
-                if currentDimLimit not in optimizeCacheItems[dimensionIndex]:
-
-                    _, __, ___, ____, optIndex = solvers[dimensionIndex].solve(wPoint1(currentDimLimit))
-
-                    dimIndex = dimDescSortedItems[dimensionIndex][2]
-
-                    dimCacheItems = []
-
-                    for oi in optIndex:
-                        itemIndex = dimIndex[oi]
-
-                        dimCacheItems.append(itemIndex)
-                        optimizedIndexes.add(itemIndex)
-
-                    iterCounter[0] += len(optIndex)
-
-                    optimizeCacheItems[dimensionIndex][currentDimLimit] = dimCacheItems
-                else:
-                    optimizedIndexes.update(optimizeCacheItems[dimensionIndex][currentDimLimit])
-                    iterCounter[0] += len(optimizeCacheItems[dimensionIndex])
-
-            newData = []
-            newValues = []
-
-            optTuple = tuple(optimizedIndexes)
-
-            if optTuple not in prevOptimizedIndexes:
-
-                sumOfNewValues = 0
-
-                for itemIndex in optimizedIndexes:
-
-                    nDims = [0] * size
-
-                    for dimensionIndex in range(size):
-                        dimIndex = dimensionIndexes[dimensionIndex]
-                        nDims[dimIndex] = points[itemIndex].getDimension(dimIndex)
-
-                    newData.append(self.createNewPoint(nDims))
-                    newValues.append(values[itemIndex])
-
-                    sumOfNewValues += values[itemIndex]
-
-                iterCounter[0] += len(optimizedIndexes) * size
-
-                if sumOfNewValues > maxN:
-
-                    descNewDims, descNewVals = sortBoth(newData, newValues)
-                    iterCounter[0] += (len(descNewDims) * math.log2(len(descNewDims)))
-
-                    optN, optDimN, optItemsN, optValuesN = solveKnapsackNd(constraints, descNewDims, descNewVals,
-                                                                           doSolveSuperInc, forceUseLimits, iterCounter)
-
-                    attemptTimeS = round(time.perf_counter() - t1, 4)
-
-                    if maxN < optN:
-                        maxN = optN
-                        maxDimN = optDimN
-                        maxNValues = optValuesN
-                        maxNItems = optItemsN
-
-                        if self.printGreedyInfo and optimizeIterIndex == 0:
-                            estimatedMaxTime = estimatedAttemptsCount * Decimal(attemptTimeS)
-                            print(
-                                f"The NON exact {size}D greedyTopDown knapsack solver: estimated max time {estimatedMaxTime}.")
-
-                        if self.printGreedyInfo:
-                            print(
-                                f"The NON exact {size}D greedyTopDown knapsack solver:  attempt {optimizeIterIndex}, some max value {maxN} has been found, time {attemptTimeS}, total time {round(time.perf_counter() - t0, 4)}, total iters {round(iterCounter[0])}.")
-
-                    elif self.printGreedyInfo and attemptTimeS > 2:
-                        print(
-                            f"The NON exact {size}D greedyTopDown knapsack solver: attempt {optimizeIterIndex}, delta max {maxN - optN}, time {attemptTimeS}, total time {round(time.perf_counter() - t0, 4)}, total iters {round(iterCounter[0])}")
-
-                    prevOptimizedIndexes.add(optTuple)
-                elif self.printGreedyInfo:
-                    print(
-                        f"The NON exact {size}D greedyTopDown knapsack solver:  attempt {optimizeIterIndex} was skipped due to less values. Exiting.")
-                    break
-            elif self.printGreedyInfo:
-                print(f"The NON exact {size}D greedyTopDown knapsack solver: attempt {optimizeIterIndex} was skipped.")
-
-            decIndex = (optimizeIterIndex) % size
-
-            if dimStairDownCursors[decIndex] >= dimStairSteps[decIndex]:
-                dimStairDownCursors[decIndex] -= dimStairSteps[decIndex]
-
-            for dimensionIndex in range(size):
-                anyGreaterThanStep = dimStairDownCursors[dimensionIndex] >= dimStairSteps[dimensionIndex]
-                if anyGreaterThanStep:
-                    break
-
-            optimizeIterIndex += 1
-
-        return maxN, maxDimN, maxNItems, maxNValues
-
     def solveByPareto(self, constraints, lessSizeItems, lessSizeValues, iterCounter):
 
         if self.printGreedyInfo:
@@ -775,13 +564,10 @@ class knapsackNSolver:
         if self.doSolveSuperInc and superIncreasing:
             return self.solveSuperIncreasing(constraints, lessSizeItems, lessSizeValues, count, allAsc, iterCounter)
 
-        if len(items) <= self.worstCaseExpLimit or (
-                (allAsc or allDesc) and canUsePartialSums) or self.forceUseDpSolver or self.forceUseLimits:
+        if len(items) <= self.worstCaseExpLimit or ((allAsc or allDesc) and canUsePartialSums) or self.forceUseDpSolver or self.forceUseLimits:
             return self.solveByDynamicPrograming(constraints, count, lessSizeItems, lessSizeValues, partialSums,
                                                  superIncreasingItems, allAsc, allDesc, forceUseLimits,
                                                  canUsePartialSums, iterCounter)
 
-        if self.useParetoGreedy:
-            return self.solveByPareto(constraints, lessSizeItems, lessSizeValues, iterCounter)
+        return self.solveByPareto(constraints, lessSizeItems, lessSizeValues, iterCounter)
 
-        return self.solveByGreedyTopDown(constraints, lessSizeItems, lessSizeValues, doSolveSuperInc, False, iterCounter)

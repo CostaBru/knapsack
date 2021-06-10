@@ -1,10 +1,10 @@
 # Rethinking the knapsack and set partitions. 
 
-The classic dynamic programing algorithm for 1-0 unbounded knapsack problem was extended to work with rational numbers, and to has any number of independent dimensions. Special cases were solved in polynomial time and used as part of new partition algorithm.
+The classic dynamic programming algorithm for 1-0 unbounded knapsack problem was extended to work with rational numbers, and to has any number of independent dimensions. Special cases were solved in polynomial time and used as part of new partition algorithm.
 
 The algorithm for equal subset problem complexity was improved to be exponential in number of partitions only. The integer input type limitation was removed.
 
-This work contains the source code of algorithms, performance analysis and reports:
+This work contains ``python`` and ``cpp`` source code of algorithms, performance analysis and reports:
 
 - The polynomial time and space algorithm for unbounded subset sum knapsack problem for positive integer and rational numbers. 
 
@@ -18,11 +18,13 @@ This work contains the source code of algorithms, performance analysis and repor
 
 - The exponential algorithm for ``T`` independent dimensions unbounded 1-0 knapsack problem. The counting and non increasing order cases were solved in polynomial time. A non exact greedy algorithm was introduced for general case.
 
+- The greedy ``M`` independent dimension knapsack algorithm that exponential in reduced ``N`` that depends on given constraint.
+  
 - The ``M`` equal-subset-sum of ``N`` integer number set that is exponential in ``M`` only.
 
 - The algorithms for multiple knapsack that is exponential in numbers of knapsacks.
 
-- ``M`` strict partition problem. The run time complexity is exponential in number of partition. That algorithm runtime is ``M`` times slower than the subset sum problem.
+- ``M`` strict partition problem solver. The run time complexity is exponential in number of partition. That algorithm runtime is ``M`` times slower than the subset sum problem.
 
 - Test cases and iteration reports.
 
@@ -59,6 +61,10 @@ There are 8 python methods to use:
     The result is tuple of bestValue, bestSize, bestItems, bestValues.	
 - ``hybridKnapsackNd`` NU algorithm called for worst exponential case of KB.
 
+	The result is tuple of bestValue, bestSize, bestItems, bestValues.
+
+- ``greedyKnapsackNd`` Non exact greedy N dimensional knapsack solver.
+  
 	The result is tuple of bestValue, bestSize, bestItems, bestValues.
 	
 	<details>
@@ -97,9 +103,9 @@ There are 8 python methods to use:
 
 # C++ port
 
-There are super-increasing, kb limit, pareto, and N dimension greedy knapsack solvers ported. Lib was built using CLion, mingw64(9.0) and g++ (Rev9, Built by MSYS2 project) 10.2.0.
+There are ``super-increasing``, ``kb limit``, ``pareto``, and ``N dimension greedy`` knapsack solvers ported. The library was built using ``CLion``, ``mingw64`` (9.0) and ``g++`` (Rev9, Built by MSYS2 project) 10.2.0.
 
-It performs up to 10x faster than python implementation.
+Right now it performs up to ``10x`` faster than python implementation, and it is the subject for further optimizations.
 
 <details>
 		<summary> Subset sum example </summary>
@@ -137,7 +143,7 @@ It performs up to 10x faster than python implementation.
 
 </details>	
 
-Please see more test cases for examples of usage in cpp/knapsack_tests.
+Please see more test cases for examples of usage in ``./cpp/knapsack_tests``.
 
 # Introduction
 
@@ -146,7 +152,7 @@ The knapsack problem is defined as follows:
 We are given a set of ``N`` items, each item ``J`` having a ``Pj`` value and a weight ``Wj`` . The problem is to choose a subset of the
 items such that their overall profit is maximized, while the overall weight does not exceed a given capacity ``C`` [6].
 
-Let's consider classical bottom-up dynamic programing solution for unbounded knapsack problem. Let's call it ``DPS``. 
+Let's consider classical bottom-up dynamic programming solution for unbounded knapsack problem. Let's call it ``DPS``. 
 
 Bounded version of that problem has known way of reduction to unbounded one [5].
 
@@ -850,23 +856,31 @@ To determine which algorithm is better use, we can check input data:
 
 - Do we have full or partial super increasing weights.
 
-After that check, we call super increasing solver, kb limit or pareto solver depends on data given. 
+After that check, we call super increasing solver, ``kb limit`` or ``pareto`` solver depends on data given. 
 
-Please refer to human readable ./cpp/knapsack/knapsack_solver.h source.
+Please refer to  ``./cpp/knapsack/knapsack_solver.hpp`` or ``./python/knapsackNd.py``.
 
-# Greedy N independant dimension knapsack algorithm
+The cpp ``kb limit`` solver has an alternative DP implementation. It doesn't use dynamic programming procedure implemented in python. Instead of using map data structure, while generating combinations of new points, new solver is keeping track of maximum profit point, building backtrace table ``./cpp/source_link.hpp``, and filtering out old and new points using limits described in this study. 
 
-In case of abstract ``M`` independant dimension knapsack, the ``pareto`` solver doesn't work, becuase we cannot sort items in appreciate way. However to get an exact result, we can use ``KB`` knapsack, and it is going to be exponential in ``N`` of items given, since we are required to check ``all combinations``. 
+It leads to unifying the backtrace procedure for ``pareto`` and ``kb limit`` solvers ``./cpp/tools.hpp``, and simplifying preparing search index we use in a greedy algorithm described below.
 
-New greedy approach gives an efficent, but not complete optimal solution. 
+# Greedy N independent dimension knapsack algorithm
 
-We can reduce the ``N`` in exponential expression by performing ``pareto`` solver for each ``M`` independent dimension, then combining the resulting items and performing ``KB`` limit solver over those new ``reduced N`` of items. 
+In case of abstract ``M`` independent dimension knapsack, the ``pareto`` solver doesn't work, because we cannot sort items in appreciate way. However to get an exact result, we can use ``KB`` knapsack, and it is going to be exponential in ``N`` of items given, since we are required to check ``all combinations``. 
 
-On each step of greedy aglorithm we decrease the ``Mth`` dimension contraint, solve the problem by calling pareto solver, repeat that for each ``M``. If the sum of all pareto result values lesser than that one we have for previous steps we exit, otherwise we solve problem by ``KB`` limit solver and repeat that optimization loop. 
+New greedy approach gives an efficient, but not complete optimal solution. 
 
-Each greedy step will be safe, because we reducing the size from top constraint value by substracting minimal dimension we have in given set, all optimal items found will be in result optimal.
+We can reduce the ``N`` in ``2 ** N`` expression by performing ``pareto`` solver for each ``M`` independent dimension, then combining the resulting items and calling ``KB`` limit solver over those new ``reduced N`` of items. 
 
-Once we have ability to build an index on the first step of solving single dimension problem, next calls for decreased constraint take ``LOG N`` only. And the main complexity driver is not the actual ``N``, but the constraint. If its value includes almost all ``N `` items, this algorithm takes an exponential time anyway.
+On each step of greedy algorithm, we decrease the ``Mth`` dimension constraint, solve the problem by calling ``pareto`` solver, repeat that for each ``M``. If the sum of all pareto result values lesser than that one we have for previous steps then we exit this algorithm and return the maximum reached, otherwise we solve problem by ``KB limit`` solver and repeat that optimization loop. 
+
+Each greedy step will be safe, because we reducing the size from top constraint value by subtracting minimal ``Mth`` dimension we have in given ``N`` set, and the all optimal items found will be in result optimal.
+
+Once we have ability to build an index on the first step of solving single dimension problem, next call for decreased ``Mth`` dimension constraint takes ``LOG N`` only. Having this, the main complexity driver is not the actual ``N``, but the given constraint. If its value includes almost all ``N `` items, this algorithm takes an exponential time anyway.
+
+This algorithm can be use in practice for cases when we have limited ability and a lot of ``N`` possible items to consider. 
+
+Please take a look at ``./cpp/knapsack/knapsack_greedy_top_down_solver.hpp`` or ``./python/greedyNdKnapsack.py``.
 
 # New equal subset sum algorithm
 
@@ -990,7 +1004,7 @@ c++ tests:
 - Equal-subset-sum knapsack for hardinstances_pisinger subset sum test dataset.
 - 1-0 knapsack for hardinstances_pisinger test dataset.
 - Multidimensional  N=100 non exact greedy algorithm test
-- Couning 2 dimensional case.
+- Counting 2 dimensional case.
 - Building max profit point index for kb and pareto solvers.
 
 # References
