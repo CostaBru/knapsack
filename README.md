@@ -145,6 +145,17 @@ Right now it performs up to ``10x`` faster than python implementation, and it is
 
 Please see more test cases for examples of usage in ``./cpp/knapsack_tests``.
 
+We used Pybind11 ``https://github.com/pybind/pybind11`` to prepare an experimental python API.  
+
+Please refer to ``python3/tests/test_cpp_apy.py``. First of all, you need to build the ``cpp`` sources, then ``knapsack_python_api.{your platform}.pyd`` extention file appears in ``python3/tests/`` folder and you will be able to run api tests.
+
+You might have below error while you are importing ``pyd`` file:
+``ImportError: DLL load failed: The specified module could not be found.``
+
+To overcome it, you can try out ``https://github.com/lucasg/Dependencies`` tool.
+It shows all dependencies your pyd file has at the moment. And, you will be able to locate 
+those dependency paths, register it via ``os.add_dll_directory("your dlls path")`` 
+right before importing ``knapsack_python_api`` extension in your python script.
 # Introduction
 
 The knapsack problem is defined as follows: 

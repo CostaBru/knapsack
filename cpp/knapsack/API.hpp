@@ -109,7 +109,7 @@ namespace kb_knapsack {
     }
 
     template<typename T, typename W, int N>
-    std::tuple<W, std::array<T, N>, std::vector<std::array<T, N>>, std::vector<W>>
+    std::tuple<W, std::array<T, N>, std::vector<std::array<T, N>>, std::vector<W>, std::vector<int>>
     greedyKnapsackN(std::array<T, N>              & constraint,
                     std::vector<std::array<T, N>> & dimensions,
                     std::vector<W>                & values,
@@ -143,6 +143,7 @@ namespace kb_knapsack {
         auto optSize =    std::get<1>(rez);
         auto optDim =     std::get<2>(rez);
         auto optValue2 =  std::get<3>(rez);
+        auto optIndex =  std::get<4>(rez);
 
         std::vector<std::array<T, N>> optDimRez(optDim.size());
 
@@ -151,7 +152,7 @@ namespace kb_knapsack {
             optDimRez[i] = optDim[i].value;
         }
 
-        return std::make_tuple(optValue, optSize.value, optDimRez, optValue2);
+        return std::make_tuple(optValue, optSize.value, optDimRez, optValue2, optIndex);
     }
 }
 

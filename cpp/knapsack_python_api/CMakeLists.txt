@@ -33,3 +33,7 @@ pybind11_add_module(knapsack_python_api
 include_directories(SYSTEM ../knapsack)
 
 target_compile_definitions(knapsack_python_api PRIVATE VERSION_INFO=${KNAPSACK_PYTHON_API_VERSION_INFO})
+
+add_custom_command(TARGET knapsack_python_api POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:knapsack_python_api> ../../../python3/tests/${targetfile}
+        )
