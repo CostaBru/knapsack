@@ -13,6 +13,4 @@ set(HEADER_FILES
 
 add_executable(partition_tests ${SOURCE_FILES} ${HEADER_FILES})
 
-target_link_libraries(partition_tests BBSort)
-
 set(CMAKE_EXE_LINKER_FLAGS "-static")

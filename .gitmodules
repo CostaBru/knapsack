@@ -1,0 +1,4 @@
+[submodule "cpp/knapsack_python_api/pybind11"]
+	path = cpp/knapsack_python_api/pybind11
+	url = ../../pybind/pybind11
+	branch = stable
